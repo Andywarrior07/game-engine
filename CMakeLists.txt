@@ -26,8 +26,6 @@ link_libraries(${SDL2_LIBRARY} ${SDL2_IMAGE_LIBRARY})
 find_package(Bullet REQUIRED)
 add_executable(simple_game src/main.cpp
         src/Input/InputManager.cpp
-        src/Resource/ResourceManager.cpp
-        src/Texture/TextureResource.cpp
         Game.cpp
         src/Animation/AnimationManager.cpp
         src/Camera/CameraManager.cpp
@@ -45,6 +43,39 @@ add_executable(simple_game src/main.cpp
         src/memory/utils/ScopedAllocator.cpp
         src/memory/utils/ScopedAllocator.h
         src/memory/MemorySystem.h
+        src/resources/core/ResourceTypes.h
+        src/resources/core/ResourceMetadata.h
+        src/resources/core/Resource.cpp
+        src/resources/core/Resource.h
+        src/resources/core/ResourceHandle.cpp
+        src/resources/core/ResourceHandle.h
+        src/resources/loader/IResourceLoader.cpp
+        src/resources/loader/IResourceLoader.h
+        src/resources/cache/ResourceCache.cpp
+        src/resources/cache/ResourceCache.h
+        src/resources/manager/ResourceFactory.cpp
+        src/resources/manager/ResourceFactory.h
+        src/resources/manager/ResourceManager.cpp
+        src/resources/manager/ResourceManager.h
+        src/resources/packaging/ResourceGroup.cpp
+        src/resources/packaging/ResourceGroup.h
+        src/resources/packaging/ResourcePackage.cpp
+        src/resources/packaging/ResourcePackage.h
+        src/resources/utils/ResourcePool.h
+        src/resources/streaming/StreamableResource.cpp
+        src/resources/streaming/StreamableResource.h
+        src/resources/utils/ResourceDependencyGraph.cpp
+        src/resources/utils/ResourceDependencyGraph.h
+        src/resources/manager/ResourceRegistry.cpp
+        src/resources/manager/ResourceRegistry.h
+        src/resources/types/textures/TextureResource.cpp
+        src/resources/types/textures/TextureResource.h
+        src/resources/async/ResourceTask.cpp
+        src/resources/async/ResourceTask.h
+        src/resources/async/ResourceTaskScheduler.cpp
+        src/resources/async/ResourceTaskScheduler.h
+        src/resources/types/textures/TextureFormat.h
+        src/resources/types/textures/TextureUtils.h
 )
 
 target_link_libraries(${PROJECT_NAME}
