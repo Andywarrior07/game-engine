@@ -4,6 +4,7 @@
 
 #pragma once
 
+
 #include <functional>
 #include <shared_mutex>
 #include <string>
@@ -15,6 +16,7 @@
 #include "../allocators/PoolAllocator.h"
 #include "../allocators/RingBufferAllocator.h"
 #include "../core/IAllocator.h"
+#include "../core/SystemInfo.h"
 
 namespace engine::memory {
     class MemoryManager {
@@ -25,9 +27,10 @@ namespace engine::memory {
         MemoryManager(const MemoryManager&) = delete;
         MemoryManager& operator=(const MemoryManager&) = delete;
 
-        bool initialize(const MemoryManagerConfig& requestedConfig);
+        bool initialize(const MemoryManagerConfig& config);
+        bool initialize(const MemoryManagerAutoConfig& autoConfig);
         void shutdown();
-        bool isInitialized() const { return initialized; }
+        bool isInitialized() const { return initialized_; }
 
         void* allocate(MemorySize size,
                        MemoryCategory category = MemoryCategory::GENERAL,
@@ -35,8 +38,8 @@ namespace engine::memory {
                        AllocationFlags flags = AllocationFlags::NONE);
         void deallocate(void* ptr, MemoryCategory category = MemoryCategory::GENERAL);
         void* reallocate(void* ptr, MemorySize newSize,
-                        MemoryCategory category = MemoryCategory::GENERAL,
-                        MemorySize alignment = DEFAULT_ALIGNMENT);
+                         MemoryCategory category = MemoryCategory::GENERAL,
+                         MemorySize alignment = DEFAULT_ALIGNMENT);
 
         template <typename T, typename... Args>
         T* allocateObject(MemoryCategory category, Args&&... args) {
@@ -119,10 +122,10 @@ namespace engine::memory {
 
         MemorySize getTotalMemoryUsage() const;
         MemorySize getCategoryMemoryUsage(MemoryCategory category) const;
-        const MemoryStats& getGlobalStats() const { return globalStats; }
+        const MemoryStats& getGlobalStats() const { return globalStats_; }
         std::string generateMemoryReport() const;
         bool dumpAllocations(const std::string& filename) const;
-        static std::size_t checkForLeaks() ;
+        static std::size_t checkForLeaks();
 
         using MemoryPressureCallback = std::function<void(MemorySize available, MemorySize required)>;
         void registerMemoryPressureCallback(MemoryPressureCallback callback);
@@ -133,11 +136,14 @@ namespace engine::memory {
                                         MemorySize& availableVirtual);
 
     private:
-        MemoryManagerConfig config;
-        bool initialized = false;
+        MemoryManagerConfig config_;
+        bool initialized_ = false;
 
-        std::unique_ptr<IAllocator> mainHeap;
-        std::unique_ptr<IAllocator> debugHeap;
+        std::unique_ptr<IAllocator> mainHeap_;
+        std::unique_ptr<IAllocator> debugHeap_;
+
+        SystemInfo systemInfo_;
+        bool autoConfigured_ = false;
 
         struct FrameAllocators {
             std::unique_ptr<StackAllocator> stackAllocator;
@@ -145,14 +151,14 @@ namespace engine::memory {
             std::uint64_t frameNumber = 0;
         };
 
-        std::vector<FrameAllocators> frameAllocators;
-        std::atomic<std::uint8_t> currentFrameIndex{0};
+        std::vector<FrameAllocators> frameAllocators_;
+        std::atomic<std::uint8_t> currentFrameIndex_{0};
 
-        std::array<std::unique_ptr<IAllocator>, static_cast<std::size_t>(MemoryCategory::COUNT)> categoryAllocators;
+        std::array<std::unique_ptr<IAllocator>, static_cast<std::size_t>(MemoryCategory::COUNT)> categoryAllocators_;
 
-        std::unordered_map<std::string, std::unique_ptr<IAllocator>> customAllocators;
+        std::unordered_map<std::string, std::unique_ptr<IAllocator>> customAllocators_;
 
-        mutable MemoryStats globalStats;
+        mutable MemoryStats globalStats_;
 
         // Allocation tracking (debug mode)
 #ifdef _DEBUG
@@ -165,18 +171,18 @@ namespace engine::memory {
             std::chrono::steady_clock::time_point timestamp;
             std::thread::id threadId;
         };
-        std::unordered_map<void*, AllocationRecord> allocationRecords;
-        mutable std::shared_mutex recordsMutex;
+        std::unordered_map<void*, AllocationRecord> allocationRecords_;
+        mutable std::shared_mutex recordsMutex_;
 #endif
 
-        std::vector<MemoryPressureCallback> memoryPressureCallbacks;
-        std::atomic<bool> inMemoryPressure{false};
+        std::vector<MemoryPressureCallback> memoryPressureCallbacks_;
+        std::atomic<bool> inMemoryPressure_{false};
 
-        mutable std::shared_mutex allocatorsMutex;
+        mutable std::shared_mutex allocatorsMutex_;
 
         IAllocator* selectAllocator(MemoryCategory category, MemorySize size, AllocationFlags flags) const;
         void updateGlobalStats(const MemoryStats& allocatorStats);
-        void handleAllocationFailure(MemorySize size, MemoryCategory category);
+        void handleAllocationFailure(MemorySize size, MemoryCategory category) const;
 
 #ifdef _DEBUG
         void recordAllocation(void* ptr, MemorySize size, MemoryCategory category,

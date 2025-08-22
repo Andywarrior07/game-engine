@@ -23,12 +23,12 @@ namespace engine::memory {
         void* allocate(MemorySize size, MemorySize alignment = DEFAULT_ALIGNMENT,
                        AllocationFlags flags = AllocationFlags::NONE) override;
         void deallocate(void* ptr) override;
-        MemorySize getCapacity() const override { return capacity; }
+        MemorySize getCapacity() const override { return capacity_; }
         MemorySize getUsedMemory() const override;
         void reset() override;
         bool owns(const void* ptr) const override;
         MemorySize getAllocationSize(const void* ptr) const override;
-        const char* getName() const override { return name; }
+        const char* getName() const override { return name_; }
 
         // Stack-specific methods
         Marker getMarker() const;
@@ -44,15 +44,15 @@ namespace engine::memory {
 #endif
         };
 
-        void* memory;
-        MemorySize capacity;
-        std::atomic<MemorySize> current;
-        std::atomic<MemorySize> highWaterMark;
-        const char* name;
+        void* memory_;
+        MemorySize capacity_;
+        std::atomic<MemorySize> current_;
+        std::atomic<MemorySize> highWaterMark_;
+        const char* name_;
 
 #ifdef __DEBUG
         static constexpr std::uint32_t SENTINEL_VALUE = 0xDEADBEEF;
-        std::atomic<std::uint32_t> allocationCount{0};
+        std::atomic<std::uint32_t> allocationCount_{0};
 #endif
     };
 }

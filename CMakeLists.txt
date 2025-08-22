@@ -30,52 +30,60 @@ add_executable(simple_game src/main.cpp
         src/Animation/AnimationManager.cpp
         src/Camera/CameraManager.cpp
         src/Physics/PhysicsManager.cpp
-        src/memory/allocators/PoolAllocator.cpp
-        src/memory/allocators/StackAllocator.cpp
-        src/memory/core/IAllocator.cpp
+        src/memory/MemorySystem.h
         src/memory/allocators/LinearAllocator.cpp
         src/memory/allocators/LinearAllocator.h
+        src/memory/allocators/PoolAllocator.cpp
         src/memory/allocators/RingBufferAllocator.cpp
         src/memory/allocators/RingBufferAllocator.h
+        src/memory/allocators/StackAllocator.cpp
+        src/memory/core/IAllocator.cpp
+        src/memory/core/SystemInfo.h
+        src/memory/manager/MemoryConfig.h
         src/memory/manager/MemoryManager.cpp
         src/memory/manager/MemoryManager.h
-        src/memory/manager/MemoryConfig.h
         src/memory/utils/ScopedAllocator.cpp
         src/memory/utils/ScopedAllocator.h
-        src/memory/MemorySystem.h
-        src/resources/core/ResourceTypes.h
-        src/resources/core/ResourceMetadata.h
-        src/resources/core/Resource.cpp
-        src/resources/core/Resource.h
-        src/resources/core/ResourceHandle.cpp
-        src/resources/core/ResourceHandle.h
-        src/resources/loader/IResourceLoader.cpp
-        src/resources/loader/IResourceLoader.h
-        src/resources/cache/ResourceCache.cpp
-        src/resources/cache/ResourceCache.h
-        src/resources/manager/ResourceFactory.cpp
-        src/resources/manager/ResourceFactory.h
-        src/resources/manager/ResourceManager.cpp
-        src/resources/manager/ResourceManager.h
-        src/resources/packaging/ResourceGroup.cpp
-        src/resources/packaging/ResourceGroup.h
-        src/resources/packaging/ResourcePackage.cpp
-        src/resources/packaging/ResourcePackage.h
-        src/resources/utils/ResourcePool.h
-        src/resources/streaming/StreamableResource.cpp
-        src/resources/streaming/StreamableResource.h
-        src/resources/utils/ResourceDependencyGraph.cpp
-        src/resources/utils/ResourceDependencyGraph.h
-        src/resources/manager/ResourceRegistry.cpp
-        src/resources/manager/ResourceRegistry.h
-        src/resources/types/textures/TextureResource.cpp
-        src/resources/types/textures/TextureResource.h
         src/resources/async/ResourceTask.cpp
         src/resources/async/ResourceTask.h
         src/resources/async/ResourceTaskScheduler.cpp
         src/resources/async/ResourceTaskScheduler.h
-        src/resources/types/textures/TextureFormat.h
-        src/resources/types/textures/TextureUtils.h
+        src/resources/cache/ResourceCache.cpp
+        src/resources/cache/ResourceCache.h
+        src/resources/core/Resource.cpp
+        src/resources/core/Resource.h
+        src/resources/core/ResourceHandle.cpp
+        src/resources/core/ResourceHandle.h
+        src/resources/core/ResourceMetadata.h
+        src/resources/core/ResourceTypes.h
+        src/resources/loader/IResourceLoader.cpp
+        src/resources/loader/IResourceLoader.h
+        src/resources/manager/ResourceFactory.cpp
+        src/resources/manager/ResourceFactory.h
+        src/resources/manager/ResourceManager.cpp
+        src/resources/manager/ResourceManager.h
+        src/resources/manager/ResourceRegistry.cpp
+        src/resources/manager/ResourceRegistry.h
+        src/resources/packaging/ResourceGroup.cpp
+        src/resources/packaging/ResourceGroup.h
+        src/resources/packaging/ResourcePackage.cpp
+        src/resources/packaging/ResourcePackage.h
+        src/resources/streaming/StreamableResource.cpp
+        src/resources/streaming/StreamableResource.h
+        src/resources/types/texture/TextureFormat.h
+        src/resources/types/texture/TextureResource.cpp
+        src/resources/types/texture/TextureResource.h
+        src/resources/utils/ResourceDependencyGraph.cpp
+        src/resources/utils/ResourceDependencyGraph.h
+        src/resources/utils/ResourcePool.h
+        src/resources/types/texture/TextureFormatUtils.cpp
+        src/resources/types/texture/TextureFormatUtils.h
+        src/resources/types/texture/TextureDesc.cpp
+        src/resources/types/texture/TextureDesc.h
+        src/memory/allocators/HeapAllocator.cpp
+        src/memory/allocators/HeapAllocator.h
+        src/memory/allocators/SystemAllocator.cpp
+        src/memory/allocators/SystemAllocator.h
 )
 
 target_link_libraries(${PROJECT_NAME}

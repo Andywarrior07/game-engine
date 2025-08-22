@@ -28,10 +28,10 @@ namespace engine::memory {
         virtual MemorySize getFreeMemory() const;
         virtual void reset() {};
         virtual MemorySize getAllocationSize(const void* ptr) const = 0;
-        virtual const MemoryStats& getStats() const { return stats; }
+        virtual const MemoryStats& getStats() const { return stats_; }
 
     protected:
-        mutable MemoryStats stats;
+        mutable MemoryStats stats_;
 
         // Helper methods
         static void* alignPointer(void* ptr, MemorySize alignment);

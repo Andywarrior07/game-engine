@@ -9,72 +9,74 @@
 
 namespace engine::memory {
     StackAllocator::StackAllocator(MemorySize capacity, const char* name)
-        : memory(nullptr)
-          , capacity(capacity)
-          , current(0)
-          , highWaterMark(0)
-          , name(name) {
-        memory = std::aligned_alloc(CACHE_LINE_SIZE, capacity);
+        : memory_(nullptr)
+          , capacity_(capacity)
+          , current_(0)
+          , highWaterMark_(0)
+          , name_(name) {
+        memory_ = std::aligned_alloc(CACHE_LINE_SIZE, capacity);
 
-        if (!memory) {
+        if (!memory_) {
+            std::cerr << "[StackAllocator] Failed to allocate "
+                << (capacity / (1024.0 * 1024.0)) << " MB for " << name_ << std::endl;
             throw std::bad_alloc();
         }
 
 #ifdef _DEBUG
-        std::memset(memory, 0xCD, capacity);
+        std::memset(memory_, 0xCD, capacity);
 #endif
 
-        stats.currentUsage = 0;
-        stats.peakUsage = 0;
-        stats.totalAllocated = 0;
-        stats.allocationCount = 0;
+        stats_.currentUsage = 0;
+        stats_.peakUsage = 0;
+        stats_.totalAllocated = 0;
+        stats_.allocationCount = 0;
     }
 
     StackAllocator::~StackAllocator() {
-        if (!memory) return;
+        if (!memory_) return;
 
 #ifdef _DEBUG
-        if (current.load() > 0) {
-            std::cerr << "Warning: StackAllocator '" << name
-                << "' destroyed with " << current.load()
+        if (current_.load() > 0) {
+            std::cerr << "Warning: StackAllocator '" << name_
+                << "' destroyed with " << current_.load()
                 << " bytes still allocated!" << std::endl;
         }
 #endif
 
-        std::free(memory);
-        memory = nullptr;
+        std::free(memory_);
+        memory_ = nullptr;
     }
 
     StackAllocator::StackAllocator(StackAllocator&& other) noexcept
-        : memory(other.memory)
-          , capacity(other.capacity)
-          , current(other.current.load())
-          , highWaterMark(other.highWaterMark.load())
-          , name(other.name) {
-        other.memory = nullptr;
-        other.capacity = 0;
-        other.current = 0;
-        other.highWaterMark = 0;
+        : memory_(other.memory_)
+          , capacity_(other.capacity_)
+          , current_(other.current_.load())
+          , highWaterMark_(other.highWaterMark_.load())
+          , name_(other.name_) {
+        other.memory_ = nullptr;
+        other.capacity_ = 0;
+        other.current_ = 0;
+        other.highWaterMark_ = 0;
     }
 
     StackAllocator& StackAllocator::operator=(StackAllocator&& other) noexcept {
         if (this == &other) return *this;
 
-        if (memory) {
-            std::free(memory);
+        if (memory_) {
+            std::free(memory_);
         }
 
-        memory = other.memory;
-        capacity = other.capacity;
-        current = other.current.load();
-        highWaterMark = other.highWaterMark.load();
-        name = other.name;
+        memory_ = other.memory_;
+        capacity_ = other.capacity_;
+        current_ = other.current_.load();
+        highWaterMark_ = other.highWaterMark_.load();
+        name_ = other.name_;
 
         // reset other
-        other.memory = nullptr;
-        other.capacity = 0;
-        other.current = 0;
-        other.highWaterMark = 0;
+        other.memory_ = nullptr;
+        other.capacity_ = 0;
+        other.current_ = 0;
+        other.highWaterMark_ = 0;
 
         return *this;
     }
@@ -87,8 +89,8 @@ namespace engine::memory {
         const MemorySize totalSize = size + headerSize;
 
         // Get current position and calculate aligned address
-        MemorySize currentPos = current.load(std::memory_order_acquire);
-        void* currentAddress = static_cast<std::uint8_t*>(memory) + currentPos;
+        MemorySize currentPos = current_.load(std::memory_order_acquire);
+        void* currentAddress = static_cast<std::uint8_t*>(memory_) + currentPos;
         void* alignedAddress = alignPointer(currentAddress, alignment);
 
         // Calculate adjustment for alignment
@@ -99,24 +101,25 @@ namespace engine::memory {
         MemorySize newPos = currentPos + adjustment + totalSize;
 
         // Check if allocation fits
-        if (newPos > capacity) {
-            stats.failedAllocations.fetch_add(1, std::memory_order_relaxed);
+        if (newPos > capacity_) {
+            stats_.failedAllocations.fetch_add(1, std::memory_order_relaxed);
             return nullptr;
         }
 
         // Atomic update of current position
         MemorySize expected = currentPos;
-        while (!current.compare_exchange_weak(expected, newPos, std::memory_order_acq_rel, std::memory_order_acquire)) {
+        while (!current_.compare_exchange_weak(expected, newPos, std::memory_order_acq_rel,
+                                               std::memory_order_acquire)) {
             // Another thread allocated, recalculate
             currentPos = expected;
-            currentAddress = static_cast<std::uint8_t*>(memory) + currentPos;
+            currentAddress = static_cast<std::uint8_t*>(memory_) + currentPos;
             alignedAddress = alignPointer(currentAddress, alignment);
             const MemorySize newAdjustment = static_cast<std::uint8_t*>(alignedAddress) -
                 static_cast<std::uint8_t*>(currentAddress);
             const MemorySize newNewPos = currentPos + newAdjustment + totalSize;
 
-            if (newNewPos > capacity) {
-                stats.failedAllocations.fetch_add(1, std::memory_order_relaxed);
+            if (newNewPos > capacity_) {
+                stats_.failedAllocations.fetch_add(1, std::memory_order_relaxed);
                 return nullptr;
             }
 
@@ -124,11 +127,11 @@ namespace engine::memory {
         }
 
         // Update high water mark
-        MemorySize currentHigh = highWaterMark.load(std::memory_order_acquire);
+        MemorySize currentHigh = highWaterMark_.load(std::memory_order_acquire);
         while (newPos > currentHigh &&
-            !highWaterMark.compare_exchange_weak(currentHigh, newPos,
-                                                 std::memory_order_acq_rel,
-                                                 std::memory_order_acquire)) {
+            !highWaterMark_.compare_exchange_weak(currentHigh, newPos,
+                                                  std::memory_order_acq_rel,
+                                                  std::memory_order_acquire)) {
             // Keep trying
             /*
              * Esto es por si llega a haber un pequeño fallo en compare_exchange_weak (que es el comportamiento normal)
@@ -183,12 +186,12 @@ namespace engine::memory {
         // Calculate if this is the top allocation
         void* headerAddress = header;
         MemorySize allocStart = reinterpret_cast<std::uint8_t*>(headerAddress) -
-            reinterpret_cast<std::uint8_t*>(memory);
+            reinterpret_cast<std::uint8_t*>(memory_);
         MemorySize allocEnd = allocStart + header->adjustment + sizeof(AllocationHeader) + header->size;
 
-        if (allocEnd == current.load(std::memory_order_acquire)) {
+        if (allocEnd == current_.load(std::memory_order_acquire)) {
             // This is the top allocation, we can free it
-            current.store(allocStart, std::memory_order_release);
+            current_.store(allocStart, std::memory_order_release);
             recordDeallocation(header->size + header->adjustment + sizeof(AllocationHeader));
             allocationCount_.fetch_sub(1, std::memory_order_relaxed);
 
@@ -207,31 +210,31 @@ namespace engine::memory {
     }
 
     MemorySize StackAllocator::getUsedMemory() const {
-        return current.load(std::memory_order_acquire);
+        return current_.load(std::memory_order_acquire);
     }
 
     void StackAllocator::reset() {
 #ifdef _DEBUG
         // Fill freed memory with pattern
-        MemorySize used = current.load(std::memory_order_acquire);
+        MemorySize used = current_.load(std::memory_order_acquire);
         if (used > 0) {
-            std::memset(memory, 0xCD, used); // Reset to uninitialized pattern
+            std::memset(memory_, 0xCD, used); // Reset to uninitialized pattern
         }
         allocationCount_.store(0, std::memory_order_release);
 #endif
-        current.store(0, std::memory_order_release);
+        current_.store(0, std::memory_order_release);
 
-        stats.currentUsage.store(0, std::memory_order_release);
+        stats_.currentUsage.store(0, std::memory_order_release);
     }
 
     StackAllocator::Marker StackAllocator::getMarker() const {
         // Return the current stack position as a marker
         // This marker can be used later to restore the stack to this exact position
-        return current.load(std::memory_order_acquire);
+        return current_.load(std::memory_order_acquire);
     }
 
     void StackAllocator::freeToMarker(const Marker marker) {
-        const MemorySize currentPos = current.load(std::memory_order_acquire);
+        const MemorySize currentPos = current_.load(std::memory_order_acquire);
 
         if (marker > currentPos) {
             std::cerr << "Error: Invalid marker in StackAllocator::freeToMarker!" << std::endl;
@@ -242,12 +245,12 @@ namespace engine::memory {
         // Fill freed memory with pattern
         MemorySize freedSize = currentPos - marker;
         if (freedSize > 0) {
-            void* freedStart = reinterpret_cast<std::uint8_t*>(memory) + marker;
+            void* freedStart = reinterpret_cast<std::uint8_t*>(memory_) + marker;
             std::memset(freedStart, 0xDE, freedSize);
         }
 #endif
 
-        current.store(marker, std::memory_order_release);
+        current_.store(marker, std::memory_order_release);
 
         recordDeallocation(currentPos - marker);
     }
@@ -255,15 +258,15 @@ namespace engine::memory {
     MemorySize StackAllocator::getHighWaterMark() const {
         // Return the maximum amount of memory that has ever been used
         // This is useful for profiling to know the peak memory usage
-        return highWaterMark.load(std::memory_order_acquire);
+        return highWaterMark_.load(std::memory_order_acquire);
     }
 
     bool StackAllocator::owns(const void* ptr) const {
-        if (!ptr || !memory) return false;
+        if (!ptr || !memory_) return false;
 
         auto* bytePtr = static_cast<const std::uint8_t*>(ptr);
-        auto* memStart = static_cast<const std::uint8_t*>(memory);
-        auto* memEnd = memStart + capacity;
+        auto* memStart = static_cast<const std::uint8_t*>(memory_);
+        auto* memEnd = memStart + capacity_;
 
         return bytePtr >= memStart && bytePtr < memEnd;
     }
