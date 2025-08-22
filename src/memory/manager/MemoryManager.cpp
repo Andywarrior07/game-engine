@@ -21,82 +21,86 @@ namespace engine::memory {
         shutdown();
     }
 
-    bool MemoryManager::initialize(const MemoryManagerConfig& requestedConfig) {
-        if (initialized) {
+    bool MemoryManager::initialize(const MemoryManagerConfig& config) {
+        if (initialized_) {
             std::cerr << "Warning: MemoryManager already initialized!" << std::endl;
             return false;
         }
 
-        config = requestedConfig;
+        config_ = config;
+
+        if (autoConfigured_) {
+            std::cout << "[MemoryManager] Using auto-detected configuration" << std::endl;
+        }
 
         try {
-            mainHeap = std::make_unique<LinearAllocator>(config.mainHeapSize, "MainHeap");
+            mainHeap_ = std::make_unique<LinearAllocator>(config_.mainHeapSize, "MainHeap");
 
 #ifdef _DEBUG
             // Create debug heap for debug allocations
-            if (config.enableLeakDetection || config.enableBoundsChecking) {
-                debugHeap_ = std::make_unique<LinearAllocator>(config.debugHeapSize, "DebugHeap");
+            if (config_.enableLeakDetection || config_.enableBoundsChecking) {
+                debugHeap_ = std::make_unique<LinearAllocator>(config_.debugHeapSize, "DebugHeap");
             }
 #endif
 
-            frameAllocators.resize(config.frameBufferCount);
+            frameAllocators_.resize(config_.frameBufferCount);
 
-            for (std::uint8_t i = 0; i < config.frameBufferCount; ++i) {
-                frameAllocators[i].stackAllocator = std::make_unique<StackAllocator>(
-                    config.frameStackSize,
+            for (std::uint8_t i = 0; i < config_.frameBufferCount; ++i) {
+                frameAllocators_[i].stackAllocator = std::make_unique<StackAllocator>(
+                    config_.frameStackSize,
                     ("FrameStack_" + std::to_string(i)).c_str()
                 );
-                frameAllocators[i].linearAllocator = std::make_unique<LinearAllocator>(
-                    config.frameLinearSize,
+                frameAllocators_[i].linearAllocator = std::make_unique<LinearAllocator>(
+                    config_.frameLinearSize,
                     ("FrameLinear_" + std::to_string(i)).c_str()
                 );
-                frameAllocators[i].frameNumber = 0;
+                frameAllocators_[i].frameNumber = 0;
             }
 
             // Create specialized allocators for different categories
 
             // Rendering pool - for render commands, vertex data, etc.
-            if (config.renderingPoolSize > 0) {
+            if (config_.renderingPoolSize > 0) {
                 auto renderPool = std::make_unique<PoolAllocator>(
                     1024, // 1KB blocks for render commands
-                    config.renderingPoolSize / 1024,
+                    config_.renderingPoolSize / 1024,
                     DEFAULT_ALIGNMENT,
                     "RenderPool"
                 );
 
-                categoryAllocators[static_cast<std::size_t>(MemoryCategory::RENDERING)] = std::move(renderPool);
+                categoryAllocators_[static_cast<std::size_t>(MemoryCategory::RENDERING)] = std::move(renderPool);
             }
 
             // Physics pool - for rigid bodies, colliders, etc.
-            if (config.physicsPoolSize > 0) {
+            if (config_.physicsPoolSize > 0) {
                 auto physicsPool = std::make_unique<PoolAllocator>(
                     512, // 512 byte blocks for physics objects
-                    config.physicsPoolSize / 512,
+                    config_.physicsPoolSize / 512,
                     DEFAULT_ALIGNMENT,
                     "PhysicsPool"
                 );
             }
 
             // Audio ring buffer - for streaming audio
-            if (config.audioRingBufferSize > 0) {
+            if (config_.audioRingBufferSize > 0) {
                 auto audioBuffer = std::make_unique<RingBufferAllocator>(
-                    config.audioRingBufferSize,
+                    config_.audioRingBufferSize,
                     "AudioRingBuffer"
                 );
-                categoryAllocators[static_cast<std::size_t>(MemoryCategory::AUDIO)] = std::move(audioBuffer);
+                categoryAllocators_[static_cast<std::size_t>(MemoryCategory::AUDIO)] = std::move(audioBuffer);
             }
 
             // Network buffer - for packet data
-            if (config.networkBufferSize > 0) {
+            if (config_.networkBufferSize > 0) {
                 auto networkBuffer = std::make_unique<RingBufferAllocator>(
-                    config.networkBufferSize,
+                    config_.networkBufferSize,
                     "NetworkBuffer"
                 );
-                categoryAllocators[static_cast<std::size_t>(MemoryCategory::NETWORKING)] = std::move(networkBuffer);
+                categoryAllocators_[static_cast<std::size_t>(MemoryCategory::NETWORKING)] = std::move(networkBuffer);
             }
 
             // Create custom pools from configuration
-            for (const auto& poolConfig : config.customPools) {
+            for (const auto& poolConfig : config_.customPools) {
                 auto pool = std::make_unique<PoolAllocator>(
                     poolConfig.blockSize,
                     poolConfig.blockCount,
@@ -104,21 +108,21 @@ namespace engine::memory {
                     ("CustomPool_" + std::to_string(static_cast<int>(poolConfig.category))).c_str()
                 );
 
-                if (!categoryAllocators[static_cast<std::size_t>(poolConfig.category)]) {
-                    categoryAllocators[static_cast<std::size_t>(poolConfig.category)] = std::move(pool);
+                if (!categoryAllocators_[static_cast<std::size_t>(poolConfig.category)]) {
+                    categoryAllocators_[static_cast<std::size_t>(poolConfig.category)] = std::move(pool);
                 }
             }
 
-            std::memset(&globalStats, 0, sizeof(globalStats));
+            std::memset(&globalStats_, 0, sizeof(globalStats_));
 
-            initialized = true;
+            initialized_ = true;
 
             // Log initialization
             std::cout << "MemoryManager initialized successfully:" << std::endl;
-            std::cout << "  Main Heap: " << (config.mainHeapSize / (1024.0 * 1024.0)) << " MB" << std::endl;
-            std::cout << "  Frame Buffers: " << static_cast<int>(config.frameBufferCount) << std::endl;
-            std::cout << "  Frame Stack: " << (config.frameStackSize / (1024.0 * 1024.0)) << " MB" << std::endl;
-            std::cout << "  Frame Linear: " << (config.frameLinearSize / (1024.0 * 1024.0)) << " MB" << std::endl;
+            std::cout << "  Main Heap: " << (config_.mainHeapSize / (1024.0 * 1024.0)) << " MB" << std::endl;
+            std::cout << "  Frame Buffers: " << static_cast<int>(config_.frameBufferCount) << std::endl;
+            std::cout << "  Frame Stack: " << (config_.frameStackSize / (1024.0 * 1024.0)) << " MB" << std::endl;
+            std::cout << "  Frame Linear: " << (config_.frameLinearSize / (1024.0 * 1024.0)) << " MB" << std::endl;
 
             return true;
         }
@@ -130,8 +134,24 @@ namespace engine::memory {
         }
     }
 
+    bool MemoryManager::initialize(const MemoryManagerAutoConfig& autoConfig) {
+        // Hacer copia local para poder modificar
+        MemoryManagerAutoConfig configCopy = autoConfig;
+
+        // Auto-detectar si está habilitado
+        if (configCopy.autoDetectLimits) {
+            systemInfo_ = SystemInfoDetector::detect();
+            SystemInfoDetector::printSystemInfo(systemInfo_);
+            configCopy.configureFromSystem();
+            autoConfigured_ = true;
+        }
+
+        // Llamar al initialize original con la config modificada
+        return initialize(static_cast<const MemoryManagerConfig&>(configCopy));
+    }
+
     void MemoryManager::shutdown() {
-        if (!initialized) {
+        if (!initialized_) {
             return;
         }
 
@@ -150,22 +170,22 @@ namespace engine::memory {
 #endif
 
         // Clear all allocators
-        frameAllocators.clear();
-        for (auto& allocator : categoryAllocators) {
+        frameAllocators_.clear();
+        for (auto& allocator : categoryAllocators_) {
             allocator.reset();
         }
-        customAllocators.clear();
-        mainHeap.reset();
-        debugHeap.reset();
+        customAllocators_.clear();
+        mainHeap_.reset();
+        debugHeap_.reset();
 
-        initialized = false;
+        initialized_ = false;
 
         std::cout << "MemoryManager shut down." << std::endl;
     }
 
     void* MemoryManager::allocate(MemorySize size, MemoryCategory category, const MemorySize alignment,
                                   const AllocationFlags flags) {
-        if (!initialized) {
+        if (!initialized_) {
             std::cerr << "Error: MemoryManager not initialized!" << std::endl;
             return nullptr;
         }
@@ -193,21 +213,21 @@ namespace engine::memory {
         }
 
         // Update global statistics
-        globalStats.totalAllocated.fetch_add(size, std::memory_order_relaxed);
-        globalStats.currentUsage.fetch_add(size, std::memory_order_relaxed);
-        globalStats.allocationCount.fetch_add(1, std::memory_order_relaxed);
-        globalStats.categoryUsage[static_cast<std::size_t>(category)].fetch_add(size, std::memory_order_relaxed);
+        globalStats_.totalAllocated.fetch_add(size, std::memory_order_relaxed);
+        globalStats_.currentUsage.fetch_add(size, std::memory_order_relaxed);
+        globalStats_.allocationCount.fetch_add(1, std::memory_order_relaxed);
+        globalStats_.categoryUsage[static_cast<std::size_t>(category)].fetch_add(size, std::memory_order_relaxed);
 
         // Update peak usage
-        const MemorySize current = globalStats.currentUsage.load(std::memory_order_relaxed);
-        MemorySize peak = globalStats.peakUsage.load(std::memory_order_relaxed);
-        while (current > peak && !globalStats.peakUsage.compare_exchange_weak(peak, current)) {
+        const MemorySize current = globalStats_.currentUsage.load(std::memory_order_relaxed);
+        MemorySize peak = globalStats_.peakUsage.load(std::memory_order_relaxed);
+        while (current > peak && !globalStats_.peakUsage.compare_exchange_weak(peak, current)) {
             // Keep trying
         }
 
 #ifdef _DEBUG
         // Record allocation for leak detection
-        if (config.enableLeakDetection) {
+        if (config_.enableLeakDetection) {
             recordAllocation(ptr, size, category, __FILE__, __LINE__);
         }
 #endif
@@ -218,14 +238,14 @@ namespace engine::memory {
     void MemoryManager::deallocate(void* ptr, MemoryCategory category) {
         if (!ptr) return;
 
-        if (!initialized) {
+        if (!initialized_) {
             std::cerr << "Error: MemoryManager not initialized!" << std::endl;
             return;
         }
 
 #ifdef _DEBUG
         // Validate allocation
-        if (config.enableLeakDetection) {
+        if (config_.enableLeakDetection) {
             validateAllocation(ptr);
             removeAllocationRecord(ptr);
         }
@@ -235,18 +255,18 @@ namespace engine::memory {
         IAllocator* allocator = nullptr;
 
         // Check category allocator first
-        if (categoryAllocators[static_cast<std::size_t>(category)]) {
-            if (categoryAllocators[static_cast<std::size_t>(category)]->owns(ptr)) {
-                allocator = categoryAllocators[static_cast<std::size_t>(category)].get();
+        if (categoryAllocators_[static_cast<std::size_t>(category)]) {
+            if (categoryAllocators_[static_cast<std::size_t>(category)]->owns(ptr)) {
+                allocator = categoryAllocators_[static_cast<std::size_t>(category)].get();
             }
         }
 
-        if (!allocator && mainHeap->owns(ptr)) {
-            allocator = mainHeap.get();
+        if (!allocator && mainHeap_->owns(ptr)) {
+            allocator = mainHeap_.get();
         }
 
         if (!allocator) {
-            for (const auto& frame : frameAllocators) {
+            for (const auto& frame : frameAllocators_) {
                 if (frame.stackAllocator->owns(ptr)) {
                     allocator = frame.stackAllocator.get();
                     break;
@@ -268,10 +288,10 @@ namespace engine::memory {
         allocator->deallocate(ptr);
 
         if (size > 0) {
-            globalStats.totalFreed.fetch_add(size, std::memory_order_relaxed);
-            globalStats.currentUsage.fetch_sub(size, std::memory_order_relaxed);
-            globalStats.freeCount.fetch_add(1, std::memory_order_relaxed);
-            globalStats.categoryUsage[static_cast<std::size_t>(category)].fetch_sub(size, std::memory_order_relaxed);
+            globalStats_.totalFreed.fetch_add(size, std::memory_order_relaxed);
+            globalStats_.currentUsage.fetch_sub(size, std::memory_order_relaxed);
+            globalStats_.freeCount.fetch_add(1, std::memory_order_relaxed);
+            globalStats_.categoryUsage[static_cast<std::size_t>(category)].fetch_sub(size, std::memory_order_relaxed);
         }
     }
 
@@ -296,15 +316,15 @@ namespace engine::memory {
 
         // Find original size
         MemorySize oldSize = 0;
-        for (const auto& allocator : categoryAllocators) {
+        for (const auto& allocator : categoryAllocators_) {
             if (allocator && allocator->owns(ptr)) {
                 oldSize = allocator->getAllocationSize(ptr);
                 break;
             }
         }
 
-        if (oldSize == 0 && mainHeap->owns(ptr)) {
-            oldSize = mainHeap->getAllocationSize(ptr);
+        if (oldSize == 0 && mainHeap_->owns(ptr)) {
+            oldSize = mainHeap_->getAllocationSize(ptr);
         }
 
         // Copy data
@@ -319,29 +339,29 @@ namespace engine::memory {
     }
 
     StackAllocator& MemoryManager::getFrameStackAllocator() const {
-        const std::uint8_t index = currentFrameIndex.load(std::memory_order_acquire);
+        const std::uint8_t index = currentFrameIndex_.load(std::memory_order_acquire);
 
-        return *frameAllocators[index].stackAllocator;
+        return *frameAllocators_[index].stackAllocator;
     }
 
     LinearAllocator& MemoryManager::getFrameLinearAllocator() const {
-        const std::uint8_t index = currentFrameIndex.load(std::memory_order_acquire);
+        const std::uint8_t index = currentFrameIndex_.load(std::memory_order_acquire);
 
-        return *frameAllocators[index].linearAllocator;
+        return *frameAllocators_[index].linearAllocator;
     }
 
     void MemoryManager::beginFrame(std::uint64_t frameNumber) {
         // Advance to the next frame buffer
-        const std::uint8_t currentIndex = currentFrameIndex.load(std::memory_order_acquire);
-        const std::uint8_t nextIndex = (currentIndex + 1) % config.frameBufferCount;
+        const std::uint8_t currentIndex = currentFrameIndex_.load(std::memory_order_acquire);
+        const std::uint8_t nextIndex = (currentIndex + 1) % config_.frameBufferCount;
 
         // Reset the allocators we're about to use (from N frames ago)
-        frameAllocators[nextIndex].stackAllocator->reset();
-        frameAllocators[nextIndex].linearAllocator->reset();
-        frameAllocators[nextIndex].frameNumber = frameNumber;
+        frameAllocators_[nextIndex].stackAllocator->reset();
+        frameAllocators_[nextIndex].linearAllocator->reset();
+        frameAllocators_[nextIndex].frameNumber = frameNumber;
 
         // Switch to the next frame
-        currentFrameIndex.store(nextIndex, std::memory_order_release);
+        currentFrameIndex_.store(nextIndex, std::memory_order_release);
     }
 
     void MemoryManager::endFrame() {
@@ -354,7 +374,7 @@ namespace engine::memory {
             return nullptr;
         }
 
-        return categoryAllocators[static_cast<std::size_t>(category)].get();
+        return categoryAllocators_[static_cast<std::size_t>(category)].get();
     }
 
     void MemoryManager::registerAllocator(MemoryCategory category,
@@ -364,11 +384,11 @@ namespace engine::memory {
             return;
         }
 
-        categoryAllocators[static_cast<std::size_t>(category)] = std::move(allocator);
+        categoryAllocators_[static_cast<std::size_t>(category)] = std::move(allocator);
     }
 
     MemorySize MemoryManager::getTotalMemoryUsage() const {
-        return globalStats.currentUsage.load(std::memory_order_acquire);
+        return globalStats_.currentUsage.load(std::memory_order_acquire);
     }
 
     MemorySize MemoryManager::getCategoryMemoryUsage(MemoryCategory category) const {
@@ -376,7 +396,7 @@ namespace engine::memory {
             return 0;
         }
 
-        return globalStats.categoryUsage[static_cast<std::size_t>(category)].load(std::memory_order_acquire);
+        return globalStats_.categoryUsage[static_cast<std::size_t>(category)].load(std::memory_order_acquire);
     }
 
     std::string MemoryManager::generateMemoryReport() const {
@@ -385,23 +405,31 @@ namespace engine::memory {
         report << "=== Memory Manager Report ===" << std::endl;
         report << std::endl;
 
+        if (autoConfigured_) {
+            report << "Configuration: AUTO-DETECTED" << std::endl;
+            report << "  System RAM: " << (systemInfo_.totalPhysicalMemory / (1024.0 * 1024.0 * 1024.0)) << " GB" << std::endl;
+            report << "  CPU Cores: " << systemInfo_.physicalCores << " physical" << std::endl;
+        } else {
+            report << "Configuration: MANUAL" << std::endl;
+        }
+
         // Global statistics
         report << "Global Statistics:" << std::endl;
         report << "  Current Usage: " << (getTotalMemoryUsage() / (1024.0 * 1024.0)) << " MB" << std::endl;
-        report << "  Peak Usage: " << (globalStats.peakUsage.load() / (1024.0 * 1024.0)) << " MB" << std::endl;
-        report << "  Total Allocated: " << (globalStats.totalAllocated.load() / (1024.0 * 1024.0)) << " MB" <<
+        report << "  Peak Usage: " << (globalStats_.peakUsage.load() / (1024.0 * 1024.0)) << " MB" << std::endl;
+        report << "  Total Allocated: " << (globalStats_.totalAllocated.load() / (1024.0 * 1024.0)) << " MB" <<
             std::endl;
-        report << "  Total Freed: " << (globalStats.totalFreed.load() / (1024.0 * 1024.0)) << " MB" << std::endl;
-        report << "  Allocation Count: " << globalStats.allocationCount.load() << std::endl;
-        report << "  Free Count: " << globalStats.freeCount.load() << std::endl;
-        report << "  Failed Allocations: " << globalStats.failedAllocations.load() << std::endl;
+        report << "  Total Freed: " << (globalStats_.totalFreed.load() / (1024.0 * 1024.0)) << " MB" << std::endl;
+        report << "  Allocation Count: " << globalStats_.allocationCount.load() << std::endl;
+        report << "  Free Count: " << globalStats_.freeCount.load() << std::endl;
+        report << "  Failed Allocations: " << globalStats_.failedAllocations.load() << std::endl;
         report << std::endl;
 
         // Category breakdown
         report << "Category Usage:" << std::endl;
 
         for (std::size_t i = 0; i < static_cast<std::size_t>(MemoryCategory::COUNT); ++i) {
-            MemorySize usage = globalStats.categoryUsage[i].load();
+            MemorySize usage = globalStats_.categoryUsage[i].load();
             if (usage > 0) {
                 const char* categoryNames[] = {
                     "GENERAL", "RENDERING", "PHYSICS", "AUDIO", "GAMEPLAY",
@@ -417,22 +445,22 @@ namespace engine::memory {
         // Allocator details
         report << "Allocator Details:" << std::endl;
 
-        if (mainHeap) {
+        if (mainHeap_) {
             report << "  Main Heap: "
-                << (mainHeap->getUsedMemory() / (1024.0 * 1024.0)) << " / "
-                << (mainHeap->getCapacity() / (1024.0 * 1024.0)) << " MB" << std::endl;
+                << (mainHeap_->getUsedMemory() / (1024.0 * 1024.0)) << " / "
+                << (mainHeap_->getCapacity() / (1024.0 * 1024.0)) << " MB" << std::endl;
         }
 
         // Frame allocators
-        std::uint8_t currentFrame = currentFrameIndex.load();
-        for (std::uint8_t i = 0; i < config.frameBufferCount; ++i) {
+        std::uint8_t currentFrame = currentFrameIndex_.load();
+        for (std::uint8_t i = 0; i < config_.frameBufferCount; ++i) {
             std::string marker = (i == currentFrame) ? " [CURRENT]" : "";
             report << "  Frame " << static_cast<int>(i) << " Stack" << marker << ": "
-                << (frameAllocators[i].stackAllocator->getUsedMemory() / (1024.0 * 1024.0)) << " / "
-                << (frameAllocators[i].stackAllocator->getCapacity() / (1024.0 * 1024.0)) << " MB" << std::endl;
+                << (frameAllocators_[i].stackAllocator->getUsedMemory() / (1024.0 * 1024.0)) << " / "
+                << (frameAllocators_[i].stackAllocator->getCapacity() / (1024.0 * 1024.0)) << " MB" << std::endl;
             report << "  Frame " << static_cast<int>(i) << " Linear" << marker << ": "
-                << (frameAllocators[i].linearAllocator->getUsedMemory() / (1024.0 * 1024.0)) << " / "
-                << (frameAllocators[i].linearAllocator->getCapacity() / (1024.0 * 1024.0)) << " MB" << std::endl;
+                << (frameAllocators_[i].linearAllocator->getUsedMemory() / (1024.0 * 1024.0)) << " / "
+                << (frameAllocators_[i].linearAllocator->getCapacity() / (1024.0 * 1024.0)) << " MB" << std::endl;
         }
 
         return report.str();
@@ -448,7 +476,7 @@ namespace engine::memory {
         file << generateMemoryReport();
 
 #ifdef _DEBUG
-        if (config.enableLeakDetection) {
+        if (config_.enableLeakDetection) {
             file << std::endl;
             file << "=== Active Allocations ===" << std::endl;
 
@@ -480,14 +508,24 @@ namespace engine::memory {
     }
 
     void MemoryManager::registerMemoryPressureCallback(MemoryPressureCallback callback) {
-        memoryPressureCallbacks.push_back(callback);
+        memoryPressureCallbacks_.push_back(callback);
     }
 
     MemorySize MemoryManager::performMemoryCleanup(const MemorySize targetBytes) const {
         constexpr MemorySize freedBytes = 0;
 
+        if (autoConfigured_ && systemInfo_.availablePhysicalMemory < config_.lowMemoryThreshold) {
+            std::cout << "[MemoryManager] System low on memory, aggressive cleanup triggered" << std::endl;
+            // Forzar garbage collection en todos los allocators
+            for (auto& allocator : categoryAllocators_) {
+                if (allocator) {
+                    allocator->reset();
+                }
+            }
+        }
+
         // Trigger memory pressure callbacks
-        for (const auto& callback : memoryPressureCallbacks) {
+        for (const auto& callback : memoryPressureCallbacks_) {
             callback(getTotalMemoryUsage(), targetBytes);
         }
 
@@ -568,17 +606,17 @@ namespace engine::memory {
 
         // Check category-specific allocator
         if (category < MemoryCategory::COUNT) {
-            if (IAllocator* categoryAllocator = categoryAllocators[static_cast<std::size_t>(category)].get()) {
+            if (IAllocator* categoryAllocator = categoryAllocators_[static_cast<std::size_t>(category)].get()) {
                 return categoryAllocator;
             }
         }
 
         //  Fall back to the main heap
-        return mainHeap.get();
+        return mainHeap_.get();
     }
 
     void MemoryManager::handleAllocationFailure(const MemorySize size, MemoryCategory category) {
-        globalStats.failedAllocations.fetch_add(1, std::memory_order_relaxed);
+        globalStats_.failedAllocations.fetch_add(1, std::memory_order_relaxed);
 
         std::cerr << "Memory allocation failed: " << size << " bytes, category: "
             << static_cast<int>(category) << std::endl;
@@ -587,11 +625,11 @@ namespace engine::memory {
         if (const MemorySize freed = performMemoryCleanup(size); freed < size) {
             // Check if we're in a critical memory situation
             MemorySize available = 0;
-            if (mainHeap) {
-                available = mainHeap->getFreeMemory();
+            if (mainHeap_) {
+                available = mainHeap_->getFreeMemory();
             }
 
-            if (available < config.criticalMemoryThreshold) {
+            if (available < config_.criticalMemoryThreshold) {
                 std::cerr << "CRITICAL: System is out of memory!" << std::endl;
 
                 // In production, this might trigger emergency measures

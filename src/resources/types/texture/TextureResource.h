@@ -10,6 +10,8 @@
 #include <mutex>
 #include <SDL2/SDL.h>
 
+#include "TextureFormatUtils.h"
+#include "TextureDesc.h"
 #include "../../core/Resource.h"
 #include "../../streaming/StreamableResource.h"
 
