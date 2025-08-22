@@ -50,23 +50,23 @@ namespace engine::memory {
     }
 
     void IAllocator::recordAllocation(const MemorySize size, const MemoryCategory category) const {
-        stats.totalAllocated.fetch_add(size, std::memory_order_relaxed);
-        stats.currentUsage.fetch_add(size, std::memory_order_relaxed);
-        stats.allocationCount.fetch_add(1, std::memory_order_relaxed);
-        stats.categoryUsage[static_cast<std::size_t>(category)].fetch_add(size, std::memory_order_relaxed);
+        stats_.totalAllocated.fetch_add(size, std::memory_order_relaxed);
+        stats_.currentUsage.fetch_add(size, std::memory_order_relaxed);
+        stats_.allocationCount.fetch_add(1, std::memory_order_relaxed);
+        stats_.categoryUsage[static_cast<std::size_t>(category)].fetch_add(size, std::memory_order_relaxed);
 
         // Update peak usage
-        const MemorySize current = stats.currentUsage.load(std::memory_order_relaxed);
-        MemorySize peak = stats.peakUsage.load(std::memory_order_relaxed);
-        while (current > peak && !stats.peakUsage.compare_exchange_weak(peak, current)) {
+        const MemorySize current = stats_.currentUsage.load(std::memory_order_relaxed);
+        MemorySize peak = stats_.peakUsage.load(std::memory_order_relaxed);
+        while (current > peak && !stats_.peakUsage.compare_exchange_weak(peak, current)) {
             // Keep trying until we update peak or current is no longer greater
         }
     }
 
     // Update statistics on deallocation
     void IAllocator::recordDeallocation(const MemorySize size, const MemoryCategory category) const {
-        stats.totalFreed.fetch_add(size, std::memory_order_relaxed);
-        stats.currentUsage.fetch_sub(size, std::memory_order_relaxed);
-        stats.categoryUsage[static_cast<std::size_t>(category)].fetch_sub(size, std::memory_order_relaxed);
+        stats_.totalFreed.fetch_add(size, std::memory_order_relaxed);
+        stats_.currentUsage.fetch_sub(size, std::memory_order_relaxed);
+        stats_.categoryUsage[static_cast<std::size_t>(category)].fetch_sub(size, std::memory_order_relaxed);
     }
 }

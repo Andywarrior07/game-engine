@@ -80,6 +80,10 @@ add_executable(simple_game src/main.cpp
         src/resources/types/texture/TextureFormatUtils.h
         src/resources/types/texture/TextureDesc.cpp
         src/resources/types/texture/TextureDesc.h
+        src/memory/allocators/HeapAllocator.cpp
+        src/memory/allocators/HeapAllocator.h
+        src/memory/allocators/SystemAllocator.cpp
+        src/memory/allocators/SystemAllocator.h
 )
 
 target_link_libraries(${PROJECT_NAME}

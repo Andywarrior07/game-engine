@@ -5,90 +5,93 @@
 #include "RingBufferAllocator.h"
 
 #include <cassert>
+#include <iostream>
 
 namespace engine::memory {
     RingBufferAllocator::RingBufferAllocator(const MemorySize capacity, const char* name)
-        : memory(nullptr)
-          , capacity(capacity)
-          , head(0)
-          , tail(0)
-          , fenceCounter(0)
-          , name(name) {
-        memory = std::aligned_alloc(CACHE_LINE_SIZE, capacity);
+        : memory_(nullptr)
+          , capacity_(capacity)
+          , head_(0)
+          , tail_(0)
+          , fenceCounter_(0)
+          , name_(name) {
+        memory_ = std::aligned_alloc(CACHE_LINE_SIZE, capacity);
 
-        if (!memory) {
+        if (!memory_) {
+            std::cerr << "[RingBufferAllocator] Failed to allocate "
+                << (capacity / (1024.0 * 1024.0)) << " MB for " << name_ << std::endl;
             throw std::bad_alloc();
         }
 
         // Initialize memory with debug pattern
 #ifdef _DEBUG
-        std::memset(memory, 0xCD, capacity);
+        std::memset(memory_, 0xCD, capacity);
 #endif
 
-        stats.currentUsage = 0;
-        stats.peakUsage = 0;
-        stats.totalAllocated = 0;
-        stats.allocationCount = 0;
+        stats_.currentUsage = 0;
+        stats_.peakUsage = 0;
+        stats_.totalAllocated = 0;
+        stats_.allocationCount = 0;
     }
 
     RingBufferAllocator::~RingBufferAllocator() {
-        if (!memory) return;
+        if (!memory_) return;
 
 #ifdef _DEBUG
         MemorySize used = getUsedMemory();
         if (used > 0) {
-            std::cerr << "Warning: RingBufferAllocator '" << name
+            std::cerr << "Warning: RingBufferAllocator '" << name_
                 << "' destroyed with " << used
                 << " bytes still allocated!" << std::endl;
         }
 #endif
 
-        std::free(memory);
-        memory = nullptr;
+        std::free(memory_);
+        memory_ = nullptr;
     }
 
     RingBufferAllocator::RingBufferAllocator(RingBufferAllocator&& other) noexcept
-        : memory(other.memory)
-          , capacity(other.capacity)
-          , head(other.head.load())
-          , tail(other.tail.load())
-          , fenceCounter(other.fenceCounter.load())
-          , name(other.name) {
-        other.memory = nullptr;
-        other.capacity = 0;
-        other.head = 0;
-        other.tail = 0;
-        other.fenceCounter = 0;
+        : memory_(other.memory_)
+          , capacity_(other.capacity_)
+          , head_(other.head_.load())
+          , tail_(other.tail_.load())
+          , fenceCounter_(other.fenceCounter_.load())
+          , name_(other.name_) {
+        other.memory_ = nullptr;
+        other.capacity_ = 0;
+        other.head_ = 0;
+        other.tail_ = 0;
+        other.fenceCounter_ = 0;
     }
 
     RingBufferAllocator& RingBufferAllocator::operator=(RingBufferAllocator&& other) noexcept {
         if (this != &other) {
             // Free existing memory
-            if (memory) {
-                std::free(memory);
+            if (memory_) {
+                std::free(memory_);
             }
 
             // Move from other
-            memory = other.memory;
-            capacity = other.capacity;
-            head = other.head.load();
-            tail = other.tail.load();
-            fenceCounter = other.fenceCounter.load();
-            name = other.name;
+            memory_ = other.memory_;
+            capacity_ = other.capacity_;
+            head_ = other.head_.load();
+            tail_ = other.tail_.load();
+            fenceCounter_ = other.fenceCounter_.load();
+            name_ = other.name_;
 
             // Reset other
-            other.memory = nullptr;
-            other.capacity = 0;
-            other.head = 0;
-            other.tail = 0;
-            other.fenceCounter = 0;
+            other.memory_ = nullptr;
+            other.capacity_ = 0;
+            other.head_ = 0;
+            other.tail_ = 0;
+            other.fenceCounter_ = 0;
         }
         return *this;
     }
 
     void* RingBufferAllocator::allocate(const MemorySize size, const MemorySize alignement,
                                         const AllocationFlags flags) {
-        std::lock_guard lock(allocationMutex);
+        std::lock_guard lock(allocationMutex_);
 
         assert(isPowerOfTwo(alignement) && "Alignment msut be power of 2");
 
@@ -96,12 +99,12 @@ namespace engine::memory {
         const MemorySize alignedHeaderSize = alignSize(headerSize, alignement);
         const MemorySize totalSize = alignedHeaderSize + size;
 
-        MemorySize currentHead = head.load(std::memory_order_acquire);
-        const MemorySize currentTail = tail.load(std::memory_order_acquire);
+        MemorySize currentHead = head_.load(std::memory_order_acquire);
+        const MemorySize currentTail = tail_.load(std::memory_order_acquire);
 
         MemorySize available;
         if (currentHead >= currentTail) {
-            available = capacity - currentHead + currentTail;
+            available = capacity_ - currentHead + currentTail;
         }
         else {
             available = currentTail - currentHead;
@@ -110,16 +113,16 @@ namespace engine::memory {
         if (totalSize > available) {
             // Try to free old allocations by moving tail forward
             // In a real implementation, this would check fence values
-            stats.failedAllocations.fetch_add(1, std::memory_order_relaxed);
+            stats_.failedAllocations.fetch_add(1, std::memory_order_relaxed);
             return nullptr;
         }
 
         MemorySize newHead = currentHead + totalSize;
 
-        if (newHead >= capacity) {
+        if (newHead >= capacity_) {
             if (totalSize > currentTail) {
                 // Can't wrap - not enough space at beginning
-                stats.failedAllocations.fetch_add(1, std::memory_order_relaxed);
+                stats_.failedAllocations.fetch_add(1, std::memory_order_relaxed);
                 return nullptr;
             }
 
@@ -127,17 +130,17 @@ namespace engine::memory {
             newHead = totalSize;
         }
 
-        void* headerPtr = static_cast<std::uint8_t*>(memory) + currentHead;
+        void* headerPtr = static_cast<std::uint8_t*>(memory_) + currentHead;
         auto* header = static_cast<AllocationHeader*>(headerPtr);
         header->size = size;
-        header->fence = fenceCounter.load(std::memory_order_acquire);
+        header->fence = fenceCounter_.load(std::memory_order_acquire);
 #ifdef _DEBUG
         header->magic = MAGIC_NUMBER;
 #endif
 
         void* userPtr = static_cast<std::uint8_t*>(headerPtr) + alignedHeaderSize;
 
-        head.store(newHead % capacity, std::memory_order_release);
+        head_.store(newHead % capacity_, std::memory_order_release);
 
         if (hasFlags(flags, AllocationFlags::ZERO_MEMORY)) {
             std::memset(userPtr, 0, size);
@@ -169,37 +172,37 @@ namespace engine::memory {
     }
 
     MemorySize RingBufferAllocator::getUsedMemory() const {
-        const MemorySize currentHead = head.load(std::memory_order_acquire);
-        const MemorySize currentTail = tail.load(std::memory_order_acquire);
+        const MemorySize currentHead = head_.load(std::memory_order_acquire);
+        const MemorySize currentTail = tail_.load(std::memory_order_acquire);
 
         if (currentHead >= currentTail) {
             return currentHead - currentTail;
         }
 
-        return (capacity - currentTail) + currentHead;
+        return (capacity_ - currentTail) + currentHead;
     }
 
     void RingBufferAllocator::reset() {
-        std::lock_guard lock(allocationMutex);
+        std::lock_guard lock(allocationMutex_);
 
 #ifdef _DEBUG
         // Fill memory with uninitialized pattern
-        std::memset(memory, 0xCD, capacity);
+        std::memset(memory_, 0xCD, capacity_);
 #endif
 
-        head.store(0, std::memory_order_release);
-        tail.store(0, std::memory_order_release);
-        fenceCounter.store(0, std::memory_order_release);
+        head_.store(0, std::memory_order_release);
+        tail_.store(0, std::memory_order_release);
+        fenceCounter_.store(0, std::memory_order_release);
 
-        stats.currentUsage.store(0, std::memory_order_release);
+        stats_.currentUsage.store(0, std::memory_order_release);
     }
 
     bool RingBufferAllocator::owns(const void* ptr) const {
-        if (!ptr || !memory) return false;
+        if (!ptr || !memory_) return false;
 
         const auto* bytePtr = static_cast<const std::uint8_t*>(ptr);
-        const auto* memStart = static_cast<const std::uint8_t*>(memory);
-        const std::uint8_t* memEnd = memStart + capacity;
+        const auto* memStart = static_cast<const std::uint8_t*>(memory_);
+        const std::uint8_t* memEnd = memStart + capacity_;
 
         return bytePtr >= memStart && bytePtr < memEnd;
     }
@@ -225,11 +228,11 @@ namespace engine::memory {
     }
 
     std::uint64_t RingBufferAllocator::createFence() {
-        return fenceCounter.fetch_add(1, std::memory_order_acq_rel) + 1;
+        return fenceCounter_.fetch_add(1, std::memory_order_acq_rel) + 1;
     }
 
     void RingBufferAllocator::waitForFence(std::uint64_t fence) {
-        std::lock_guard lock(allocationMutex);
+        std::lock_guard lock(allocationMutex_);
 
         // Move tail forward to the position marked by the fence
         // This would free all allocations before the fence
@@ -240,8 +243,8 @@ namespace engine::memory {
     }
 
     bool RingBufferAllocator::canAllocateWithoutWrap(const MemorySize size) const {
-        const MemorySize currentHead = head.load(std::memory_order_acquire);
+        const MemorySize currentHead = head_.load(std::memory_order_acquire);
 
-        return (currentHead + size) <= capacity;
+        return (currentHead + size) <= capacity_;
     }
 }

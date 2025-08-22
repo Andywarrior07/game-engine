@@ -21,12 +21,12 @@ namespace engine::memory {
         void* allocate(MemorySize size, MemorySize alignment = DEFAULT_ALIGNMENT,
                       AllocationFlags flags = AllocationFlags::NONE) override;
         void deallocate(void* ptr) override;
-        MemorySize getCapacity() const override { return capacity; }
+        MemorySize getCapacity() const override { return capacity_; }
         MemorySize getUsedMemory() const override;
         void reset() override;
         bool owns(const void* ptr) const override;
         MemorySize getAllocationSize(const void* ptr) const override;
-        const char* getName() const override { return name; }
+        const char* getName() const override { return name_; }
 
         std::uint64_t createFence();
         void waitForFence(std::uint64_t fence);
@@ -41,14 +41,14 @@ namespace engine::memory {
 #endif
         };
 
-        void* memory;
-        MemorySize capacity;
-        std::atomic<MemorySize> head;
-        std::atomic<MemorySize> tail;
-        std::atomic<std::uint64_t> fenceCounter;
-        const char* name;
+        void* memory_;
+        MemorySize capacity_;
+        std::atomic<MemorySize> head_;
+        std::atomic<MemorySize> tail_;
+        std::atomic<std::uint64_t> fenceCounter_;
+        const char* name_;
 
-        std::mutex allocationMutex;
+        std::mutex allocationMutex_;
 
 #ifdef _DEBUG
         static constexpr std::uint32_t MAGIC_NUMBER = 0xFEEDFACE;

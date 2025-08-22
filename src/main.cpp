@@ -1351,7 +1351,21 @@ int main() {
 
     // Crear instancia del MemoryManager (no singleton, como querías)
     MemoryManager memoryManager;
+    MemoryManagerAutoConfig memConfig;
 
+    memConfig.autoDetectLimits = true;
+    memConfig.memoryUsagePercent = 0.10f;   // 10% en otras plataformas
+    memConfig.heapSizePercent = 0.25f;
+
+    memConfig.enableLeakDetection = true;      // Deshabilitar por ahora
+    memConfig.enableBoundsChecking = true;     // Deshabilitar por ahora
+
+    if (!memoryManager.initialize(memConfig)) {
+        std::cerr << "Failed to initialize MemoryManager in MAIN" << std::endl;
+        return -1;
+    }
+/*
+ * MANUAL CONFIGURATION
     // Configurar el sistema de memoria
     MemoryManagerConfig config;
     config.mainHeapSize = 256 * 1024 * 1024;        // 256 MB para el heap principal
@@ -1373,7 +1387,7 @@ int main() {
         std::cerr << "Failed to initialize memory manager!" << std::endl;
         return -1;
     }
-
+*/
     std::cout << "✓ Memory Manager initialized successfully" << std::endl;
     std::cout << "  - Main Heap: 256 MB" << std::endl;
     std::cout << "  - Frame Buffers: 2 (double buffering)" << std::endl;

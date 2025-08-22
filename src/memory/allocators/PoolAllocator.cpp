@@ -13,13 +13,13 @@ namespace engine::memory {
                                  const std::size_t blockCount,
                                  const MemorySize alignment,
                                  const char* name)
-        : memory(nullptr)
-          , blockSize(alignSize(blockSize, alignment)) // Ensure block size is aligned
-          , blockCount(blockCount)
-          , alignment(alignment)
-          , freeList(nullptr)
-          , usedBlocks(0)
-          , name(name) {
+        : memory_(nullptr)
+          , blockSize_(alignSize(blockSize, alignment)) // Ensure block size is aligned
+          , blockCount_(blockCount)
+          , alignment_(alignment)
+          , freeList_(nullptr)
+          , usedBlocks_(0)
+          , name_(name) {
         // Validate parameters
         assert(isPowerOfTwo(alignment) && "Alignment must be power of 2");
         assert(blockSize >= sizeof(FreeNode) && "Block size must be at least pointer size");
@@ -29,33 +29,33 @@ namespace engine::memory {
         const MemorySize totalSize = blockSize * blockCount;
 
         // Allocate aligned memory
-        memory = std::aligned_alloc(alignment, totalSize);
+        memory_ = std::aligned_alloc(alignment, totalSize);
 
-        if (!memory) {
+        if (!memory_) {
+            std::cerr << "[PoolAllocator] Failed to allocate: " << name_ << std::endl;
             throw std::bad_alloc();
         }
 
-#ifdef _DEBUG
-        std::memset(memory, 0xCD, totalSize);
-#endif
 
+#ifdef _DEBUG
+        std::memset(memory_, 0xCD, totalSize);
+#endif
         // Initialize free list
         initializeFreeList();
-
         // Initialize statistics
-        stats.currentUsage = 0;
-        stats.peakUsage = 0;
-        stats.totalAllocated = 0;
-        stats.allocationCount = 0;
+        stats_.currentUsage = 0;
+        stats_.peakUsage = 0;
+        stats_.totalAllocated = 0;
+        stats_.allocationCount = 0;
     }
 
     PoolAllocator::~PoolAllocator() {
-        if (!memory) return;
+        if (!memory_) return;
 
 #ifdef _DEBUG
-        if (usedBlocks.load() > 0) {
-            std::cerr << "Warning: PoolAllocator '" << name
-                << "' destroyed with " << usedBlocks.load()
+        if (usedBlocks_.load() > 0) {
+            std::cerr << "Warning: PoolAllocator '" << name_
+                << "' destroyed with " << usedBlocks_.load()
                 << " blocks still allocated!" << std::endl;
 
             // In debug mode, verify all allocations were freed
@@ -68,23 +68,23 @@ namespace engine::memory {
         }
 #endif
 
-        std::free(memory);
-        memory = nullptr;
+        std::free(memory_);
+        memory_ = nullptr;
     }
 
     PoolAllocator::PoolAllocator(PoolAllocator&& other) noexcept
-        : memory(other.memory)
-          , blockSize(other.blockSize)
-          , blockCount(other.blockCount)
-          , alignment(other.alignment)
-          , freeList(other.freeList.load())
-          , usedBlocks(other.usedBlocks.load())
-          , name(other.name) {
-        other.memory = nullptr;
-        other.blockSize = 0;
-        other.blockCount = 0;
-        other.freeList = nullptr;
-        other.usedBlocks = 0;
+        : memory_(other.memory_)
+          , blockSize_(other.blockSize_)
+          , blockCount_(other.blockCount_)
+          , alignment_(other.alignment_)
+          , freeList_(other.freeList_.load())
+          , usedBlocks_(other.usedBlocks_.load())
+          , name_(other.name_) {
+        other.memory_ = nullptr;
+        other.blockSize_ = 0;
+        other.blockCount_ = 0;
+        other.freeList_ = nullptr;
+        other.usedBlocks_ = 0;
 
 #ifdef _DEBUG
         // Move debug allocation map
@@ -96,25 +96,25 @@ namespace engine::memory {
     PoolAllocator& PoolAllocator::operator=(PoolAllocator&& other) noexcept {
         if (this != &other) {
             // Free existing memory
-            if (memory) {
-                std::free(memory);
+            if (memory_) {
+                std::free(memory_);
             }
 
             // Move from other
-            memory = other.memory;
-            blockSize = other.blockSize;
-            blockCount = other.blockCount;
-            alignment = other.alignment;
-            freeList = other.freeList.load();
-            usedBlocks = other.usedBlocks.load();
-            name = other.name;
+            memory_ = other.memory_;
+            blockSize_ = other.blockSize_;
+            blockCount_ = other.blockCount_;
+            alignment_ = other.alignment_;
+            freeList_ = other.freeList_.load();
+            usedBlocks_ = other.usedBlocks_.load();
+            name_ = other.name_;
 
             // Reset other
-            other.memory = nullptr;
-            other.blockSize = 0;
-            other.blockCount = 0;
-            other.freeList = nullptr;
-            other.usedBlocks = 0;
+            other.memory_ = nullptr;
+            other.blockSize_ = 0;
+            other.blockCount_ = 0;
+            other.freeList_ = nullptr;
+            other.usedBlocks_ = 0;
 
 #ifdef _DEBUG
             // Move debug allocation map
@@ -126,54 +126,54 @@ namespace engine::memory {
     }
 
     void PoolAllocator::initializeFreeList() {
-        auto* currentBlock = static_cast<std::uint8_t*>(memory);
+        auto* currentBlock = static_cast<std::uint8_t*>(memory_);
         auto* firstNode = reinterpret_cast<FreeNode*>(currentBlock);
         FreeNode* currentNode = firstNode;
 
-        for (std::size_t i = 0; i < blockCount - 1; i++) {
-            auto* nextNode = reinterpret_cast<FreeNode*>(currentBlock + blockSize);
+        for (std::size_t i = 0; i < blockCount_ - 1; i++) {
+            auto* nextNode = reinterpret_cast<FreeNode*>(currentBlock + blockSize_);
             currentNode->next = nextNode;
             currentNode = nextNode;
-            currentBlock += blockSize;
+            currentBlock += blockSize_;
         }
 
         currentNode->next = nullptr;
 
-        freeList.store(firstNode, std::memory_order_release);
+        freeList_.store(firstNode, std::memory_order_release);
 
 #ifdef _DEBUG
         // Initialize allocation tracking
         std::lock_guard<std::mutex> lock(debugMutex);
         allocationMap.clear();
-        std::uint8_t* block = reinterpret_cast<std::uint8_t*>(memory);
-        for (std::size_t i = 0; i < blockCount; ++i) {
+        std::uint8_t* block = reinterpret_cast<std::uint8_t*>(memory_);
+        for (std::size_t i = 0; i < blockCount_; ++i) {
             allocationMap[block] = false; // All blocks start as free
-            block += blockSize;
+            block += blockSize_;
         }
 #endif
     }
 
     void* PoolAllocator::allocate(const MemorySize requestedSize, const MemorySize requestedAlignment, const AllocationFlags flags) {
-        if (requestedSize > blockSize) {
-            stats.failedAllocations.fetch_add(1, std::memory_order_relaxed);
+        if (requestedSize > blockSize_) {
+            stats_.failedAllocations.fetch_add(1, std::memory_order_relaxed);
             return nullptr;
         }
 
-        if (requestedAlignment > alignment) {
-            stats.failedAllocations.fetch_add(1, std::memory_order_relaxed);
+        if (requestedAlignment > alignment_) {
+            stats_.failedAllocations.fetch_add(1, std::memory_order_relaxed);
             return nullptr;
         }
 
-        FreeNode* head = freeList.load(std::memory_order_acquire);
+        FreeNode* head = freeList_.load(std::memory_order_acquire);
 
         while (head != nullptr) {
-            if (FreeNode* next = head->next; freeList.compare_exchange_weak(head, next,
+            if (FreeNode* next = head->next; freeList_.compare_exchange_weak(head, next,
                                                                             std::memory_order_acq_rel,
                                                                             std::memory_order_acquire)) {
                 auto* block = reinterpret_cast<std::uint8_t*>(head);
 
-                usedBlocks.fetch_add(1, std::memory_order_relaxed);
-                recordAllocation(blockSize);
+                usedBlocks_.fetch_add(1, std::memory_order_relaxed);
+                recordAllocation(blockSize_);
 
 #ifdef _DEBUG
                 // Track allocation
@@ -184,7 +184,7 @@ namespace engine::memory {
 #endif
 
                 if (hasFlags(flags, AllocationFlags::ZERO_MEMORY)) {
-                    std::memset(block, 0, blockSize);
+                    std::memset(block, 0, blockSize_);
                 }
 
 #ifdef _DEBUG
@@ -196,10 +196,10 @@ namespace engine::memory {
                 return block;
             }
 
-            head = freeList.load(std::memory_order_acquire);
+            head = freeList_.load(std::memory_order_acquire);
         }
 
-        stats.failedAllocations.fetch_add(1, std::memory_order_relaxed);
+        stats_.failedAllocations.fetch_add(1, std::memory_order_relaxed);
         return nullptr;
     }
 
@@ -229,21 +229,21 @@ namespace engine::memory {
 #endif
 
         auto* node = static_cast<FreeNode*>(ptr);
-        FreeNode* head = freeList.load(std::memory_order_acquire);
+        FreeNode* head = freeList_.load(std::memory_order_acquire);
 
         do {
             node->next = head;
         }
-        while (!freeList.compare_exchange_weak(head, node,
+        while (!freeList_.compare_exchange_weak(head, node,
                                                std::memory_order_acq_rel,
                                                std::memory_order_acquire));
 
-        usedBlocks.fetch_sub(1, std::memory_order_relaxed);
-        recordDeallocation(blockSize);
+        usedBlocks_.fetch_sub(1, std::memory_order_relaxed);
+        recordDeallocation(blockSize_);
     }
 
     void PoolAllocator::reset() {
-        usedBlocks.store(0, std::memory_order_release);
+        usedBlocks_.store(0, std::memory_order_release);
 
 #ifdef _DEBUG
         // Clear memory with uninitialized pattern
@@ -252,22 +252,22 @@ namespace engine::memory {
 
         initializeFreeList();
 
-        stats.currentUsage.store(0, std::memory_order_release);
+        stats_.currentUsage.store(0, std::memory_order_release);
     }
 
     bool PoolAllocator::owns(const void* ptr) const {
-        if (!ptr || !memory) return false;
+        if (!ptr || !memory_) return false;
 
         const auto bytePtr = static_cast<const std::uint8_t*>(ptr);
-        const auto memStart = static_cast<const std::uint8_t*>(memory);
+        const auto memStart = static_cast<const std::uint8_t*>(memory_);
 
-        if (const std::uint8_t* memEnd = memStart + (blockSize * blockCount); bytePtr < memStart || bytePtr >= memEnd) {
+        if (const std::uint8_t* memEnd = memStart + (blockSize_ * blockCount_); bytePtr < memStart || bytePtr >= memEnd) {
             return false;
         }
 
         const std::ptrdiff_t offset = bytePtr - memStart;
 
-        return (offset % blockSize) == 0;
+        return (offset % blockSize_) == 0;
     }
 
     std::size_t PoolAllocator::defragment() {

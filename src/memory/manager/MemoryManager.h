@@ -182,7 +182,7 @@ namespace engine::memory {
 
         IAllocator* selectAllocator(MemoryCategory category, MemorySize size, AllocationFlags flags) const;
         void updateGlobalStats(const MemoryStats& allocatorStats);
-        void handleAllocationFailure(MemorySize size, MemoryCategory category);
+        void handleAllocationFailure(MemorySize size, MemoryCategory category) const;
 
 #ifdef _DEBUG
         void recordAllocation(void* ptr, MemorySize size, MemoryCategory category,

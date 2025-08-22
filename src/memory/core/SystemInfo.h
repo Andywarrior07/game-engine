@@ -8,42 +8,41 @@
 #include <iostream>
 
 #ifdef _WIN32
-    #include <windows.h>
-    #include <psapi.h>
-    #include <sysinfoapi.h>
+#include <windows.h>
+#include <psapi.h>
+#include <sysinfoapi.h>
 #elif __APPLE__
-    #include <mach/mach.h>
-    #include <mach/mach_host.h>
-    #include <sys/sysctl.h>
-    #include <unistd.h>
+#include <mach/mach.h>
+#include <mach/mach_host.h>
+#include <sys/sysctl.h>
+#include <unistd.h>
 #elif __linux__
-    #include <sys/sysinfo.h>
-    #include <unistd.h>
-    #include <fstream>
-    #include <string>
+#include <sys/sysinfo.h>
+#include <unistd.h>
+#include <fstream>
+#include <string>
 #endif
 
 namespace engine::memory {
-
     /**
      * @brief System information for automatic hardware detection
      */
     struct SystemInfo {
         // Memory information
-        std::size_t totalPhysicalMemory = 0;     // Total RAM in bytes
+        std::size_t totalPhysicalMemory = 0; // Total RAM in bytes
         std::size_t availablePhysicalMemory = 0; // Available RAM in bytes
-        std::size_t totalVirtualMemory = 0;      // Total virtual memory
-        std::size_t availableVirtualMemory = 0;  // Available virtual memory
+        std::size_t totalVirtualMemory = 0; // Total virtual memory
+        std::size_t availableVirtualMemory = 0; // Available virtual memory
 
         // CPU information
-        unsigned int physicalCores = 0;          // Physical CPU cores
-        unsigned int logicalCores = 0;           // Logical cores (with HyperThreading)
-        unsigned int cacheLineSize = 64;         // CPU cache line size
+        unsigned int physicalCores = 0; // Physical CPU cores
+        unsigned int logicalCores = 0; // Logical cores (with HyperThreading)
+        unsigned int cacheLineSize = 64; // CPU cache line size
 
         // Recommended limits based on system
-        std::size_t recommendedHeapSize = 0;     // Recommended main heap size
-        std::size_t recommendedMaxMemory = 0;    // Max memory to use (leaving room for OS)
-        unsigned int recommendedThreadCount = 0;  // Recommended worker threads
+        std::size_t recommendedHeapSize = 0; // Recommended main heap size
+        std::size_t recommendedMaxMemory = 0; // Max memory to use (leaving room for OS)
+        unsigned int recommendedThreadCount = 0; // Recommended worker threads
     };
 
     /**
@@ -105,76 +104,76 @@ namespace engine::memory {
                 info.logicalCores = 1; // Fallback
             }
 
-            #ifdef _WIN32
-                // Windows CPU detection
-                SYSTEM_INFO sysInfo;
-                GetSystemInfo(&sysInfo);
-                info.logicalCores = sysInfo.dwNumberOfProcessors;
+#ifdef _WIN32
+            // Windows CPU detection
+            SYSTEM_INFO sysInfo;
+            GetSystemInfo(&sysInfo);
+            info.logicalCores = sysInfo.dwNumberOfProcessors;
 
-                // Get physical cores (more complex on Windows)
-                DWORD bufferSize = 0;
-                GetLogicalProcessorInformation(nullptr, &bufferSize);
+            // Get physical cores (more complex on Windows)
+            DWORD bufferSize = 0;
+            GetLogicalProcessorInformation(nullptr, &bufferSize);
 
-                if (bufferSize > 0) {
-                    std::vector<SYSTEM_LOGICAL_PROCESSOR_INFORMATION> buffer(
-                        bufferSize / sizeof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION)
-                    );
+            if (bufferSize > 0) {
+                std::vector<SYSTEM_LOGICAL_PROCESSOR_INFORMATION> buffer(
+                    bufferSize / sizeof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION)
+                );
 
-                    if (GetLogicalProcessorInformation(buffer.data(), &bufferSize)) {
-                        info.physicalCores = 0;
-                        for (const auto& proc : buffer) {
-                            if (proc.Relationship == RelationProcessorCore) {
-                                info.physicalCores++;
-                            }
+                if (GetLogicalProcessorInformation(buffer.data(), &bufferSize)) {
+                    info.physicalCores = 0;
+                    for (const auto& proc : buffer) {
+                        if (proc.Relationship == RelationProcessorCore) {
+                            info.physicalCores++;
                         }
                     }
                 }
+            }
 
-                // Cache line size
-                for (const auto& proc : buffer) {
-                    if (proc.Relationship == RelationCache && proc.Cache.Level == 1) {
-                        info.cacheLineSize = proc.Cache.LineSize;
-                        break;
-                    }
+            // Cache line size
+            for (const auto& proc : buffer) {
+                if (proc.Relationship == RelationCache && proc.Cache.Level == 1) {
+                    info.cacheLineSize = proc.Cache.LineSize;
+                    break;
                 }
+            }
 
-            #elif __APPLE__
-                // macOS CPU detection
-                size_t size = sizeof(info.physicalCores);
-                sysctlbyname("hw.physicalcpu", &info.physicalCores, &size, nullptr, 0);
+#elif __APPLE__
+            // macOS CPU detection
+            size_t size = sizeof(info.physicalCores);
+            sysctlbyname("hw.physicalcpu", &info.physicalCores, &size, nullptr, 0);
 
-                size = sizeof(info.logicalCores);
-                sysctlbyname("hw.logicalcpu", &info.logicalCores, &size, nullptr, 0);
+            size = sizeof(info.logicalCores);
+            sysctlbyname("hw.logicalcpu", &info.logicalCores, &size, nullptr, 0);
 
-                size = sizeof(info.cacheLineSize);
-                sysctlbyname("hw.cachelinesize", &info.cacheLineSize, &size, nullptr, 0);
+            size = sizeof(info.cacheLineSize);
+            sysctlbyname("hw.cachelinesize", &info.cacheLineSize, &size, nullptr, 0);
 
-            #elif __linux__
-                // Linux CPU detection
-                info.physicalCores = sysconf(_SC_NPROCESSORS_ONLN);
+#elif __linux__
+            // Linux CPU detection
+            info.physicalCores = sysconf(_SC_NPROCESSORS_ONLN);
 
-                // Try to get physical cores from /proc/cpuinfo
-                std::ifstream cpuinfo("/proc/cpuinfo");
-                std::string line;
-                std::set<int> physicalIds;
+            // Try to get physical cores from /proc/cpuinfo
+            std::ifstream cpuinfo("/proc/cpuinfo");
+            std::string line;
+            std::set<int> physicalIds;
 
-                while (std::getline(cpuinfo, line)) {
-                    if (line.find("physical id") != std::string::npos) {
-                        int id = std::stoi(line.substr(line.find(":") + 1));
-                        physicalIds.insert(id);
-                    }
+            while (std::getline(cpuinfo, line)) {
+                if (line.find("physical id") != std::string::npos) {
+                    int id = std::stoi(line.substr(line.find(":") + 1));
+                    physicalIds.insert(id);
                 }
+            }
 
-                if (!physicalIds.empty()) {
-                    info.physicalCores = physicalIds.size();
-                }
+            if (!physicalIds.empty()) {
+                info.physicalCores = physicalIds.size();
+            }
 
-                // Cache line size
-                long cacheLineSize = sysconf(_SC_LEVEL1_DCACHE_LINESIZE);
-                if (cacheLineSize > 0) {
-                    info.cacheLineSize = static_cast<unsigned int>(cacheLineSize);
-                }
-            #endif
+            // Cache line size
+            long cacheLineSize = sysconf(_SC_LEVEL1_DCACHE_LINESIZE);
+            if (cacheLineSize > 0) {
+                info.cacheLineSize = static_cast<unsigned int>(cacheLineSize);
+            }
+#endif
 
             // Fallback for physical cores
             if (info.physicalCores == 0) {
@@ -187,55 +186,55 @@ namespace engine::memory {
          * @brief Detect memory information
          */
         static void detectMemoryInfo(SystemInfo& info) {
-            #ifdef _WIN32
-                // Windows memory detection
-                MEMORYSTATUSEX memStatus;
-                memStatus.dwLength = sizeof(memStatus);
+#ifdef _WIN32
+            // Windows memory detection
+            MEMORYSTATUSEX memStatus;
+            memStatus.dwLength = sizeof(memStatus);
 
-                if (GlobalMemoryStatusEx(&memStatus)) {
-                    info.totalPhysicalMemory = memStatus.ullTotalPhys;
-                    info.availablePhysicalMemory = memStatus.ullAvailPhys;
-                    info.totalVirtualMemory = memStatus.ullTotalVirtual;
-                    info.availableVirtualMemory = memStatus.ullAvailVirtual;
-                }
+            if (GlobalMemoryStatusEx(&memStatus)) {
+                info.totalPhysicalMemory = memStatus.ullTotalPhys;
+                info.availablePhysicalMemory = memStatus.ullAvailPhys;
+                info.totalVirtualMemory = memStatus.ullTotalVirtual;
+                info.availableVirtualMemory = memStatus.ullAvailVirtual;
+            }
 
-            #elif __APPLE__
-                // macOS memory detection
-                int mib[2];
-                size_t length;
+#elif __APPLE__
+            // macOS memory detection
+            int mib[2];
+            size_t length;
 
-                // Get physical memory
-                mib[0] = CTL_HW;
-                mib[1] = HW_MEMSIZE;
-                length = sizeof(info.totalPhysicalMemory);
-                sysctl(mib, 2, &info.totalPhysicalMemory, &length, nullptr, 0);
+            // Get physical memory
+            mib[0] = CTL_HW;
+            mib[1] = HW_MEMSIZE;
+            length = sizeof(info.totalPhysicalMemory);
+            sysctl(mib, 2, &info.totalPhysicalMemory, &length, nullptr, 0);
 
-                // Get available memory
-                vm_size_t page_size;
-                vm_statistics64_data_t vm_stat;
-                mach_msg_type_number_t host_size = sizeof(vm_stat) / sizeof(natural_t);
+            // Get available memory
+            vm_size_t page_size;
+            vm_statistics64_data_t vm_stat;
+            mach_msg_type_number_t host_size = sizeof(vm_stat) / sizeof(natural_t);
 
-                host_page_size(mach_host_self(), &page_size);
-                host_statistics64(mach_host_self(), HOST_VM_INFO64,
-                                 (host_info64_t)&vm_stat, &host_size);
+            host_page_size(mach_host_self(), &page_size);
+            host_statistics64(mach_host_self(), HOST_VM_INFO64,
+                              (host_info64_t)&vm_stat, &host_size);
 
-                info.availablePhysicalMemory = (vm_stat.free_count +
-                                               vm_stat.inactive_count) * page_size;
+            info.availablePhysicalMemory = (vm_stat.free_count +
+                vm_stat.inactive_count) * page_size;
 
-                // Virtual memory (approximate)
-                info.totalVirtualMemory = info.totalPhysicalMemory * 2;
-                info.availableVirtualMemory = info.availablePhysicalMemory * 2;
+            // Virtual memory (approximate)
+            info.totalVirtualMemory = info.totalPhysicalMemory * 2;
+            info.availableVirtualMemory = info.availablePhysicalMemory * 2;
 
-            #elif __linux__
-                // Linux memory detection
-                struct sysinfo memInfo;
-                if (sysinfo(&memInfo) == 0) {
-                    info.totalPhysicalMemory = memInfo.totalram * memInfo.mem_unit;
-                    info.availablePhysicalMemory = memInfo.freeram * memInfo.mem_unit;
-                    info.totalVirtualMemory = (memInfo.totalram + memInfo.totalswap) * memInfo.mem_unit;
-                    info.availableVirtualMemory = (memInfo.freeram + memInfo.freeswap) * memInfo.mem_unit;
-                }
-            #endif
+#elif __linux__
+            // Linux memory detection
+            struct sysinfo memInfo;
+            if (sysinfo(&memInfo) == 0) {
+                info.totalPhysicalMemory = memInfo.totalram * memInfo.mem_unit;
+                info.availablePhysicalMemory = memInfo.freeram * memInfo.mem_unit;
+                info.totalVirtualMemory = (memInfo.totalram + memInfo.totalswap) * memInfo.mem_unit;
+                info.availableVirtualMemory = (memInfo.freeram + memInfo.freeswap) * memInfo.mem_unit;
+            }
+#endif
         }
 
         /**
@@ -257,7 +256,8 @@ namespace engine::memory {
             // Use physical cores for CPU-bound work, leave some for OS
             if (info.physicalCores > 2) {
                 info.recommendedThreadCount = info.physicalCores - 1;
-            } else {
+            }
+            else {
                 info.recommendedThreadCount = 1;
             }
 
@@ -295,59 +295,76 @@ namespace engine::memory {
      * @brief Enhanced configuration that can auto-detect system limits
      */
     struct MemoryManagerAutoConfig : public MemoryManagerConfig {
-        bool autoDetectLimits = true;           // Auto-detect system capabilities
-        float memoryUsagePercent = 0.5f;        // Use 50% of available RAM
-        float heapSizePercent = 0.25f;          // Main heap as % of total allocation
+        bool autoDetectLimits = true; // Auto-detect system capabilities
+        float memoryUsagePercent = 0.5f; // Use 50% of available RAM
+        float heapSizePercent = 0.25f; // Main heap as % of total allocation
 
         /**
          * @brief Configure based on system detection
          */
         void configureFromSystem() {
+            std::cout << "\n=== MEMORY MANAGER CONFIGURATION ===" << std::endl;
+
             if (!autoDetectLimits) return;
 
             SystemInfo sysInfo = SystemInfoDetector::detect();
-            SystemInfoDetector::printSystemInfo(sysInfo);
 
-            // Calculate total memory budget
-            const auto totalBudget = static_cast<std::size_t>(
+            // Calcular presupuesto total de memoria
+            std::size_t totalBudget = static_cast<std::size_t>(
                 sysInfo.availablePhysicalMemory * memoryUsagePercent
             );
 
-            std::cout << "\nMemory Budget: " << (totalBudget / (1024.0 * 1024.0))
-                     << " MB (" << (memoryUsagePercent * 100) << "% of available RAM)" << std::endl;
+            std::cout << "\n[MemoryManager] Auto-Configuration:" << std::endl;
+            std::cout << "  Total RAM: " << (sysInfo.totalPhysicalMemory / (1024.0 * 1024.0 * 1024.0)) << " GB" <<
+                std::endl;
+            std::cout << "  Available RAM: " << (sysInfo.availablePhysicalMemory / (1024.0 * 1024.0 * 1024.0)) << " GB"
+                << std::endl;
+            std::cout << "  Memory Budget: " << (totalBudget / (1024.0 * 1024.0)) << " MB ("
+                << (memoryUsagePercent * 100) << "% of available)" << std::endl;
 
-            // Distribute memory budget
+            // Distribuir presupuesto de memoria
+#ifdef __APPLE__
+            // macOS tiene restricciones diferentes, ser más conservador
+            std::cout << "  [macOS] Adjusting for platform limitations" << std::endl;
+
+            // Limitar allocaciones individuales a 32MB máximo en macOS
+            const MemorySize maxSingleAlloc = 32 * 1024 * 1024;
+
+            mainHeapSize = std::min(mainHeapSize, maxSingleAlloc);
+            debugHeapSize = std::min(debugHeapSize, static_cast<MemorySize>(8 * 1024 * 1024));
+            frameStackSize = std::min(frameStackSize, static_cast<MemorySize>(4 * 1024 * 1024));
+            frameLinearSize = std::min(frameLinearSize, static_cast<MemorySize>(4 * 1024 * 1024));
+            renderingPoolSize = std::min(renderingPoolSize, static_cast<MemorySize>(16 * 1024 * 1024));
+            physicsPoolSize = std::min(physicsPoolSize, static_cast<MemorySize>(8 * 1024 * 1024));
+#else
             mainHeapSize = static_cast<std::size_t>(totalBudget * heapSizePercent);
-
-            // Frame allocators (5% each)
             frameStackSize = static_cast<std::size_t>(totalBudget * 0.05f);
             frameLinearSize = static_cast<std::size_t>(totalBudget * 0.05f);
-
-            // Specialized allocators
             renderingPoolSize = static_cast<std::size_t>(totalBudget * 0.20f);
             physicsPoolSize = static_cast<std::size_t>(totalBudget * 0.10f);
+#endif
             audioRingBufferSize = static_cast<std::size_t>(totalBudget * 0.05f);
             networkBufferSize = static_cast<std::size_t>(totalBudget * 0.02f);
 
-            // Adjust frame buffer count based on CPU cores
+            // Ajustar frame buffers según CPU
             if (sysInfo.physicalCores >= 8) {
-                frameBufferCount = 3;  // Triple buffering for high-end
-            } else if (sysInfo.physicalCores >= 4) {
-                frameBufferCount = 2;  // Double buffering for mid-range
-            } else {
-                frameBufferCount = 1;  // Single buffer for low-end
+                frameBufferCount = 3;
+            }
+            else if (sysInfo.physicalCores >= 4) {
+                frameBufferCount = 2;
+            }
+            else {
+                frameBufferCount = 1;
             }
 
-            // Set thresholds
+            // Establecer umbrales
             lowMemoryThreshold = static_cast<std::size_t>(totalBudget * 0.15f);
             criticalMemoryThreshold = static_cast<std::size_t>(totalBudget * 0.05f);
 
-            std::cout << "\nAuto-configured Memory Layout:" << std::endl;
-            std::cout << "  Main Heap: " << (mainHeapSize / (1024.0 * 1024.0)) << " MB" << std::endl;
-            std::cout << "  Rendering Pool: " << (renderingPoolSize / (1024.0 * 1024.0)) << " MB" << std::endl;
-            std::cout << "  Physics Pool: " << (physicsPoolSize / (1024.0 * 1024.0)) << " MB" << std::endl;
-            std::cout << "  Frame Buffers: " << static_cast<int>(frameBufferCount) << std::endl;
-            std::cout << "  Low Memory Threshold: " << (lowMemoryThreshold / (1024.0 * 1024.0)) << " MB" << std::endl;
+            std::cout << "  Configured heap: " << (mainHeapSize / (1024.0 * 1024.0)) << " MB" << std::endl;
+            std::cout << "  Frame buffers: " << static_cast<int>(frameBufferCount) << std::endl;
+            std::cout << "  CPU cores: " << sysInfo.physicalCores << " physical, "
+                << sysInfo.logicalCores << " logical" << std::endl;
         }
     };
 
@@ -380,21 +397,21 @@ namespace engine::memory {
             std::cout << "  Logical Cores: " << sysInfo.logicalCores << std::endl;
 
             // Set thread affinity for better cache usage (platform-specific)
-            #ifdef _WIN32
-                // Windows thread affinity
-                for (unsigned int i = 0; i < workerThreadCount_; ++i) {
-                    DWORD_PTR mask = 1ULL << i;
-                    // SetThreadAffinityMask for each worker thread
-                }
-            #elif __linux__
-                // Linux thread affinity
-                for (unsigned int i = 0; i < workerThreadCount_; ++i) {
-                    cpu_set_t cpuset;
-                    CPU_ZERO(&cpuset);
-                    CPU_SET(i, &cpuset);
-                    // pthread_setaffinity_np for each worker thread
-                }
-            #endif
+#ifdef _WIN32
+            // Windows thread affinity
+            for (unsigned int i = 0; i < workerThreadCount_; ++i) {
+                DWORD_PTR mask = 1ULL << i;
+                // SetThreadAffinityMask for each worker thread
+            }
+#elif __linux__
+            // Linux thread affinity
+            for (unsigned int i = 0; i < workerThreadCount_; ++i) {
+                cpu_set_t cpuset;
+                CPU_ZERO(&cpuset);
+                CPU_SET(i, &cpuset);
+                // pthread_setaffinity_np for each worker thread
+            }
+#endif
         }
 
         unsigned int getWorkerCount() const { return workerThreadCount_; }
@@ -402,5 +419,4 @@ namespace engine::memory {
     private:
         unsigned int workerThreadCount_ = 1;
     };
-
 } // namespace engine::memory

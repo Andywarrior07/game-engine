@@ -5,57 +5,60 @@
 #include "LinearAllocator.h"
 
 #include <cassert>
+#include <iostream>
 
 namespace engine::memory {
     LinearAllocator::LinearAllocator(const MemorySize capacity, const char* name)
-        : memory(nullptr)
-          , capacity(capacity)
-          , current(0)
-          , allocationCount(0)
-          , name(name) {
-        memory = std::aligned_alloc(CACHE_LINE_SIZE, capacity);
+        : memory_(nullptr)
+          , capacity_(capacity)
+          , current_(0)
+          , allocationCount_(0)
+          , name_(name) {
+        memory_ = std::aligned_alloc(CACHE_LINE_SIZE, capacity);
 
-        if (!memory) {
+        if (!memory_) {
+            std::cerr << "[LinearAllocator] Failed to allocate "
+                << (capacity / (1024.0 * 1024.0)) << " MB for " << name_ << std::endl;
             throw std::bad_alloc();
         }
 
         // Initialize memory with debug pattern
 #ifdef _DEBUG
-        std::memset(memory, 0xCD, capacity);
+        std::memset(memory_, 0xCD, capacity);
 #endif
 
-        stats.currentUsage = 0;
-        stats.peakUsage = 0;
-        stats.totalAllocated = 0;
-        stats.allocationCount = 0;
+        stats_.currentUsage = 0;
+        stats_.peakUsage = 0;
+        stats_.totalAllocated = 0;
+        stats_.allocationCount = 0;
     }
 
     LinearAllocator::~LinearAllocator() {
-        if (!memory) return;
+        if (!memory_) return;
 
 
 #ifdef _DEBUG
-        if (current.load() > 0) {
+        if (current_.load() > 0) {
             std::cerr << "Warning: LinearAllocator '" << name_
                 << "' destroyed with " << current_.load()
                 << " bytes still allocated!" << std::endl;
         }
 #endif
 
-        std::free(memory);
-        memory = nullptr;
+        std::free(memory_);
+        memory_ = nullptr;
     }
 
     LinearAllocator::LinearAllocator(LinearAllocator&& other) noexcept
-        : memory(other.memory)
-          , capacity(other.capacity)
-          , current(other.current.load())
-          , allocationCount(other.allocationCount.load())
-          , name(other.name) {
-        other.memory = nullptr;
-        other.capacity = 0;
-        other.current = 0;
-        other.allocationCount = 0;
+        : memory_(other.memory_)
+          , capacity_(other.capacity_)
+          , current_(other.current_.load())
+          , allocationCount_(other.allocationCount_.load())
+          , name_(other.name_) {
+        other.memory_ = nullptr;
+        other.capacity_ = 0;
+        other.current_ = 0;
+        other.allocationCount_ = 0;
 
 #ifdef _DEBUG
         std::lock_guard<std::mutex> lock(other.debugMutex);
@@ -66,20 +69,20 @@ namespace engine::memory {
     LinearAllocator& LinearAllocator::operator=(LinearAllocator&& other) noexcept {
         if (this == &other) return *this;
 
-        if (memory) {
-            std::free(memory);
+        if (memory_) {
+            std::free(memory_);
         }
 
-        memory = other.memory;
-        capacity = other.capacity;
-        current = other.current.load();
-        allocationCount = other.allocationCount.load();
-        name = other.name;
+        memory_ = other.memory_;
+        capacity_ = other.capacity_;
+        current_ = other.current_.load();
+        allocationCount_ = other.allocationCount_.load();
+        name_ = other.name_;
 
-        other.memory = nullptr;
-        other.capacity = 0;
-        other.current = 0;
-        other.allocationCount = 0;
+        other.memory_ = nullptr;
+        other.capacity_ = 0;
+        other.current_ = 0;
+        other.allocationCount_ = 0;
 
 #ifdef _DEBUG
         std::lock_guard<std::mutex> lock(other.debugMutex);
@@ -92,9 +95,9 @@ namespace engine::memory {
     void* LinearAllocator::allocate(const MemorySize size, const MemorySize alignment, const AllocationFlags flags) {
         assert(isPowerOfTwo(alignment) && "Alignment must be power of 2");
 
-        MemorySize currentPos = current.load(std::memory_order_acquire);
+        MemorySize currentPos = current_.load(std::memory_order_acquire);
 
-        void* currentAddress = static_cast<std::uint8_t*>(memory) + currentPos;
+        void* currentAddress = static_cast<std::uint8_t*>(memory_) + currentPos;
         void* alignedAddress = alignPointer(currentAddress, alignment);
 
         const MemorySize adjustment = static_cast<std::uint8_t*>(alignedAddress) -
@@ -102,31 +105,31 @@ namespace engine::memory {
 
         MemorySize newPos = currentPos + adjustment + size;
 
-        if (newPos > capacity) {
-            stats.failedAllocations.fetch_add(1, std::memory_order_relaxed);
+        if (newPos > capacity_) {
+            stats_.failedAllocations.fetch_add(1, std::memory_order_relaxed);
             return nullptr;
         }
 
         MemorySize expected = currentPos;
-        while (!current.compare_exchange_weak(expected, newPos,
+        while (!current_.compare_exchange_weak(expected, newPos,
                                               std::memory_order_acq_rel,
                                               std::memory_order_acquire)) {
             currentPos = expected;
-            currentAddress = static_cast<std::uint8_t*>(memory) + currentPos;
+            currentAddress = static_cast<std::uint8_t*>(memory_) + currentPos;
             alignedAddress = alignPointer(currentAddress, alignment);
             const MemorySize newAdjustment = static_cast<std::uint8_t*>(alignedAddress) -
                 static_cast<std::uint8_t*>(currentAddress);
             const MemorySize newNewPos = currentPos + newAdjustment + size;
 
-            if (newNewPos > capacity) {
-                stats.failedAllocations.fetch_add(1, std::memory_order_relaxed);
+            if (newNewPos > capacity_) {
+                stats_.failedAllocations.fetch_add(1, std::memory_order_relaxed);
                 return nullptr;
             }
 
             newPos = newNewPos;
         }
 
-        allocationCount.fetch_add(1, std::memory_order_relaxed);
+        allocationCount_.fetch_add(1, std::memory_order_relaxed);
 
 #ifdef _DEBUG
         // Track allocation for debugging
@@ -167,15 +170,15 @@ namespace engine::memory {
     }
 
     MemorySize LinearAllocator::getUsedMemory() const {
-        return current.load(std::memory_order_acquire);
+        return current_.load(std::memory_order_acquire);
     }
 
     void LinearAllocator::reset() {
 #ifdef _DEBUG
         // Fill freed memory with pattern
-        MemorySize used = current.load(std::memory_order_acquire);
+        MemorySize used = current_.load(std::memory_order_acquire);
         if (used > 0) {
-            std::memset(memory, 0xCD, used);
+            std::memset(memory_, 0xCD, used);
         }
 
         // Clear debug allocations
@@ -185,18 +188,18 @@ namespace engine::memory {
         }
 #endif
 
-        current.store(0, std::memory_order_release);
-        allocationCount.store(0, std::memory_order_release);
+        current_.store(0, std::memory_order_release);
+        allocationCount_.store(0, std::memory_order_release);
 
-        stats.currentUsage.store(0, std::memory_order_release);
+        stats_.currentUsage.store(0, std::memory_order_release);
     }
 
     bool LinearAllocator::owns(const void* ptr) const {
-        if (!ptr || !memory) return false;
+        if (!ptr || !memory_) return false;
 
         const auto* bytePtr = static_cast<const std::uint8_t*>(ptr);
-        const auto* memStart = static_cast<const std::uint8_t*>(memory);
-        const std::uint8_t* memEnd = memStart + capacity;
+        const auto* memStart = static_cast<const std::uint8_t*>(memory_);
+        const std::uint8_t* memEnd = memStart + capacity_;
 
         return bytePtr >= memStart && bytePtr < memEnd;
     }
@@ -209,7 +212,7 @@ namespace engine::memory {
         std::lock_guard<std::mutex> lock(debugMutex);
 
         const std::uint8_t* bytePtr = reinterpret_cast<const std::uint8_t*>(ptr);
-        const std::uint8_t* memStart = reinterpret_cast<const std::uint8_t*>(memory);
+        const std::uint8_t* memStart = reinterpret_cast<const std::uint8_t*>(memory_);
         const MemorySize ptrOffset = bytePtr - memStart;
 
         for (const auto& alloc : debugAllocations) {
@@ -224,7 +227,7 @@ namespace engine::memory {
     }
 
     std::size_t LinearAllocator::getAllocationCount() const {
-        return allocationCount.load(std::memory_order_acquire);
+        return allocationCount_.load(std::memory_order_acquire);
     }
 
 }

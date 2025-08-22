@@ -33,27 +33,44 @@ namespace engine::memory {
             std::cout << "[MemoryManager] Using auto-detected configuration" << std::endl;
         }
 
+        std::cout << "[MemoryManager] About to allocate:" << std::endl;
+        std::cout << "  Main Heap: " << (config_.mainHeapSize / (1024.0 * 1024.0)) << " MB" << std::endl;
+        std::cout << "  Debug Heap: " << (config_.debugHeapSize / (1024.0 * 1024.0)) << " MB" << std::endl;
+        std::cout << "  Frame Stack: " << (config_.frameStackSize / (1024.0 * 1024.0)) << " MB x "
+            << static_cast<int>(config_.frameBufferCount) << std::endl;
+
         try {
+            std::cout << "[MemoryManager] Creating main heap..." << std::endl;
             mainHeap_ = std::make_unique<LinearAllocator>(config_.mainHeapSize, "MainHeap");
 
 #ifdef _DEBUG
             // Create debug heap for debug allocations
             if (config_.enableLeakDetection || config_.enableBoundsChecking) {
+                std::cout << "[MemoryManager] Creating debug heap..." << std::endl;
                 debugHeap_ = std::make_unique<LinearAllocator>(config_.debugHeapSize, "DebugHeap");
+                std::cout << "[MemoryManager] ✓ Debug heap created" << std::endl;
             }
 #endif
 
+            std::cout << "[MemoryManager] Creating frame allocators..." << std::endl;
             frameAllocators_.resize(config_.frameBufferCount);
 
             for (std::uint8_t i = 0; i < config_.frameBufferCount; ++i) {
+                std::cout << "[MemoryManager] Creating frame " << (int)i << " stack allocator..." << std::endl;
                 frameAllocators_[i].stackAllocator = std::make_unique<StackAllocator>(
                     config_.frameStackSize,
                     ("FrameStack_" + std::to_string(i)).c_str()
-                );
+                    );
+                std::cout << "[MemoryManager] ✓ Frame " << (int)i << " stack created" << std::endl;
+
+                std::cout << "[MemoryManager] Creating frame " << (int)i << " linear allocator..." << std::endl;
+
                 frameAllocators_[i].linearAllocator = std::make_unique<LinearAllocator>(
                     config_.frameLinearSize,
                     ("FrameLinear_" + std::to_string(i)).c_str()
                 );
+                std::cout << "[MemoryManager] ✓ Frame " << (int)i << " linear created" << std::endl;
+
                 frameAllocators_[i].frameNumber = 0;
             }
 
@@ -61,6 +78,7 @@ namespace engine::memory {
 
             // Rendering pool - for render commands, vertex data, etc.
             if (config_.renderingPoolSize > 0) {
+                std::cout << "[MemoryManager] Creating rendering pool..." << std::endl;
                 auto renderPool = std::make_unique<PoolAllocator>(
                     1024, // 1KB blocks for render commands
                     config_.renderingPoolSize / 1024,
@@ -69,6 +87,7 @@ namespace engine::memory {
                 );
 
                 categoryAllocators_[static_cast<std::size_t>(MemoryCategory::RENDERING)] = std::move(renderPool);
+                std::cout << "[MemoryManager] ✓ Rendering pool created" << std::endl;
             }
 
             // Physics pool - for rigid bodies, colliders, etc.
@@ -83,20 +102,20 @@ namespace engine::memory {
 
             // Audio ring buffer - for streaming audio
             if (config_.audioRingBufferSize > 0) {
-                auto audioBuffer = std::make_unique<RingBufferAllocator>(
-                    config_.audioRingBufferSize,
-                    "AudioRingBuffer"
-                );
-                categoryAllocators_[static_cast<std::size_t>(MemoryCategory::AUDIO)] = std::move(audioBuffer);
+                // auto audioBuffer = std::make_unique<RingBufferAllocator>(
+                //     config_.audioRingBufferSize,
+                //     "AudioRingBuffer"
+                // );
+                // categoryAllocators_[static_cast<std::size_t>(MemoryCategory::AUDIO)] = std::move(audioBuffer);
             }
 
             // Network buffer - for packet data
             if (config_.networkBufferSize > 0) {
-                auto networkBuffer = std::make_unique<RingBufferAllocator>(
-                    config_.networkBufferSize,
-                    "NetworkBuffer"
-                );
-                categoryAllocators_[static_cast<std::size_t>(MemoryCategory::NETWORKING)] = std::move(networkBuffer);
+                // auto networkBuffer = std::make_unique<RingBufferAllocator>(
+                //     config_.networkBufferSize,
+                //     "NetworkBuffer"
+                // );
+                // categoryAllocators_[static_cast<std::size_t>(MemoryCategory::NETWORKING)] = std::move(networkBuffer);
             }
 
             // Create custom pools from configuration
@@ -114,7 +133,7 @@ namespace engine::memory {
             }
 
             std::memset(&globalStats_, 0, sizeof(globalStats_));
-
+            std::cout << "[MemoryManager] All allocators created successfully" << std::endl;
             initialized_ = true;
 
             // Log initialization
@@ -378,7 +397,7 @@ namespace engine::memory {
     }
 
     void MemoryManager::registerAllocator(MemoryCategory category,
-        std::unique_ptr<IAllocator> allocator) {
+                                          std::unique_ptr<IAllocator> allocator) {
         if (category >= MemoryCategory::COUNT) {
             std::cerr << "Error: Invalid memory category!" << std::endl;
             return;
@@ -407,9 +426,11 @@ namespace engine::memory {
 
         if (autoConfigured_) {
             report << "Configuration: AUTO-DETECTED" << std::endl;
-            report << "  System RAM: " << (systemInfo_.totalPhysicalMemory / (1024.0 * 1024.0 * 1024.0)) << " GB" << std::endl;
+            report << "  System RAM: " << (systemInfo_.totalPhysicalMemory / (1024.0 * 1024.0 * 1024.0)) << " GB" <<
+                std::endl;
             report << "  CPU Cores: " << systemInfo_.physicalCores << " physical" << std::endl;
-        } else {
+        }
+        else {
             report << "Configuration: MANUAL" << std::endl;
         }
 
@@ -591,7 +612,8 @@ namespace engine::memory {
 #endif
     }
 
-    IAllocator* MemoryManager::selectAllocator(MemoryCategory category, const MemorySize size, const AllocationFlags flags) const {
+    IAllocator* MemoryManager::selectAllocator(MemoryCategory category, const MemorySize size,
+                                               const AllocationFlags flags) const {
         // Check for a thread-local flag
         if (hasFlags(flags, AllocationFlags::THREAD_LOCAL)) {
             // Use frame stack for thread-local allocations
@@ -615,7 +637,7 @@ namespace engine::memory {
         return mainHeap_.get();
     }
 
-    void MemoryManager::handleAllocationFailure(const MemorySize size, MemoryCategory category) {
+    void MemoryManager::handleAllocationFailure(const MemorySize size, MemoryCategory category) const {
         globalStats_.failedAllocations.fetch_add(1, std::memory_order_relaxed);
 
         std::cerr << "Memory allocation failed: " << size << " bytes, category: "
