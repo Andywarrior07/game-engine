@@ -23,7 +23,7 @@ namespace engine::resources {
      * but stores the data in a renderer-agnostic format. The actual GPU
      * upload is handled by the rendering system separately.
      */
-    class TextureResource : public StreamableResource {
+    class TextureResource final : public StreamableResource {
     public:
         // ====================================================================
         // CONSTRUCTION / DESTRUCTION

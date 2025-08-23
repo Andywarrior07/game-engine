@@ -84,7 +84,7 @@ namespace engine::resources {
         // Resource loading
         template<typename T>
         ResourceHandle<T> loadById(ResourceID id,
-            const std::string& path,
+            std::string path,
             const ResourcePriority priority = ResourcePriority::NORMAL,
             const LoadMode mode = LoadMode::ASYNC) {
             // Check if already loaded
@@ -201,7 +201,7 @@ namespace engine::resources {
         IResourceLoader* selectLoader(const std::string& path, ResourceType type) const;
 
         // Loading implementation
-        ResourcePtr<Resource> loadSync(ResourceID id, std::string& path, ResourceType type);
+        ResourcePtr<Resource> loadSync(ResourceID id, std::string path, ResourceType type);
         std::future<ResourcePtr<Resource>> loadAsync(ResourceID id, const std::string& path,
                                                      ResourceType type, ResourcePriority priority);
         void loadThreadWorker();

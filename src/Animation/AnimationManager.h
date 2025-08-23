@@ -15,10 +15,10 @@
 // #include <atomic>                  // For thread-safe operations
 // #include <mutex>                   // For thread synchronization
 // #include <array>                   // For fixed-size arrays
-// #include "../Math/MathTypes.h"
 //
-// // Include our texture resource
-// #include "../Texture/TextureResource.h"
+// #include "../Math/MathTypes.h"
+// #include "../resources/core/ResourceHandle.h"
+// #include "../resources/types/texture/TextureResource.h"
 //
 // namespace engine::animation {
 //     using Vector2 = math::Vector2;
@@ -398,19 +398,19 @@
 //          * @brief Set frame rate
 //          * @param frameRate New frame rate in FPS
 //          */
-//         void setFrameRate(float frameRate) { config_.frameRate = frameRate; }
+//         void setFrameRate(const float frameRate) { config_.frameRate = frameRate; }
 //
 //         /**
 //          * @brief Set animation mode
 //          * @param mode New animation mode
 //          */
-//         void setMode(AnimationMode mode) { config_.mode = mode; }
+//         void setMode(const AnimationMode mode) { config_.mode = mode; }
 //
 //         /**
 //          * @brief Set playback speed
 //          * @param speed Speed multiplier (1.0 = normal speed)
 //          */
-//         void setSpeed(float speed) { config_.speed = speed; }
+//         void setSpeed(const float speed) { config_.speed = speed; }
 //
 //         // === Validation ===
 //
@@ -533,13 +533,13 @@
 //          * @brief Set rotation
 //          * @param rotation New rotation in degrees
 //          */
-//         void setRotation(float rotation) { transform_.rotation = rotation; }
+//         void setRotation(const float rotation) { transform_.rotation = rotation; }
 //
 //         /**
 //          * @brief Set alpha transparency
 //          * @param alpha Alpha value (0-255)
 //          */
-//         void setAlpha(std::uint8_t alpha) { transform_.alpha = alpha; }
+//         void setAlpha(const std::uint8_t alpha) { transform_.alpha = alpha; }
 //
 //         /**
 //          * @brief Set color tint
@@ -551,13 +551,13 @@
 //          * @brief Set sprite flipping
 //          * @param flip Flip mode
 //          */
-//         void setFlip(SpriteFlip flip) { transform_.flip = flip; }
+//         void setFlip(const SpriteFlip flip) { transform_.flip = flip; }
 //
 //         /**
 //          * @brief Set rendering layer
 //          * @param layer Layer/depth value
 //          */
-//         void setLayer(int layer) { transform_.layer = layer; }
+//         void setLayer(const int layer) { transform_.layer = layer; }
 //
 //         // === Playback Control ===
 //
@@ -599,7 +599,7 @@
 //          * @brief Set playback speed multiplier
 //          * @param speed Speed multiplier (1.0 = normal)
 //          */
-//         void setSpeed(float speed) { speed_ = speed; }
+//         void setSpeed(const float speed) { speed_ = speed; }
 //
 //         /**
 //          * @brief Get current speed multiplier
