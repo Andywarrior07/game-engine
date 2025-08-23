@@ -46,30 +46,22 @@ namespace engine::memory {
 #ifdef _DEBUG
             // Create debug heap for debug allocations
             if (config_.enableLeakDetection || config_.enableBoundsChecking) {
-                std::cout << "[MemoryManager] Creating debug heap..." << std::endl;
                 debugHeap_ = std::make_unique<LinearAllocator>(config_.debugHeapSize, "DebugHeap");
-                std::cout << "[MemoryManager] ✓ Debug heap created" << std::endl;
             }
 #endif
 
-            std::cout << "[MemoryManager] Creating frame allocators..." << std::endl;
             frameAllocators_.resize(config_.frameBufferCount);
 
             for (std::uint8_t i = 0; i < config_.frameBufferCount; ++i) {
-                std::cout << "[MemoryManager] Creating frame " << (int)i << " stack allocator..." << std::endl;
                 frameAllocators_[i].stackAllocator = std::make_unique<StackAllocator>(
                     config_.frameStackSize,
                     ("FrameStack_" + std::to_string(i)).c_str()
                     );
-                std::cout << "[MemoryManager] ✓ Frame " << (int)i << " stack created" << std::endl;
-
-                std::cout << "[MemoryManager] Creating frame " << (int)i << " linear allocator..." << std::endl;
 
                 frameAllocators_[i].linearAllocator = std::make_unique<LinearAllocator>(
                     config_.frameLinearSize,
                     ("FrameLinear_" + std::to_string(i)).c_str()
                 );
-                std::cout << "[MemoryManager] ✓ Frame " << (int)i << " linear created" << std::endl;
 
                 frameAllocators_[i].frameNumber = 0;
             }
@@ -78,7 +70,6 @@ namespace engine::memory {
 
             // Rendering pool - for render commands, vertex data, etc.
             if (config_.renderingPoolSize > 0) {
-                std::cout << "[MemoryManager] Creating rendering pool..." << std::endl;
                 auto renderPool = std::make_unique<PoolAllocator>(
                     1024, // 1KB blocks for render commands
                     config_.renderingPoolSize / 1024,
@@ -87,7 +78,6 @@ namespace engine::memory {
                 );
 
                 categoryAllocators_[static_cast<std::size_t>(MemoryCategory::RENDERING)] = std::move(renderPool);
-                std::cout << "[MemoryManager] ✓ Rendering pool created" << std::endl;
             }
 
             // Physics pool - for rigid bodies, colliders, etc.
@@ -101,22 +91,22 @@ namespace engine::memory {
             }
 
             // Audio ring buffer - for streaming audio
-            if (config_.audioRingBufferSize > 0) {
-                // auto audioBuffer = std::make_unique<RingBufferAllocator>(
-                //     config_.audioRingBufferSize,
-                //     "AudioRingBuffer"
-                // );
-                // categoryAllocators_[static_cast<std::size_t>(MemoryCategory::AUDIO)] = std::move(audioBuffer);
-            }
-
-            // Network buffer - for packet data
-            if (config_.networkBufferSize > 0) {
-                // auto networkBuffer = std::make_unique<RingBufferAllocator>(
-                //     config_.networkBufferSize,
-                //     "NetworkBuffer"
-                // );
-                // categoryAllocators_[static_cast<std::size_t>(MemoryCategory::NETWORKING)] = std::move(networkBuffer);
-            }
+            // if (config_.audioRingBufferSize > 0) {
+            //     auto audioBuffer = std::make_unique<RingBufferAllocator>(
+            //         config_.audioRingBufferSize,
+            //         "AudioRingBuffer"
+            //     );
+            //     categoryAllocators_[static_cast<std::size_t>(MemoryCategory::AUDIO)] = std::move(audioBuffer);
+            // }
+            //
+            // // Network buffer - for packet data
+            // if (config_.networkBufferSize > 0) {
+            //     auto networkBuffer = std::make_unique<RingBufferAllocator>(
+            //         config_.networkBufferSize,
+            //         "NetworkBuffer"
+            //     );
+            //     categoryAllocators_[static_cast<std::size_t>(MemoryCategory::NETWORKING)] = std::move(networkBuffer);
+            // }
 
             // Create custom pools from configuration
             for (const auto& poolConfig : config_.customPools) {

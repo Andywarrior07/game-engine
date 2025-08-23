@@ -377,7 +377,7 @@ namespace engine::resources {
         return nullptr;
     }
 
-    ResourcePtr<Resource> ResourceManager::loadSync(ResourceID id, std::string& path, ResourceType type) {
+    ResourcePtr<Resource> ResourceManager::loadSync(ResourceID id, std::string path, ResourceType type) {
         // Check if already loading
         {
             std::lock_guard lock(pendingMutex_);
@@ -459,8 +459,9 @@ namespace engine::resources {
         return sharedResource;
     }
 
-    std::future<ResourcePtr<Resource>> ResourceManager::loadAsync(ResourceID id, const std::string& path,
-                                                                  ResourceType type, ResourcePriority priority) {
+    std::future<ResourcePtr<Resource>> ResourceManager::loadAsync(const ResourceID id, const std::string& path,
+                                                                  const ResourceType type,
+                                                                  const ResourcePriority priority) {
         std::promise<ResourcePtr<Resource>> promise;
         auto future = promise.get_future();
 
@@ -573,7 +574,8 @@ namespace engine::resources {
         return currentUsage > threshold;
     }
 
-    void* ResourceManager::allocateResourceMemory(const ResourceSize size, const memory::MemoryCategory category) const {
+    void* ResourceManager::allocateResourceMemory(const ResourceSize size,
+                                                  const memory::MemoryCategory category) const {
         return memoryManager_->allocate(size, category);
     }
 

@@ -3,6 +3,7 @@
 // //
 //
 // #include "AnimationManager.h"
+//
 // #include <iostream>         // For logging and debug output
 // #include <algorithm>        // For std::sort, std::find, etc.
 // #include <cassert>          // For debug assertions
@@ -10,7 +11,6 @@
 // #include <sstream>          // For string stream operations
 //
 // namespace engine::animation {
-//
 //     // ========================================================================
 //     // SPRITE SHEET IMPLEMENTATION
 //     // ========================================================================
@@ -19,13 +19,14 @@
 //      * @brief Constructor for SpriteSheet
 //      * CHANGE: Initialize with texture resource handle for integration with ResourceManager
 //      */
-//     SpriteSheet::SpriteSheet(SpriteSheetID id, std::string name, engine::resources::ResourceHandle<engine::resources::TextureResource> texture)
-//         : id_(id)                                           // Store unique identifier
-//         , name_(std::move(name))                           // Move name to avoid copy
-//         , texture_(std::move(texture))                     // Move texture handle
+//     SpriteSheet::SpriteSheet(SpriteSheetID id, std::string name,
+//                              engine::resources::ResourceHandle<engine::resources::TextureResource> texture)
+//         : id_(id) // Store unique identifier
+//           , name_(std::move(name)) // Move name to avoid copy
+//           , texture_(std::move(texture)) // Move texture handle
 //     {
 //         // Reserve space for common number of frames to avoid frequent reallocations
-//         frames_.reserve(64);                               // Most sprite sheets have < 64 frames
+//         frames_.reserve(64); // Most sprite sheets have < 64 frames
 //     }
 //
 //     /**
@@ -33,20 +34,20 @@
 //      * CHANGE: Proper validation of texture resource state
 //      */
 //     bool SpriteSheet::isReady() const noexcept {
-//         return texture_.isValid() &&                       // Texture handle is valid
-//                texture_.isReady() &&                       // Texture is loaded
-//                !frames_.empty();                           // Has at least one frame defined
+//         return texture_.isValid() && // Texture handle is valid
+//             // texture_.isReady() &&                       // Texture is loaded
+//             !frames_.empty(); // Has at least one frame defined
 //     }
 //
 //     /**
 //      * @brief Get frame rectangle by index with bounds checking
 //      * CHANGE: Safe frame access with validation
 //      */
-//     SpriteRect SpriteSheet::getFrame(int frameIndex) const {
+//     SpriteRect SpriteSheet::getFrame(const int frameIndex) const {
 //         if (frameIndex >= 0 && frameIndex < static_cast<int>(frames_.size())) {
-//             return frames_[frameIndex];                     // Return valid frame
+//             return frames_[frameIndex]; // Return valid frame
 //         }
-//         return SpriteRect{};                               // Return empty rect for invalid index
+//         return SpriteRect{}; // Return empty rect for invalid index
 //     }
 //
 //     /**
@@ -54,8 +55,8 @@
 //      * CHANGE: Return frame index for easy reference
 //      */
 //     int SpriteSheet::addFrame(const SpriteRect& frame) {
-//         frames_.push_back(frame);                          // Add frame to collection
-//         return static_cast<int>(frames_.size()) - 1;       // Return index of added frame
+//         frames_.push_back(frame); // Add frame to collection
+//         return static_cast<int>(frames_.size()) - 1; // Return index of added frame
 //     }
 //
 //     /**
@@ -63,28 +64,28 @@
 //      * CHANGE: Bulk operation for efficiency
 //      */
 //     int SpriteSheet::addFrames(const std::vector<SpriteRect>& frames) {
-//         int addedCount = static_cast<int>(frames.size());
-//         frames_.reserve(frames_.size() + addedCount);      // Reserve space to avoid reallocations
+//         const int addedCount = static_cast<int>(frames.size());
+//         frames_.reserve(frames_.size() + addedCount); // Reserve space to avoid reallocations
 //
 //         for (const auto& frame : frames) {
-//             frames_.push_back(frame);                      // Add each frame
+//             frames_.push_back(frame); // Add each frame
 //         }
 //
-//         return addedCount;                                 // Return number of frames added
+//         return addedCount; // Return number of frames added
 //     }
 //
 //     /**
 //      * @brief Generate frames from grid layout automatically
 //      * CHANGE: Utility function for common sprite sheet layouts
 //      */
-//     int SpriteSheet::generateGridFrames(int columns, int rows, int frameWidth, int frameHeight,
-//                                        int startX, int startY, int spacingX, int spacingY) {
+//     int SpriteSheet::generateGridFrames(const int columns, const int rows, const int frameWidth, const int frameHeight,
+//                                         const int startX, const int startY, const int spacingX, const int spacingY) {
 //         if (columns <= 0 || rows <= 0 || frameWidth <= 0 || frameHeight <= 0) {
-//             return 0;                                      // Invalid parameters
+//             return 0; // Invalid parameters
 //         }
 //
-//         int frameCount = columns * rows;
-//         frames_.reserve(frames_.size() + frameCount);      // Reserve space for all frames
+//         const int frameCount = columns * rows;
+//         frames_.reserve(frames_.size() + frameCount); // Reserve space for all frames
 //
 //         for (int row = 0; row < rows; ++row) {
 //             for (int col = 0; col < columns; ++col) {
@@ -92,11 +93,11 @@
 //                 int x = startX + col * (frameWidth + spacingX);
 //                 int y = startY + row * (frameHeight + spacingY);
 //
-//                 frames_.emplace_back(x, y, frameWidth, frameHeight);  // Add frame directly
+//                 frames_.emplace_back(x, y, frameWidth, frameHeight); // Add frame directly
 //             }
 //         }
 //
-//         return frameCount;                                 // Return number of frames generated
+//         return frameCount; // Return number of frames generated
 //     }
 //
 //     /**
@@ -104,20 +105,20 @@
 //      * CHANGE: Complete frame reset
 //      */
 //     void SpriteSheet::clearFrames() {
-//         frames_.clear();                                   // Remove all frames
-//         frames_.shrink_to_fit();                          // Release memory
+//         frames_.clear(); // Remove all frames
+//         frames_.shrink_to_fit(); // Release memory
 //     }
 //
 //     /**
 //      * @brief Remove specific frame by index
 //      * CHANGE: Safe frame removal with validation
 //      */
-//     bool SpriteSheet::removeFrame(int frameIndex) {
+//     bool SpriteSheet::removeFrame(const int frameIndex) {
 //         if (frameIndex >= 0 && frameIndex < static_cast<int>(frames_.size())) {
-//             frames_.erase(frames_.begin() + frameIndex);   // Remove frame at index
+//             frames_.erase(frames_.begin() + frameIndex); // Remove frame at index
 //             return true;
 //         }
-//         return false;                                      // Invalid index
+//         return false; // Invalid index
 //     }
 //
 //     /**
@@ -125,11 +126,13 @@
 //      * CHANGE: Safe access to texture properties
 //      */
 //     Vector2 SpriteSheet::getTextureDimensions() const {
-//         if (texture_.isReady()) {
-//             return Vector2(static_cast<float>(texture_->getWidth()),
-//                           static_cast<float>(texture_->getHeight()));
+//         if (texture_.isValid()) {
+//             return {
+//                 static_cast<float>(texture_->getWidth()),
+//                 static_cast<float>(texture_->getHeight())
+//             };
 //         }
-//         return Vector2{0.0f, 0.0f};                       // Return zero size if texture not ready
+//         return Vector2{0.0f, 0.0f}; // Return zero size if texture not ready
 //     }
 //
 //     /**
@@ -137,23 +140,21 @@
 //      * CHANGE: Comprehensive validation for debugging
 //      */
 //     bool SpriteSheet::validateFrames() const {
-//         if (!texture_.isReady()) {
-//             return false;                                  // Can't validate without texture
+//         if (!texture_.isValid()) {
+//             return false; // Can't validate without texture
 //         }
 //
-//         int textureWidth = texture_->getWidth();
-//         int textureHeight = texture_->getHeight();
+//         const int textureWidth = texture_->getWidth();
+//         const int textureHeight = texture_->getHeight();
 //
-//         for (const auto& frame : frames_) {
-//             // Check if frame is completely within texture bounds
-//             if (frame.x < 0 || frame.y < 0 ||
-//                 frame.x + frame.width > textureWidth ||
-//                 frame.y + frame.height > textureHeight) {
-//                 return false;                              // Frame extends outside texture
-//             }
-//         }
-//
-//         return true;                                       // All frames are valid
+//         // Check if frame is completely within texture bounds
+//         //True: All frames are valid
+//         //False: Frame extends outside texture
+//         return std::ranges::all_of(frames_, [&](const auto& frame) {
+//             return frame.x >= 0 && frame.y >= 0 &&
+//                 frame.x + frame.width <= textureWidth &&
+//                 frame.y + frame.height <= textureHeight;
+//         });
 //     }
 //
 //     /**
@@ -161,8 +162,8 @@
 //      * CHANGE: Memory tracking for optimization
 //      */
 //     std::size_t SpriteSheet::getMemoryUsage() const {
-//         std::size_t frameMemory = frames_.size() * sizeof(SpriteRect);  // Frame definitions
-//         std::size_t nameMemory = name_.capacity();                      // String memory
+//         std::size_t frameMemory = frames_.size() * sizeof(SpriteRect); // Frame definitions
+//         std::size_t nameMemory = name_.capacity(); // String memory
 //
 //         // Note: Texture memory is tracked by ResourceManager, not counted here
 //         return frameMemory + nameMemory;
@@ -177,13 +178,13 @@
 //      * CHANGE: Initialize with comprehensive configuration
 //      */
 //     Animation::Animation(AnimationID id, std::string name, SpriteSheetID spriteSheetId, const AnimationConfig& config)
-//         : id_(id)                                          // Store unique identifier
-//         , name_(std::move(name))                          // Move name to avoid copy
-//         , spriteSheetId_(spriteSheetId)                   // Associated sprite sheet
-//         , config_(config)                                 // Animation configuration
+//         : id_(id) // Store unique identifier
+//           , name_(std::move(name)) // Move name to avoid copy
+//           , spriteSheetId_(spriteSheetId) // Associated sprite sheet
+//           , config_(config) // Animation configuration
 //     {
 //         // Reserve space for typical animation frame count
-//         frameSequence_.reserve(32);                       // Most animations have < 32 frames
+//         frameSequence_.reserve(32); // Most animations have < 32 frames
 //     }
 //
 //     /**
@@ -192,9 +193,9 @@
 //      */
 //     int Animation::getFrameIndex(int sequenceIndex) const {
 //         if (sequenceIndex >= 0 && sequenceIndex < static_cast<int>(frameSequence_.size())) {
-//             return frameSequence_[sequenceIndex];         // Return valid frame index
+//             return frameSequence_[sequenceIndex]; // Return valid frame index
 //         }
-//         return -1;                                        // Invalid sequence index
+//         return -1; // Invalid sequence index
 //     }
 //
 //     /**
@@ -203,10 +204,10 @@
 //      */
 //     float Animation::getTotalDuration() const noexcept {
 //         if (frameSequence_.empty() || config_.frameRate <= 0.0f) {
-//             return 0.0f;                                  // No duration if no frames or invalid frame rate
+//             return 0.0f; // No duration if no frames or invalid frame rate
 //         }
 //
-//         return static_cast<float>(frameSequence_.size()) / config_.frameRate;  // Duration in seconds
+//         return static_cast<float>(frameSequence_.size()) / config_.frameRate; // Duration in seconds
 //     }
 //
 //     /**
@@ -214,7 +215,7 @@
 //      * CHANGE: Replace entire sequence efficiently
 //      */
 //     void Animation::setFrameSequence(const std::vector<int>& frameIndices) {
-//         frameSequence_ = frameIndices;                    // Copy new sequence
+//         frameSequence_ = frameIndices; // Copy new sequence
 //     }
 //
 //     /**
@@ -222,7 +223,7 @@
 //      * CHANGE: Simple frame addition
 //      */
 //     void Animation::addFrame(int frameIndex) {
-//         frameSequence_.push_back(frameIndex);             // Add to end of sequence
+//         frameSequence_.push_back(frameIndex); // Add to end of sequence
 //     }
 //
 //     /**
@@ -231,10 +232,10 @@
 //      */
 //     bool Animation::insertFrame(int sequenceIndex, int frameIndex) {
 //         if (sequenceIndex >= 0 && sequenceIndex <= static_cast<int>(frameSequence_.size())) {
-//             frameSequence_.insert(frameSequence_.begin() + sequenceIndex, frameIndex);  // Insert at position
+//             frameSequence_.insert(frameSequence_.begin() + sequenceIndex, frameIndex); // Insert at position
 //             return true;
 //         }
-//         return false;                                     // Invalid insertion position
+//         return false; // Invalid insertion position
 //     }
 //
 //     /**
@@ -243,10 +244,10 @@
 //      */
 //     bool Animation::removeFrame(int sequenceIndex) {
 //         if (sequenceIndex >= 0 && sequenceIndex < static_cast<int>(frameSequence_.size())) {
-//             frameSequence_.erase(frameSequence_.begin() + sequenceIndex);  // Remove from sequence
+//             frameSequence_.erase(frameSequence_.begin() + sequenceIndex); // Remove from sequence
 //             return true;
 //         }
-//         return false;                                     // Invalid sequence index
+//         return false; // Invalid sequence index
 //     }
 //
 //     /**
@@ -255,17 +256,18 @@
 //      */
 //     void Animation::generateSequence(int startFrame, int endFrame, int step) {
 //         if (step <= 0) {
-//             return;                                       // Invalid step value
+//             return; // Invalid step value
 //         }
 //
-//         frameSequence_.clear();                           // Clear existing sequence
+//         frameSequence_.clear(); // Clear existing sequence
 //
 //         if (startFrame <= endFrame) {
 //             // Forward sequence
 //             for (int frame = startFrame; frame <= endFrame; frame += step) {
 //                 frameSequence_.push_back(frame);
 //             }
-//         } else {
+//         }
+//         else {
 //             // Reverse sequence
 //             for (int frame = startFrame; frame >= endFrame; frame -= step) {
 //                 frameSequence_.push_back(frame);
@@ -278,8 +280,8 @@
 //      * CHANGE: Complete sequence reset
 //      */
 //     void Animation::clearSequence() {
-//         frameSequence_.clear();                           // Remove all frames
-//         frameSequence_.shrink_to_fit();                   // Release memory
+//         frameSequence_.clear(); // Remove all frames
+//         frameSequence_.shrink_to_fit(); // Release memory
 //     }
 //
 //     /**
@@ -288,18 +290,18 @@
 //      */
 //     bool Animation::validate(const SpriteSheet& spriteSheet) const {
 //         if (frameSequence_.empty()) {
-//             return false;                                 // No frames to validate
+//             return false; // No frames to validate
 //         }
 //
 //         int maxFrame = spriteSheet.getFrameCount() - 1;
 //
 //         for (int frameIndex : frameSequence_) {
 //             if (frameIndex < 0 || frameIndex > maxFrame) {
-//                 return false;                             // Frame index out of bounds
+//                 return false; // Frame index out of bounds
 //             }
 //         }
 //
-//         return true;                                      // All frame indices are valid
+//         return true; // All frame indices are valid
 //     }
 //
 //     // ========================================================================
@@ -310,16 +312,17 @@
 //      * @brief Constructor for AnimationInstance
 //      * CHANGE: Initialize with complete state tracking
 //      */
-//     AnimationInstance::AnimationInstance(AnimationInstanceID id, AnimationID animationId, const SpriteTransform& transform)
-//         : id_(id)                                         // Store unique identifier
-//         , animationId_(animationId)                       // Associated animation
-//         , transform_(transform)                           // Initial transform data
-//         , state_(AnimationState::STOPPED)                // Start in stopped state
-//         , currentFrame_(0)                               // Start at first frame
-//         , currentTime_(0.0f)                             // Zero elapsed time
-//         , loopCount_(0)                                  // No loops completed
-//         , playingForward_(true)                          // Forward direction initially
-//         , speed_(1.0f)                                   // Normal playback speed
+//     AnimationInstance::AnimationInstance(AnimationInstanceID id, AnimationID animationId,
+//                                          const SpriteTransform& transform)
+//         : id_(id) // Store unique identifier
+//           , animationId_(animationId) // Associated animation
+//           , transform_(transform) // Initial transform data
+//           , state_(AnimationState::STOPPED) // Start in stopped state
+//           , currentFrame_(0) // Start at first frame
+//           , currentTime_(0.0f) // Zero elapsed time
+//           , loopCount_(0) // No loops completed
+//           , playingForward_(true) // Forward direction initially
+//           , speed_(1.0f) // Normal playback speed
 //     {
 //         // Constructor body empty - all initialization in member list
 //     }
@@ -331,7 +334,7 @@
 //     float AnimationInstance::getProgress() const noexcept {
 //         // Progress calculation depends on current animation state
 //         // This will be implemented when we have access to animation data
-//         return 0.0f;  // Placeholder - actual implementation needs animation reference
+//         return 0.0f; // Placeholder - actual implementation needs animation reference
 //     }
 //
 //     /**
@@ -346,7 +349,8 @@
 //             playingForward_ = true;
 //             state_ = AnimationState::PLAYING;
 //             triggerCallback(AnimationEventType::STARTED);
-//         } else if (state_ == AnimationState::PAUSED) {
+//         }
+//         else if (state_ == AnimationState::PAUSED) {
 //             // Resuming from pause
 //             state_ = AnimationState::PLAYING;
 //             triggerCallback(AnimationEventType::RESUMED);
@@ -382,8 +386,8 @@
 //      * CHANGE: Reset and immediately start playing
 //      */
 //     void AnimationInstance::restart() {
-//         stop();                                           // Reset state
-//         play();                                           // Start playing
+//         stop(); // Reset state
+//         play(); // Start playing
 //     }
 //
 //     /**
@@ -391,7 +395,8 @@
 //      * CHANGE: Direct frame control with validation
 //      */
 //     void AnimationInstance::setCurrentFrame(int frameIndex) {
-//         if (frameIndex >= 0) {  // Basic validation - full validation needs animation reference
+//         if (frameIndex >= 0) {
+//             // Basic validation - full validation needs animation reference
 //             int oldFrame = currentFrame_;
 //             currentFrame_ = frameIndex;
 //             triggerFrameCallback(oldFrame, frameIndex);
@@ -416,14 +421,14 @@
 //      */
 //     bool AnimationInstance::update(float deltaTime, const Animation& animation) {
 //         if (state_ != AnimationState::PLAYING) {
-//             return false;                                 // Not playing, no update needed
+//             return false; // Not playing, no update needed
 //         }
 //
 //         const auto& config = animation.getConfig();
 //         int frameCount = animation.getFrameCount();
 //
 //         if (frameCount <= 0) {
-//             return false;                                 // No frames to animate
+//             return false; // No frames to animate
 //         }
 //
 //         // Store old frame for change detection
@@ -441,86 +446,84 @@
 //         bool frameChanged = false;
 //
 //         switch (config.mode) {
-//             case AnimationMode::ONCE:
-//                 {
-//                     // Play once and stop at last frame
-//                     int targetFrame = static_cast<int>(currentTime_ / frameDuration);
-//                     if (targetFrame >= frameCount) {
-//                         currentFrame_ = frameCount - 1;   // Clamp to last frame
-//                         state_ = AnimationState::FINISHED;
-//                         triggerCallback(AnimationEventType::FINISHED);
-//                     } else {
-//                         currentFrame_ = targetFrame;
-//                     }
-//                 }
+//         case AnimationMode::ONCE: {
+//             // Play once and stop at last frame
+//             int targetFrame = static_cast<int>(currentTime_ / frameDuration);
+//             if (targetFrame >= frameCount) {
+//                 currentFrame_ = frameCount - 1; // Clamp to last frame
+//                 state_ = AnimationState::FINISHED;
+//                 triggerCallback(AnimationEventType::FINISHED);
+//             }
+//             else {
+//                 currentFrame_ = targetFrame;
+//             }
+//         }
+//         break;
+//
+//         case AnimationMode::LOOP: {
+//             // Loop continuously
+//             float totalDuration = animation.getTotalDuration();
+//             if (currentTime_ >= totalDuration) {
+//                 currentTime_ -= totalDuration; // Wrap time
+//                 loopCount_++;
+//                 triggerCallback(AnimationEventType::LOOPED);
+//             }
+//             currentFrame_ = static_cast<int>(currentTime_ / frameDuration) % frameCount;
+//         }
+//         break;
+//
+//         case AnimationMode::PING_PONG: {
+//             // Play forward then backward
+//             int totalFrames = frameCount * 2 - 2; // Account for ping-pong
+//             if (totalFrames <= 0) {
+//                 currentFrame_ = 0;
 //                 break;
+//             }
 //
-//             case AnimationMode::LOOP:
-//                 {
-//                     // Loop continuously
-//                     float totalDuration = animation.getTotalDuration();
-//                     if (currentTime_ >= totalDuration) {
-//                         currentTime_ -= totalDuration;    // Wrap time
-//                         loopCount_++;
-//                         triggerCallback(AnimationEventType::LOOPED);
-//                     }
-//                     currentFrame_ = static_cast<int>(currentTime_ / frameDuration) % frameCount;
-//                 }
-//                 break;
+//             float totalDuration = totalFrames * frameDuration;
+//             if (currentTime_ >= totalDuration) {
+//                 currentTime_ -= totalDuration; // Wrap time
+//                 loopCount_++;
+//                 triggerCallback(AnimationEventType::LOOPED);
+//             }
 //
-//             case AnimationMode::PING_PONG:
-//                 {
-//                     // Play forward then backward
-//                     int totalFrames = frameCount * 2 - 2;  // Account for ping-pong
-//                     if (totalFrames <= 0) {
-//                         currentFrame_ = 0;
-//                         break;
-//                     }
+//             int pingPongFrame = static_cast<int>(currentTime_ / frameDuration) % totalFrames;
+//             if (pingPongFrame < frameCount) {
+//                 currentFrame_ = pingPongFrame; // Forward direction
+//                 playingForward_ = true;
+//             }
+//             else {
+//                 currentFrame_ = totalFrames - pingPongFrame; // Backward direction
+//                 playingForward_ = false;
+//             }
+//         }
+//         break;
 //
-//                     float totalDuration = totalFrames * frameDuration;
-//                     if (currentTime_ >= totalDuration) {
-//                         currentTime_ -= totalDuration;    // Wrap time
-//                         loopCount_++;
-//                         triggerCallback(AnimationEventType::LOOPED);
-//                     }
+//         case AnimationMode::REVERSE: {
+//             // Play in reverse once
+//             int targetFrame = frameCount - 1 - static_cast<int>(currentTime_ / frameDuration);
+//             if (targetFrame < 0) {
+//                 currentFrame_ = 0; // Clamp to first frame
+//                 state_ = AnimationState::FINISHED;
+//                 triggerCallback(AnimationEventType::FINISHED);
+//             }
+//             else {
+//                 currentFrame_ = targetFrame;
+//             }
+//         }
+//         break;
 //
-//                     int pingPongFrame = static_cast<int>(currentTime_ / frameDuration) % totalFrames;
-//                     if (pingPongFrame < frameCount) {
-//                         currentFrame_ = pingPongFrame;    // Forward direction
-//                         playingForward_ = true;
-//                     } else {
-//                         currentFrame_ = totalFrames - pingPongFrame;  // Backward direction
-//                         playingForward_ = false;
-//                     }
-//                 }
-//                 break;
-//
-//             case AnimationMode::REVERSE:
-//                 {
-//                     // Play in reverse once
-//                     int targetFrame = frameCount - 1 - static_cast<int>(currentTime_ / frameDuration);
-//                     if (targetFrame < 0) {
-//                         currentFrame_ = 0;                // Clamp to first frame
-//                         state_ = AnimationState::FINISHED;
-//                         triggerCallback(AnimationEventType::FINISHED);
-//                     } else {
-//                         currentFrame_ = targetFrame;
-//                     }
-//                 }
-//                 break;
-//
-//             case AnimationMode::REVERSE_LOOP:
-//                 {
-//                     // Loop in reverse continuously
-//                     float totalDuration = animation.getTotalDuration();
-//                     if (currentTime_ >= totalDuration) {
-//                         currentTime_ -= totalDuration;    // Wrap time
-//                         loopCount_++;
-//                         triggerCallback(AnimationEventType::LOOPED);
-//                     }
-//                     currentFrame_ = frameCount - 1 - (static_cast<int>(currentTime_ / frameDuration) % frameCount);
-//                 }
-//                 break;
+//         case AnimationMode::REVERSE_LOOP: {
+//             // Loop in reverse continuously
+//             float totalDuration = animation.getTotalDuration();
+//             if (currentTime_ >= totalDuration) {
+//                 currentTime_ -= totalDuration; // Wrap time
+//                 loopCount_++;
+//                 triggerCallback(AnimationEventType::LOOPED);
+//             }
+//             currentFrame_ = frameCount - 1 - (static_cast<int>(currentTime_ / frameDuration) % frameCount);
+//         }
+//         break;
 //         }
 //
 //         // Check if frame actually changed
@@ -562,21 +565,21 @@
 //      * CHANGE: Initialize with configuration and proper member setup
 //      */
 //     AnimationManager::AnimationManager(const AnimationManagerConfig& config)
-//         : config_(config)                                 // Store configuration
-//         , initialized_(false)                            // Start uninitialized
-//         , nextSpriteSheetId_(1)                          // Start IDs at 1 (0 is reserved)
-//         , nextAnimationId_(1)
-//         , nextInstanceId_(1)
-//         , lastUpdateTime_(std::chrono::steady_clock::now())  // Initialize timing
+//         : config_(config) // Store configuration
+//           , initialized_(false) // Start uninitialized
+//           , nextSpriteSheetId_(1) // Start IDs at 1 (0 is reserved)
+//           , nextAnimationId_(1)
+//           , nextInstanceId_(1)
+//           , lastUpdateTime_(std::chrono::steady_clock::now()) // Initialize timing
 //     {
 //         // Reserve space for common numbers of resources
-//         spriteSheets_.reserve(64);                        // Typical game has < 64 sprite sheets
-//         animations_.reserve(256);                         // Typical game has < 256 animations
-//         instances_.reserve(config_.maxInstances);         // Reserve for max instances
+//         spriteSheets_.reserve(64); // Typical game has < 64 sprite sheets
+//         animations_.reserve(256); // Typical game has < 256 animations
+//         instances_.reserve(config_.maxInstances); // Reserve for max instances
 //
 //         // Reserve space for render batches
-//         renderBatches_.reserve(32);                       // Most games need < 32 batches
-//         visibleInstances_.reserve(config_.maxInstances);  // Reserve for visibility culling
+//         renderBatches_.reserve(32); // Most games need < 32 batches
+//         visibleInstances_.reserve(config_.maxInstances); // Reserve for visibility culling
 //     }
 //
 //     /**
@@ -593,7 +596,7 @@
 //      */
 //     bool AnimationManager::initialize() {
 //         if (initialized_) {
-//             return true;                                  // Already initialized
+//             return true; // Already initialized
 //         }
 //
 //         std::cout << "Initializing AnimationManager..." << std::endl;
@@ -621,10 +624,10 @@
 //      */
 //     void AnimationManager::shutdown() {
 //         if (!initialized_) {
-//             return;                                       // Already shutdown
+//             return; // Already shutdown
 //         }
 //
-//         std::lock_guard<std::mutex> lock(animationMutex_);  // Thread-safe cleanup
+//         std::lock_guard<std::mutex> lock(animationMutex_); // Thread-safe cleanup
 //
 //         std::cout << "Shutting down AnimationManager..." << std::endl;
 //
@@ -656,7 +659,7 @@
 //      */
 //     void AnimationManager::update(float deltaTime) {
 //         if (!initialized_) {
-//             return;                                       // Not initialized
+//             return; // Not initialized
 //         }
 //
 //         // Update all active instances
@@ -684,13 +687,14 @@
 //      */
 //     void AnimationManager::render(SDL_Renderer* renderer, const Vector2& cameraPosition, const Vector2& viewportSize) {
 //         if (!initialized_ || !renderer) {
-//             return;                                       // Not initialized or invalid renderer
+//             return; // Not initialized or invalid renderer
 //         }
 //
 //         // Update visibility culling if enabled
 //         if (config_.enableCulling) {
 //             updateCulling(cameraPosition, viewportSize);
-//         } else {
+//         }
+//         else {
 //             // If culling disabled, all instances are visible
 //             visibleInstances_.clear();
 //             visibleInstances_.reserve(instances_.size());
@@ -712,7 +716,8 @@
 //                     drawCalls_.fetch_add(1, std::memory_order_relaxed);
 //                 }
 //             }
-//         } else {
+//         }
+//         else {
 //             // Render instances individually (simpler but less efficient)
 //             for (AnimationInstanceID instanceId : visibleInstances_) {
 //                 auto instanceIt = instances_.find(instanceId);
@@ -746,7 +751,7 @@
 //                 const auto& transform = instance.getTransform();
 //                 SDL_SetTextureAlphaMod(spriteSheet.getTexture()->getSDLTexture(), transform.alpha);
 //                 SDL_SetTextureColorMod(spriteSheet.getTexture()->getSDLTexture(),
-//                                      transform.tint.r, transform.tint.g, transform.tint.b);
+//                                        transform.tint.r, transform.tint.g, transform.tint.b);
 //
 //                 // Handle sprite flipping
 //                 SDL_RendererFlip flip = SDL_FLIP_NONE;
@@ -759,8 +764,8 @@
 //
 //                 // Render the sprite
 //                 SDL_RenderCopyEx(renderer, spriteSheet.getTexture()->getSDLTexture(),
-//                                &srcRect, &dstRect, static_cast<double>(transform.rotation),
-//                                nullptr, flip);
+//                                  &srcRect, &dstRect, static_cast<double>(transform.rotation),
+//                                  nullptr, flip);
 //
 //                 drawCalls_.fetch_add(1, std::memory_order_relaxed);
 //                 framesRendered_.fetch_add(1, std::memory_order_relaxed);
@@ -772,13 +777,15 @@
 //      * @brief Create sprite sheet from texture resource
 //      * CHANGE: Integration with ResourceManager texture system
 //      */
-//     SpriteSheetID AnimationManager::createSpriteSheet(const std::string& name, engine::resources::ResourceHandle<engine::resources::TextureResource> texture) {
+//     SpriteSheetID AnimationManager::createSpriteSheet(const std::string& name,
+//                                                       resources::ResourceHandle<
+//                                                           resources::TextureResource> texture) {
 //         if (!initialized_) {
 //             std::cerr << "AnimationManager not initialized" << std::endl;
 //             return INVALID_SPRITESHEET_ID;
 //         }
 //
-//         std::lock_guard<std::mutex> lock(animationMutex_);  // Thread-safe operation
+//         std::lock_guard lock(animationMutex_); // Thread-safe operation
 //
 //         SpriteSheetID spriteSheetId = nextSpriteSheetId_++;
 //
@@ -801,7 +808,7 @@
 //             return false;
 //         }
 //
-//         std::lock_guard<std::mutex> lock(animationMutex_);
+//         std::lock_guard lock(animationMutex_);
 //
 //         // Remove all animations that use this sprite sheet
 //         std::vector<AnimationID> animationsToRemove;
@@ -812,7 +819,7 @@
 //         }
 //
 //         for (AnimationID animId : animationsToRemove) {
-//             removeAnimation(animId);  // This will also remove instances
+//             removeAnimation(animId); // This will also remove instances
 //         }
 //
 //         // Remove the sprite sheet
@@ -850,7 +857,8 @@
 //      * @brief Create animation from sprite sheet
 //      * CHANGE: Full animation creation with validation
 //      */
-//     AnimationID AnimationManager::createAnimation(const std::string& name, SpriteSheetID spriteSheetId, const AnimationConfig& config) {
+//     AnimationID AnimationManager::createAnimation(const std::string& name, SpriteSheetID spriteSheetId,
+//                                                   const AnimationConfig& config) {
 //         if (!initialized_) {
 //             std::cerr << "AnimationManager not initialized" << std::endl;
 //             return INVALID_ANIMATION_ID;
@@ -955,7 +963,8 @@
 //         instances_[instanceId] = std::move(instance);
 //
 //         if (config_.enableAnimationLogging) {
-//             std::cout << "Created animation instance (ID: " << instanceId << ") for animation " << animationId << std::endl;
+//             std::cout << "Created animation instance (ID: " << instanceId << ") for animation " << animationId <<
+//                 std::endl;
 //         }
 //
 //         return instanceId;
@@ -1123,7 +1132,7 @@
 //
 //         // Calculate render batch memory
 //         for (const auto& batch : renderBatches_) {
-//             totalMemory += batch->capacity * (sizeof(SDL_Rect) * 2);  // src + dst rects
+//             totalMemory += batch->capacity * (sizeof(SDL_Rect) * 2); // src + dst rects
 //         }
 //
 //         return totalMemory;
@@ -1190,7 +1199,7 @@
 //      */
 //     bool AnimationManager::isValidSpriteSheetId(SpriteSheetID spriteSheetId) const {
 //         return spriteSheetId != INVALID_SPRITESHEET_ID &&
-//                spriteSheets_.find(spriteSheetId) != spriteSheets_.end();
+//             spriteSheets_.find(spriteSheetId) != spriteSheets_.end();
 //     }
 //
 //     /**
@@ -1199,7 +1208,7 @@
 //      */
 //     bool AnimationManager::isValidAnimationId(AnimationID animationId) const {
 //         return animationId != INVALID_ANIMATION_ID &&
-//                animations_.find(animationId) != animations_.end();
+//             animations_.find(animationId) != animations_.end();
 //     }
 //
 //     /**
@@ -1208,7 +1217,7 @@
 //      */
 //     bool AnimationManager::isValidInstanceId(AnimationInstanceID instanceId) const {
 //         return instanceId != INVALID_INSTANCE_ID &&
-//                instances_.find(instanceId) != instances_.end();
+//             instances_.find(instanceId) != instances_.end();
 //     }
 //
 //     /**
@@ -1332,7 +1341,7 @@
 //
 //         if (batch.count <= 0 || !batch.texture.isReady()) {
 //             std::cout << "ERROR: Batch invalid - count: " << batch.count
-//                       << ", texture ready: " << batch.texture.isReady() << std::endl;
+//                 << ", texture ready: " << batch.texture.isReady() << std::endl;
 //             return;
 //         }
 //
@@ -1352,7 +1361,8 @@
 //      * @brief Calculate destination rectangle for sprite rendering
 //      * CHANGE: Handle transform, scale, and positioning
 //      */
-//     SDL_Rect AnimationManager::calculateDestRect(const AnimationInstance& instance, const SpriteSheet& spriteSheet, const SpriteRect& frameRect) const {
+//     SDL_Rect AnimationManager::calculateDestRect(const AnimationInstance& instance, const SpriteSheet& spriteSheet,
+//                                                  const SpriteRect& frameRect) const {
 //         const auto& transform = instance.getTransform();
 //
 //         // Calculate scaled dimensions
@@ -1370,24 +1380,25 @@
 //      * @brief Check if instance is visible within camera view
 //      * CHANGE: Frustum culling with margin for smooth scrolling
 //      */
-//     bool AnimationManager::isInstanceVisible(const AnimationInstance& instance, const Vector2& cameraPosition, const Vector2& viewportSize) const {
+//     bool AnimationManager::isInstanceVisible(const AnimationInstance& instance, const Vector2& cameraPosition,
+//                                              const Vector2& viewportSize) const {
 //         const auto& transform = instance.getTransform();
 //
 //         // Calculate sprite bounds (simplified bounding box)
-//         float spriteWidth = 64.0f * transform.scale.x;   // Assume 64px default sprite size
-//         float spriteHeight = 64.0f * transform.scale.y;
+//         const float spriteWidth = 64.0f * transform.scale.x; // Assume 64px default sprite size
+//         const float spriteHeight = 64.0f * transform.scale.y;
 //
 //         // Calculate camera bounds with margin
-//         float leftBound = cameraPosition.x - config_.cullMargin.x;
-//         float rightBound = cameraPosition.x + viewportSize.x + config_.cullMargin.x;
-//         float topBound = cameraPosition.y - config_.cullMargin.y;
-//         float bottomBound = cameraPosition.y + viewportSize.y + config_.cullMargin.y;
+//         const float leftBound = cameraPosition.x - config_.cullMargin.x;
+//         const float rightBound = cameraPosition.x + viewportSize.x + config_.cullMargin.x;
+//         const float topBound = cameraPosition.y - config_.cullMargin.y;
+//         const float bottomBound = cameraPosition.y + viewportSize.y + config_.cullMargin.y;
 //
-//         // Check if sprite intersects with camera view
+//         // Check if sprite intersects with the camera view
 //         return (transform.position.x + spriteWidth >= leftBound &&
-//                 transform.position.x <= rightBound &&
-//                 transform.position.y + spriteHeight >= topBound &&
-//                 transform.position.y <= bottomBound);
+//             transform.position.x <= rightBound &&
+//             transform.position.y + spriteHeight >= topBound &&
+//             transform.position.y <= bottomBound);
 //     }
 //
 //     /**
@@ -1405,17 +1416,17 @@
 //      * CHANGE: Depth sorting for proper rendering order
 //      */
 //     void AnimationManager::sortInstancesByLayer() {
-//         std::sort(visibleInstances_.begin(), visibleInstances_.end(),
-//                  [this](AnimationInstanceID a, AnimationInstanceID b) {
-//                      auto instanceA = instances_.find(a);
-//                      auto instanceB = instances_.find(b);
+//         std::ranges::sort(visibleInstances_,
+//                           [this](AnimationInstanceID a, AnimationInstanceID b) {
+//                               const auto instanceA = instances_.find(a);
+//                               const auto instanceB = instances_.find(b);
 //
-//                      if (instanceA == instances_.end() || instanceB == instances_.end()) {
-//                          return false;
-//                      }
+//                               if (instanceA == instances_.end() || instanceB == instances_.end()) {
+//                                   return false;
+//                               }
 //
-//                      return instanceA->second->getTransform().layer < instanceB->second->getTransform().layer;
-//                  });
+//                               return instanceA->second->getTransform().layer < instanceB->second->getTransform().layer;
+//                           });
 //     }
 //
 //     /**
@@ -1424,12 +1435,9 @@
 //      */
 //     void AnimationManager::cleanupRenderBatches() {
 //         // Remove empty batches to free memory
-//         renderBatches_.erase(
-//             std::remove_if(renderBatches_.begin(), renderBatches_.end(),
-//                           [](const std::unique_ptr<RenderBatch>& batch) {
-//                               return batch->count == 0;
-//                           }),
-//             renderBatches_.end());
+//         std::erase_if(renderBatches_,
+//                       [](const std::unique_ptr<RenderBatch>& batch) {
+//                           return batch->count == 0;
+//                       });
 //     }
-//
 // } // namespace engine::animation                                 // Not
