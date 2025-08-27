@@ -28,7 +28,6 @@ add_executable(simple_game src/main.cpp
         src/Input/InputManager.cpp
         Game.cpp
         src/Animation/AnimationManager.cpp
-        src/Camera/CameraManager.cpp
         src/Physics/PhysicsManager.cpp
         src/memory/MemorySystem.h
         src/memory/allocators/LinearAllocator.cpp
@@ -84,6 +83,46 @@ add_executable(simple_game src/main.cpp
         src/memory/allocators/HeapAllocator.h
         src/memory/allocators/SystemAllocator.cpp
         src/memory/allocators/SystemAllocator.h
+        src/camera/CameraSystem.h
+        src/camera/cameras/BaseCamera.cpp
+        src/camera/cameras/BaseCamera.h
+        src/camera/cameras/Camera2D.cpp
+        src/camera/cameras/Camera2D.h
+        src/camera/cameras/Camera3D.cpp
+        src/camera/cameras/Camera3D.h
+        src/camera/core/CameraBounds.cpp
+        src/camera/core/CameraBounds.h
+        src/camera/core/CameraTypes.h
+        src/camera/effects/CameraShake.cpp
+        src/camera/effects/CameraShake.h
+        src/camera/effects/ShakeConfig.h
+        src/camera/effects/ShakePattern.h
+        src/camera/input/CameraInputHandler.cpp
+        src/camera/input/CameraInputHandler.h
+        src/camera/manager/CameraManagerConfig.h
+        src/camera/transitions/TransitionConfig.h
+        src/camera/transitions/TransitionEasing.cpp
+        src/camera/transitions/TransitionEasing.h
+        src/camera/manager/CameraManager.cpp
+        src/camera/manager/CameraManager.h
+        src/camera/transitions/CameraTransition.cpp
+        src/camera/transitions/CameraTransition.h
+        src/camera/presets/FPSCamera.cpp
+        src/camera/presets/FPSCamera.h
+        src/camera/presets/ThirdPersonCamera.cpp
+        src/camera/presets/ThirdPersonCamera.h
+        src/camera/presets/TopDownCamera.cpp
+        src/camera/presets/TopDownCamera.h
+        src/camera/presets/SideSCrollerCamera.cpp
+        src/camera/presets/SideSCrollerCamera.h
+        src/camera/presets/ISometricCamera.cpp
+        src/camera/presets/ISometricCamera.h
+        src/camera/utils/CoordinateTransform.cpp
+        src/camera/utils/CoordinateTransform.h
+        src/camera/utils/CameraDebugger.cpp
+        src/camera/utils/CameraDebugger.h
+        src/camera/manager/CameraRegistry.cpp
+        src/camera/manager/CameraRegistry.h
 )
 
 target_link_libraries(${PROJECT_NAME}

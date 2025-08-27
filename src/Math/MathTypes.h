@@ -76,24 +76,26 @@ namespace engine::math {
         constexpr float E = 2.71828182846f;                 // Euler's number
 
         // Common vectors
-        const Vector2 VEC2_ZERO{0.0f, 0.0f};
-        const Vector2 VEC2_ONE{1.0f, 1.0f};
-        const Vector2 VEC2_UNIT_X{1.0f, 0.0f};
-        const Vector2 VEC2_UNIT_Y{0.0f, 1.0f};
+        constexpr Vector2 VEC2_ZERO{0.0f, 0.0f};
+        constexpr Vector2 VEC2_ONE{1.0f, 1.0f};
+        constexpr Vector2 VEC2_UNIT_X{1.0f, 0.0f};
+        constexpr Vector2 VEC2_UNIT_Y{0.0f, 1.0f};
 
-        const Vector3 VEC3_ZERO{0.0f, 0.0f, 0.0f};
-        const Vector3 VEC3_ONE{1.0f, 1.0f, 1.0f};
-        const Vector3 VEC3_UNIT_X{1.0f, 0.0f, 0.0f};       // Right
-        const Vector3 VEC3_UNIT_Y{0.0f, 1.0f, 0.0f};       // Up
-        const Vector3 VEC3_UNIT_Z{0.0f, 0.0f, 1.0f};       // Forward (OpenGL style)
-        const Vector3 VEC3_FORWARD{0.0f, 0.0f, -1.0f};     // Forward direction (looking into -Z)
-        const Vector3 VEC3_RIGHT{1.0f, 0.0f, 0.0f};        // Right direction
-        const Vector3 VEC3_UP{0.0f, 1.0f, 0.0f};           // Up direction
+        constexpr Vector3 VEC3_ZERO{0.0f, 0.0f, 0.0f};
+        constexpr Vector3 VEC3_ONE{1.0f, 1.0f, 1.0f};
+        constexpr Vector3 VEC3_UNIT_X{1.0f, 0.0f, 0.0f};       // Right
+        constexpr Vector3 VEC3_UNIT_Y{0.0f, 1.0f, 0.0f};       // Up
+        constexpr Vector3 VEC3_UNIT_Z{0.0f, 0.0f, 1.0f};       // Forward (OpenGL style)
+        constexpr Vector3 VEC3_FORWARD{0.0f, 0.0f, -1.0f};     // Forward direction (looking into -Z)
+        constexpr Vector3 VEC3_RIGHT{1.0f, 0.0f, 0.0f};        // Right direction
+        constexpr Vector3 VEC3_UP{0.0f, 1.0f, 0.0f};           // Up direction
+        constexpr Vector3 VEC3_MIN{-FLT_MAX, -FLT_MAX, -FLT_MAX};  // Minimum possible vector values
+        constexpr Vector3 VEC3_MAX{FLT_MAX, FLT_MAX, FLT_MAX};      // Maximum possible vector values
 
-        const Matrix4 MAT4_IDENTITY{1.0f};                  // 4x4 Identity matrix
-        const Matrix3 MAT3_IDENTITY{1.0f};                  // 3x3 Identity matrix
+        constexpr Matrix4 MAT4_IDENTITY{1.0f};                  // 4x4 Identity matrix
+        constexpr Matrix3 MAT3_IDENTITY{1.0f};                  // 3x3 Identity matrix
 
-        const Quaternion QUAT_IDENTITY{1.0f, 0.0f, 0.0f, 0.0f}; // Identity quaternion
+        constexpr Quaternion QUAT_IDENTITY{1.0f, 0.0f, 0.0f, 0.0f}; // Identity quaternion
     }
 
     // ========================================================================
