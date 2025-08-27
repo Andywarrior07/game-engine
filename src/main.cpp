@@ -18,7 +18,8 @@
 #include "./Input/InputManager.h"
 // CHANGE: Removed animation manager as it depends on old system
 // #include "./Animation/AnimationManager.h"
-#include "./Camera/CameraManager.h"
+#include "./camera/CameraSystem.h"
+// #include "./Camera-old/CameraManager.h"
 #include "Animation/AnimationManager.h"
 // #include "memory/manager/MemoryManager.h"
 
@@ -26,6 +27,7 @@
 using namespace engine::memory;
 using namespace engine::resources; // Now points to new resource system
 using namespace engine::input;
+using namespace engine::math;
 // using namespace engine::animation;
 using namespace engine::camera;
 
@@ -72,7 +74,8 @@ public:
             std::cout << "Quick shutdown mode enabled - disabling memory checks" << std::endl;
             memConfig.enableLeakDetection = false;
             memConfig.enableBoundsChecking = false;
-        } else {
+        }
+        else {
             memConfig.enableLeakDetection = true;
             memConfig.enableLeakDetection = true;
             memConfig.enableBoundsChecking = true;
@@ -188,7 +191,7 @@ public:
         }
 
         // 8. CONFIGURE VIEWPORT FOR CAMERA
-        Viewport viewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+        engine::math::Viewport viewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
         cameraManager_->setViewport(viewport);
 
         // 9. SETUP WORLD AND CAMERA
@@ -236,34 +239,40 @@ public:
             return false;
         }
 
-        // 2. SETUP CAMERA FOR PLAYER TRACKING
-        if (!cameraManager_->setupTopDownCamera(mainCameraId_, Vector2(WORLD_WIDTH / 2, WORLD_HEIGHT / 2), 1.0f)) {
-            std::cerr << "Failed to setup top-down camera" << std::endl;
+        // 2. GET CAMERA AND CONFIGURE IT DIRECTLY (no existe setupTopDownCamera)
+        Camera2D* mainCamera = cameraManager_->getCamera2D(mainCameraId_);
+        if (!mainCamera) {
+            std::cerr << "Failed to get main camera" << std::endl;
             return false;
         }
 
-        // 3. CONFIGURE WORLD BOUNDS
-        Vector2 worldMin(0.0f, 0.0f);
-        Vector2 worldMax(WORLD_WIDTH, WORLD_HEIGHT);
-        CameraBounds worldBounds(Vector3(worldMin.x, worldMin.y, 0.0f),
-                                 Vector3(worldMax.x, worldMax.y, 0.0f), 100.0f);
+        // 3. SETUP CAMERA FOR TOP-DOWN VIEW
+        mainCamera->setMode(CameraMode::TOP_DOWN);
+        mainCamera->setPosition(Vector2(WORLD_WIDTH / 2, WORLD_HEIGHT / 2));
+        mainCamera->setZoom(1.0f);
+        mainCamera->setFollowSpeed(6.0f);
+        mainCamera->setZoomLimits(0.5f, 2.0f);
+        mainCamera->setSmoothingSpeed(8.0f);
 
-        Camera2D* mainCamera = cameraManager_->getCamera2D(mainCameraId_);
-        if (mainCamera) {
-            mainCamera->setBounds(worldBounds);
-            mainCamera->setMode(CameraMode::FOLLOW_TARGET);
-            mainCamera->setFollowSpeed(6.0f);
-            mainCamera->setZoomLimits(0.5f, 2.0f);
-            std::cout << "✓ Main camera configured with world bounds" << std::endl;
-        }
+        // 4. CONFIGURE WORLD BOUNDS (sin el tercer parámetro)
+        CameraBounds worldBounds(
+            Vector3(0.0f, 0.0f, -1.0f),
+            Vector3(WORLD_WIDTH, WORLD_HEIGHT, 1.0f)
+        );
+        worldBounds.enabled = true; // Asegurarse de que estén habilitados
 
-        // 4. ACTIVATE MAIN CAMERA
+        mainCamera->setBounds(worldBounds);
+        mainCamera->setMode(CameraMode::FOLLOW_TARGET);
+
+        std::cout << "✓ Main camera configured with world bounds" << std::endl;
+
+        // 5. ACTIVATE MAIN CAMERA
         if (!cameraManager_->setActiveCamera(mainCameraId_)) {
             std::cerr << "Failed to set active camera" << std::endl;
             return false;
         }
 
-        // 5. CREATE FREE CAMERA FOR TESTING
+        // 6. CREATE FREE CAMERA FOR TESTING
         freeCameraId_ = cameraManager_->createCamera2D("FreeCamera");
         if (freeCameraId_ != INVALID_CAMERA_ID) {
             Camera2D* freeCamera = cameraManager_->getCamera2D(freeCameraId_);
@@ -417,7 +426,6 @@ public:
         currentSpriteFrame_.h = 140; // Frame height
 
         // CHANGE: Load background texture (commented out for now as requested)
-        /*
         std::cout << "\n=== Loading Background Texture ===" << std::endl;
 
         ResourceID backgroundTextureId = std::hash<std::string>{}("background_texture");
@@ -429,14 +437,13 @@ public:
         );
 
         auto backgroundTexture = backgroundTextureHandle_.get();
-        if (backgroundTexture && backgroundTexture->isLoaded()) {
+        if (backgroundTexture ) {
             SDL_Surface* bgSurface = backgroundTexture->getSDLSurface();
             if (bgSurface) {
                 backgroundSDLTexture_ = SDL_CreateTextureFromSurface(renderer_, bgSurface);
                 std::cout << "✓ Background texture loaded and created" << std::endl;
             }
         }
-        */
 
         // CHANGE: Print memory usage after loading resources
         std::cout << "\nResource Memory Usage: " << (resourceManager_->getMemoryUsage() / 1024.0 / 1024.0) << " MB" <<
@@ -533,8 +540,10 @@ public:
 
         // Camera shake
         if (inputManager_->isActionPressed(shakeAction_)) {
-            ShakeConfig shakeConfig(2.0f, 0.5f, ShakePattern::EXPLOSION);
-            cameraManager_->startCameraShake(mainCameraId_, shakeConfig);
+            ShakeConfig shakeConfig = ShakeConfig::explosion(3.0f);
+            shakeConfig.duration = 0.5f;
+            const CameraID cameraId = cameraManager_->getActiveCameraId();
+            cameraManager_->startCameraShake(cameraId, shakeConfig);
         }
 
         // Manual camera control (only in free mode)
