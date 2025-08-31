@@ -16,13 +16,13 @@ namespace engine::camera {
      * @brief Top-down camera configuration
      */
     struct TopDownCameraConfig {
-        Vector2 position{0.0f, 0.0f};           ///< Initial camera position
+        Vec2 position{0.0f, 0.0f};           ///< Initial camera position
         float zoom = 1.0f;                      ///< Initial zoom level
         float minZoom = 0.5f;                   ///< Minimum zoom level
         float maxZoom = 3.0f;                   ///< Maximum zoom level
         float followSpeed = 8.0f;               ///< Target follow speed
         float smoothing = 5.0f;                 ///< Camera smoothing
-        Vector2 deadzone{50.0f, 50.0f};        ///< Follow deadzone size
+        Vec2 deadzone{50.0f, 50.0f};        ///< Follow deadzone size
         bool enableBounds = false;              ///< Enable world bounds
         CameraBounds worldBounds;               ///< World boundary limits
         bool enableEdgeScrolling = true;        ///< Enable edge scrolling
@@ -104,7 +104,7 @@ namespace engine::camera {
          * @param deltaTime Time step
          */
         static void followWithDeadzone(Camera2D* camera,
-                                       const Vector2& targetPosition,
+                                       const Vec2& targetPosition,
                                        const TopDownCameraConfig& config,
                                        float deltaTime);
 
@@ -117,8 +117,8 @@ namespace engine::camera {
          * @param deltaTime Time step
          */
         static void handleEdgeScrolling(Camera2D* camera,
-                                       const Vector2& mousePos,
-                                       const Vector2& screenSize,
+                                       const Vec2& mousePos,
+                                       const Vec2& screenSize,
                                        const TopDownCameraConfig& config,
                                        float deltaTime);
 
@@ -130,7 +130,7 @@ namespace engine::camera {
          * @param config Configuration
          */
         static void handleDragPan(Camera2D* camera,
-                                 const Vector2& mouseDelta,
+                                 const Vec2& mouseDelta,
                                  bool isDragging,
                                  const TopDownCameraConfig& config);
 
@@ -155,7 +155,7 @@ namespace engine::camera {
          * @param deltaTime Time step
          */
         static void smoothTransition(Camera2D* camera,
-                                    const Vector2& targetPosition,
+                                    const Vec2& targetPosition,
                                     float targetZoom,
                                     float speed,
                                     float deltaTime);

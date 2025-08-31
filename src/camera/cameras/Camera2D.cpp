@@ -22,21 +22,21 @@ namespace engine::camera {
 
         applyZoomConstraints();
 
-        const Vector3 pos3D(position_.x, position_.y, 0.0f);
-        const Vector3 constrainedPos3D = bounds_.clamp(pos3D);
+        const Vec3 pos3D(position_.x, position_.y, 0.0f);
+        const Vec3 constrainedPos3D = bounds_.clamp(pos3D);
 
-        position_ = Vector2(constrainedPos3D.x, constrainedPos3D.y);
+        position_ = Vec2(constrainedPos3D.x, constrainedPos3D.y);
     }
 
     void Camera2D::reset() {
-        position_ = math::constants::VEC2_ZERO;
-        targetPosition_ = math::constants::VEC2_ZERO;
-        offset_ = math::constants::VEC2_ZERO;
+        position_ = math::VEC2_ZERO;
+        targetPosition_ = math::VEC2_ZERO;
+        offset_ = math::VEC2_ZERO;
         zoom_ = 1.0f;
         targetZoom_ = 1.0f;
         rotation_ = 0.0f;
         targetRotation_ = 0.0f;
-        velocity_ = math::constants::VEC2_ZERO;
+        velocity_ = math::VEC2_ZERO;
     }
 
     std::string Camera2D::getDebugInfo() const {
@@ -62,14 +62,14 @@ namespace engine::camera {
         return true;
     }
 
-    void Camera2D::setPosition(const Vector2& position) {
-        const Vector3 pos3D(position.x, position.y, 0.0f);
-        const Vector3 constrainedPos3D = bounds_.clamp(pos3D);
+    void Camera2D::setPosition(const Vec2& position) {
+        const Vec3 pos3D(position.x, position.y, 0.0f);
+        const Vec3 constrainedPos3D = bounds_.clamp(pos3D);
 
-        if (const Vector2 constrainedPos(constrainedPos3D.x, constrainedPos3D.y); constrainedPos != position_) {
+        if (const Vec2 constrainedPos(constrainedPos3D.x, constrainedPos3D.y); constrainedPos != position_) {
             position_ = constrainedPos;
             targetPosition_ = constrainedPos;
-            triggerCallback(getPosition(), math::constants::VEC3_ZERO);
+            triggerCallback(getPosition(), math::VEC3_ZERO);
         }
     }
 
@@ -81,11 +81,11 @@ namespace engine::camera {
     // TARGET FOLLOWING
     // ========================================================================
 
-    void Camera2D::setTarget(const Vector2& target) {
-        const Vector3 target3D(target.x, target.y, 0.0f);
-        const Vector3 constrainedTarget3D = bounds_.clamp(target3D);
+    void Camera2D::setTarget(const Vec2& target) {
+        const Vec3 target3D(target.x, target.y, 0.0f);
+        const Vec3 constrainedTarget3D = bounds_.clamp(target3D);
 
-        targetPosition_ = Vector2(constrainedTarget3D.x, constrainedTarget3D.y);
+        targetPosition_ = Vec2(constrainedTarget3D.x, constrainedTarget3D.y);
     }
 
     // ========================================================================
@@ -105,20 +105,20 @@ namespace engine::camera {
     // COORDINATE TRANSFORMATIONS
     // ========================================================================
 
-    Vector2 Camera2D::worldToScreen(const Vector2& worldPos, const Viewport& viewport) const {
+    Vec2 Camera2D::worldToScreen(const Vec2& worldPos, const Viewport& viewport) const {
         // Apply camera transformation
-        Vector2 relativePos = worldPos - position_;
+        Vec2 relativePos = worldPos - position_;
 
         // Apply zoom
         relativePos *= zoom_;
 
         // Apply rotation if needed
         if (std::abs(rotation_) > 1e-3f) {
-            const float radians = rotation_ * math::constants::DEG_TO_RAD;
+            const float radians = rotation_ * math::DEG_TO_RAD<math::Float>;
             const float cosR = std::cos(radians);
             const float sinR = std::sin(radians);
 
-            const Vector2 rotated(
+            const Vec2 rotated(
                 relativePos.x * cosR - relativePos.y * sinR,
                 relativePos.x * sinR + relativePos.y * cosR
             );
@@ -126,27 +126,27 @@ namespace engine::camera {
         }
 
         // Apply offset and convert to screen coordinates
-        Vector2 screenPos = relativePos + offset_;
-        screenPos.x += viewport.width * 0.5f;
-        screenPos.y += viewport.height * 0.5f;
+        Vec2 screenPos = relativePos + offset_;
+        screenPos.x += viewport.getWidth() * 0.5f;
+        screenPos.y += viewport.getHeight() * 0.5f;
 
         return screenPos;
     }
 
-    Vector2 Camera2D::screenToWorld(const Vector2& screenPos, const Viewport& viewport) const {
+    Vec2 Camera2D::screenToWorld(const Vec2& screenPos, const Viewport& viewport) const {
         // Convert from screen coordinates to relative coordinates
-        Vector2 relativePos = screenPos;
-        relativePos.x -= viewport.width * 0.5f;
-        relativePos.y -= viewport.height * 0.5f;
+        Vec2 relativePos = screenPos;
+        relativePos.x -= viewport.getWidth() * 0.5f;
+        relativePos.y -= viewport.getHeight() * 0.5f;
         relativePos -= offset_;
 
         // Apply inverse rotation
         if (std::abs(rotation_) > 1e-3f) {
-            const float radians = -rotation_ * math::constants::DEG_TO_RAD; // Negative for inverse
+            const float radians = -rotation_ * math::DEG_TO_RAD<math::Float>; // Negative for inverse
             const float cosR = std::cos(radians);
             const float sinR = std::sin(radians);
 
-            Vector2 rotated(
+            Vec2 rotated(
                 relativePos.x * cosR - relativePos.y * sinR,
                 relativePos.x * sinR + relativePos.y * cosR
             );
@@ -162,19 +162,19 @@ namespace engine::camera {
 
     CameraBounds Camera2D::getViewBounds(const Viewport& viewport) const {
         // Calculate half viewport size in world coordinates
-        const float halfWidth = (viewport.width * 0.5f) / zoom_;
-        const float halfHeight = (viewport.height * 0.5f) / zoom_;
+        const float halfWidth = (viewport.getWidth() * 0.5f) / zoom_;
+        const float halfHeight = (viewport.getHeight() * 0.5f) / zoom_;
 
-        const Vector3 min3D(position_.x - halfWidth, position_.y - halfHeight, -1.0f);
-        const Vector3 max3D(position_.x + halfWidth, position_.y + halfHeight, 1.0f);
+        const Vec3 min3D(position_.x - halfWidth, position_.y - halfHeight, -1.0f);
+        const Vec3 max3D(position_.x + halfWidth, position_.y + halfHeight, 1.0f);
 
         return {min3D, max3D};
     }
 
-    bool Camera2D::isVisible(const Vector2& worldPos, const Viewport& viewport) const {
+    bool Camera2D::isVisible(const Vec2& worldPos, const Viewport& viewport) const {
         const CameraBounds viewBounds = getViewBounds(viewport);
 
-        return viewBounds.contains(Vector3(worldPos.x, worldPos.y, 0.0f));
+        return viewBounds.contains(Vec3(worldPos.x, worldPos.y, 0.0f));
     }
 
     // ========================================================================
@@ -182,17 +182,17 @@ namespace engine::camera {
     // ========================================================================
 
     void Camera2D::updateMovement(float deltaTime) {
-        const Vector2 oldPosition = position_;
+        const Vec2 oldPosition = position_;
 
         switch (mode_) {
         case CameraMode::FOLLOW_TARGET:
         case CameraMode::SIDE_SCROLLER: {
             // Smooth movement towards target
-            const Vector2 direction = targetPosition_ - position_;
+            const Vec2 direction = targetPosition_ - position_;
 
             if (const float distance = glm::length(direction); distance > 1e-3f) {
                 // Don't overshoot the target
-                if (const Vector2 movement = direction * followSpeed_ * deltaTime; glm::length(movement) > distance) {
+                if (const Vec2 movement = direction * followSpeed_ * deltaTime; glm::length(movement) > distance) {
                     // CAMBIO: usar glm::length
                     position_ = targetPosition_;
                 }
@@ -201,7 +201,7 @@ namespace engine::camera {
                 }
             }
         }
-            break;
+        break;
 
         case CameraMode::TOP_DOWN:
             // For top-down, position updates are usually direct
@@ -216,7 +216,7 @@ namespace engine::camera {
 
         // Trigger callback if position changed
         if (position_ != oldPosition) {
-            triggerCallback(getPosition(), math::constants::VEC3_ZERO);
+            triggerCallback(getPosition(), math::VEC3_ZERO);
         }
     }
 

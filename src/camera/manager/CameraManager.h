@@ -16,6 +16,7 @@
 #include "../effects/CameraShake.h"
 #include "../transitions/CameraTransition.h"
 #include "../input/CameraInputHandler.h"
+#include "../core/Viewport.h"
 
 #include <memory>
 #include <atomic>
@@ -178,7 +179,7 @@ namespace engine::camera {
          * @param config Transition configuration
          * @return TransitionID for tracking, or INVALID_TRANSITION_ID if failed
          */
-        TransitionID transitionToPosition(CameraID cameraId, const Vector3& targetPosition,
+        TransitionID transitionToPosition(CameraID cameraId, const Vec3& targetPosition,
                                          const TransitionConfig& config = {});
 
         /**
@@ -188,7 +189,7 @@ namespace engine::camera {
          * @param config Transition configuration
          * @return TransitionID for tracking, or INVALID_TRANSITION_ID if failed
          */
-        TransitionID transitionToTarget(CameraID cameraId, const Vector3& targetLookAt,
+        TransitionID transitionToTarget(CameraID cameraId, const Vec3& targetLookAt,
                                        const TransitionConfig& config = {});
 
         /**
@@ -306,20 +307,20 @@ namespace engine::camera {
          * @brief Set the current viewport
          * @param viewport Viewport information
          */
-        void setViewport(const math::Viewport& viewport) { viewport_ = viewport; }
+        void setViewport(const Viewport& viewport) { viewport_ = viewport; }
 
         /**
          * @brief Get the current viewport
          * @return Current viewport settings
          */
-        const math::Viewport& getViewport() const noexcept { return viewport_; }
+        const Viewport& getViewport() const noexcept { return viewport_; }
 
         /**
          * @brief Convert world position to screen coordinates using active camera
          * @param worldPos World position to convert
          * @return Screen coordinates, or Vector2::ZERO if no active camera
          */
-        Vector2 worldToScreen(const Vector3& worldPos) const;
+        Vec2 worldToScreen(const Vec3& worldPos) const;
 
         /**
          * @brief Convert screen coordinates to world position using active camera
@@ -327,13 +328,13 @@ namespace engine::camera {
          * @param depth Depth for 3D cameras (ignored for 2D)
          * @return World position, or Vector3::ZERO if no active camera
          */
-        Vector3 screenToWorld(const Vector2& screenPos, float depth = 0.0f) const;
+        Vec3 screenToWorld(const Vec2& screenPos, float depth = 0.0f) const;
 
         /**
          * @brief Get view frustum bounds for active camera
          * @return Camera bounds representing visible area
          */
-        math::Bounds3D getViewBounds() const;
+        math::AABB getViewBounds() const;
 
         // ========================================================================
         // CONFIGURATION AND STATISTICS
@@ -405,7 +406,7 @@ namespace engine::camera {
         // State
         bool initialized_ = false;                            ///< Initialization state
         CameraID activeCameraId_ = INVALID_CAMERA_ID;        ///< Currently active camera
-        math::Viewport viewport_;                        ///< Current viewport settings
+        Viewport viewport_;                        ///< Current viewport settings
 
         // ID generation
         std::atomic<CameraID> nextCameraId_{1};              ///< Next camera ID to assign

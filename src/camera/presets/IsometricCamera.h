@@ -15,8 +15,8 @@ namespace engine::camera {
      * @brief Isometric camera configuration
      */
     struct IsometricCameraConfig {
-        Vector3 position{10.0f, 10.0f, 10.0f}; ///< Camera position
-        Vector3 target{0.0f, 0.0f, 0.0f}; ///< Look-at target
+        Vec3 position{10.0f, 10.0f, 10.0f}; ///< Camera position
+        Vec3 target{0.0f, 0.0f, 0.0f}; ///< Look-at target
         float orthographicSize = 10.0f; ///< Orthographic projection size
         float minSize = 5.0f; ///< Minimum zoom size
         float maxSize = 50.0f; ///< Maximum zoom size
@@ -102,7 +102,7 @@ namespace engine::camera {
          * @param deltaTime Time step
          */
         static void pan(Camera3D* camera,
-                        const Vector2& direction,
+                        const Vec2& direction,
                         const IsometricCameraConfig& config,
                         float deltaTime);
 
@@ -133,7 +133,7 @@ namespace engine::camera {
          * @param instant Whether to snap instantly or transition
          */
         static void focusOn(Camera3D* camera,
-                            const Vector3& worldPosition,
+                            const Vec3& worldPosition,
                             bool instant);
 
         /**
@@ -145,8 +145,8 @@ namespace engine::camera {
          * @param deltaTime Time step
          */
         static void handleEdgePan(Camera3D* camera,
-                                  const Vector2& mousePos,
-                                  const Vector2& screenSize,
+                                  const Vec2& mousePos,
+                                  const Vec2& screenSize,
                                   const IsometricCameraConfig& config,
                                   float deltaTime);
 
@@ -158,8 +158,8 @@ namespace engine::camera {
          * @param groundHeight Y coordinate of ground plane
          * @return World position on ground plane
          */
-        static Vector3 screenToWorld(const Camera3D* camera,
-                                     const Vector2& screenPos,
+        static Vec3 screenToWorld(const Camera3D* camera,
+                                     const Vec2& screenPos,
                                      const Viewport& viewport,
                                      float groundHeight);
 
@@ -169,7 +169,7 @@ namespace engine::camera {
          * @param gridSize Size of grid cells
          * @return Grid coordinates
          */
-        static Vector2 worldToGrid(const Vector3& worldPos, const float gridSize);
+        static Vec2 worldToGrid(const Vec3& worldPos, const float gridSize);
 
         /**
          * @brief Get world position from grid cell
@@ -178,7 +178,7 @@ namespace engine::camera {
          * @param height Y coordinate
          * @return World position at grid cell center
          */
-        static Vector3 gridToWorld(const Vector2& gridPos, float gridSize, float height);
+        static Vec3 gridToWorld(const Vec2& gridPos, float gridSize, float height);
 
     private:
         /**
@@ -189,7 +189,7 @@ namespace engine::camera {
          * @param distance Distance from target
          * @return Camera position
          */
-        static Vector3 calculateIsometricPosition(const Vector3& target,
+        static Vec3 calculateIsometricPosition(const Vec3& target,
                                                   float angle,
                                                   float rotation,
                                                   float distance);
@@ -200,6 +200,6 @@ namespace engine::camera {
          * @param gridSize Grid cell size
          * @return Snapped movement
          */
-        static Vector3 snapToGrid(const Vector3& movement, float gridSize);
+        static Vec3 snapToGrid(const Vec3& movement, float gridSize);
     };
 } // namespace engine::camera

@@ -74,7 +74,7 @@ namespace engine::camera {
         oss << "Active: " << (camera->isActive() ? "Yes" : "No") << "\n";
         oss << "Enabled: " << (camera->isEnabled() ? "Yes" : "No") << "\n";
 
-        const Vector3 pos = camera->getPosition();
+        const Vec3 pos = camera->getPosition();
         oss << "Position: (" << pos.x << ", " << pos.y << ", " << pos.z << ")\n";
 
         // Type-specific information
@@ -87,7 +87,7 @@ namespace engine::camera {
             oss << "FOV: " << cam3D->getFOV() << "°\n";
             oss << "Projection: " << (cam3D->isPerspective() ? "Perspective" : "Orthographic") << "\n";
 
-            const Vector3 target = cam3D->getTarget();
+            const Vec3 target = cam3D->getTarget();
             oss << "Target: (" << target.x << ", " << target.y << ", " << target.z << ")\n";
             oss << "Yaw: " << cam3D->getYaw() << "°\n";
             oss << "Pitch: " << cam3D->getPitch() << "°\n";
@@ -198,8 +198,8 @@ namespace engine::camera {
         return oss.str();
     }
 
-    std::vector<Vector3> CameraDebugger::getFrustumVertices(CameraID cameraId, const Viewport& viewport) const {
-            std::vector<Vector3> vertices;
+    std::vector<Vec3> CameraDebugger::getFrustumVertices(CameraID cameraId, const Viewport& viewport) const {
+            std::vector<Vec3> vertices;
 
             if (!cameraManager_) return vertices;
 
@@ -215,7 +215,7 @@ namespace engine::camera {
             auto [nearPlane, farPlane] = cam3D->getClippingPlanes();
 
             if (cam3D->isPerspective()) {
-                float fovRad = cam3D->getFOV() * math::constants::DEG_TO_RAD;
+                float fovRad = cam3D->getFOV() * math::DEG_TO_RAD<math::Float>;
                 float tanHalfFov = std::tan(fovRad * 0.5f);
 
                 float nearHeight = 2.0f * tanHalfFov * nearPlane;
@@ -223,20 +223,20 @@ namespace engine::camera {
                 float farHeight = 2.0f * tanHalfFov * farPlane;
                 float farWidth = farHeight * aspect;
 
-                Vector3 pos = cam3D->getPosition();
-                Vector3 forward = cam3D->getForward();
-                Vector3 right = cam3D->getRight();
-                Vector3 up = cam3D->getUp();
+                Vec3 pos = cam3D->getPosition();
+                Vec3 forward = cam3D->getForward();
+                Vec3 right = cam3D->getRight();
+                Vec3 up = cam3D->getUp();
 
                 // Near plane corners
-                Vector3 nearCenter = pos + forward * nearPlane;
+                Vec3 nearCenter = pos + forward * nearPlane;
                 vertices.push_back(nearCenter + up * (nearHeight * 0.5f) - right * (nearWidth * 0.5f));
                 vertices.push_back(nearCenter + up * (nearHeight * 0.5f) + right * (nearWidth * 0.5f));
                 vertices.push_back(nearCenter - up * (nearHeight * 0.5f) + right * (nearWidth * 0.5f));
                 vertices.push_back(nearCenter - up * (nearHeight * 0.5f) - right * (nearWidth * 0.5f));
 
                 // Far plane corners
-                Vector3 farCenter = pos + forward * farPlane;
+                Vec3 farCenter = pos + forward * farPlane;
                 vertices.push_back(farCenter + up * (farHeight * 0.5f) - right * (farWidth * 0.5f));
                 vertices.push_back(farCenter + up * (farHeight * 0.5f) + right * (farWidth * 0.5f));
                 vertices.push_back(farCenter - up * (farHeight * 0.5f) + right * (farWidth * 0.5f));
@@ -247,20 +247,20 @@ namespace engine::camera {
                 float width = size * aspect;
                 float height = size;
 
-                Vector3 pos = cam3D->getPosition();
-                Vector3 forward = cam3D->getForward();
-                Vector3 right = cam3D->getRight();
-                Vector3 up = cam3D->getUp();
+                Vec3 pos = cam3D->getPosition();
+                Vec3 forward = cam3D->getForward();
+                Vec3 right = cam3D->getRight();
+                Vec3 up = cam3D->getUp();
 
                 // Near plane corners
-                Vector3 nearCenter = pos + forward * nearPlane;
+                Vec3 nearCenter = pos + forward * nearPlane;
                 vertices.push_back(nearCenter + up * height - right * width);
                 vertices.push_back(nearCenter + up * height + right * width);
                 vertices.push_back(nearCenter - up * height + right * width);
                 vertices.push_back(nearCenter - up * height - right * width);
 
                 // Far plane corners
-                Vector3 farCenter = pos + forward * farPlane;
+                Vec3 farCenter = pos + forward * farPlane;
                 vertices.push_back(farCenter + up * height - right * width);
                 vertices.push_back(farCenter + up * height + right * width);
                 vertices.push_back(farCenter - up * height + right * width);
@@ -270,8 +270,8 @@ namespace engine::camera {
             return vertices;
         }
 
-    std::vector<std::pair<Vector3, Vector3>> CameraDebugger::getDebugLines(const DebugVisualizationOptions& options) const {
-        std::vector<std::pair<Vector3, Vector3>> lines;
+    std::vector<std::pair<Vec3, Vec3>> CameraDebugger::getDebugLines(const DebugVisualizationOptions& options) const {
+        std::vector<std::pair<Vec3, Vec3>> lines;
 
         if (!cameraManager_) return lines;
 
@@ -281,16 +281,16 @@ namespace engine::camera {
         BaseCamera* camera = cameraManager_->getCamera(activeId);
         if (!camera) return lines;
 
-        Vector3 pos = camera->getPosition();
+        Vec3 pos = camera->getPosition();
 
         // Camera axes
         if (options.showAxes) {
             if (camera->getType() != CameraType::CAMERA_2D) {
                 const float axisLength = 1.0f;
                 const Camera3D* cam3D = static_cast<Camera3D*>(camera);
-                const Vector3 forward = cam3D->getForward() * axisLength;
-                const Vector3 right = cam3D->getRight() * axisLength;
-                const Vector3 up = cam3D->getUp() * axisLength;
+                const Vec3 forward = cam3D->getForward() * axisLength;
+                const Vec3 right = cam3D->getRight() * axisLength;
+                const Vec3 up = cam3D->getUp() * axisLength;
 
                 lines.push_back({pos, pos + forward}); // Z (blue)
                 lines.push_back({pos, pos + right});   // X (red)

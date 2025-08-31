@@ -1,1 +1,97 @@
-.idea
+# ======================================
+# JetBrains / CLion
+# ======================================
+.idea/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+CMakeScripts/
+Testing/
+compile_commands.json
+CMakeUserPresets.json
+
+# ======================================
+# Build outputs (binarios y libs)
+# ======================================
+*.a
+*.so
+*.so.*
+*.dylib
+*.dll
+*.lib
+*.exp
+*.pdb
+*.exe
+*.out
+
+# ======================================
+# OS generated files
+# ======================================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.Spotlight-V100
+.Trashes
+*.swp
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# ======================================
+# Logs & caches
+# ======================================
+*.log
+*.cache
+*.tmp
+*.bak
+
+# ======================================
+# Editor & IDE files
+# ======================================
+*.swp
+*~
+*.user
+*.suo
+*.ncb
+*.opendb
+*.VC.db
+
+# ======================================
+# Engine specific
+# (si tu motor genera assets o shaders compilados, ignóralos aquí)
+# ======================================
+/bin/
+/build/
+/out/
+/dist/
+/obj/
+/GeneratedFiles/
+/intermediate/
+/debug/
+/release/
+
+# ======================================
+# External deps (si las manejas externamente)
+# ======================================
+#/vendor/
+#/thirdparty/
+#/external/
+
+# ======================================
+# Misc
+# ======================================
+*.zip
+*.tar
+*.tar.gz
+*.7z
+*.bak
+*.old
+*.orig

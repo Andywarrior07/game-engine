@@ -19,7 +19,7 @@ namespace engine::camera {
     // PROTECTED HELPER METHODS
     // ========================================================================
 
-    void BaseCamera::triggerCallback(const Vector3& position, const Vector3& target) const {
+    void BaseCamera::triggerCallback(const Vec3& position, const Vec3& target) const {
         if (callback_) {
             callback_(id_, position, target);
         }
@@ -32,14 +32,14 @@ namespace engine::camera {
         return current + (target - current) * lerpFactor;
     }
 
-    Vector2 BaseCamera::applySmoothing(const Vector2& current, const Vector2& target, const float deltaTime) const {
+    Vec2 BaseCamera::applySmoothing(const Vec2& current, const Vec2& target, const float deltaTime) const {
         if (smoothingSpeed_ <= 0.0f) return target;
 
         const float lerpFactor = 1.0f - std::exp(-smoothingSpeed_ * deltaTime);
         return current + (target - current) * lerpFactor;
     }
 
-    Vector3 BaseCamera::applySmoothing(const Vector3& current, const Vector3& target, const float deltaTime) const {
+    Vec3 BaseCamera::applySmoothing(const Vec3& current, const Vec3& target, const float deltaTime) const {
         if (smoothingSpeed_ <= 0.0f) return target;
 
         const float lerpFactor = 1.0f - std::exp(-smoothingSpeed_ * deltaTime);

@@ -61,13 +61,13 @@ namespace engine::camera {
          * @brief Get current shake offset
          * @return Current position offset from shake
          */
-        [[nodiscard]] const Vector3& getCurrentOffset() const noexcept { return currentOffset_; }
+        [[nodiscard]] const Vec3& getCurrentOffset() const noexcept { return currentOffset_; }
 
         /**
          * @brief Get base position (position before shake)
          * @return Original camera position
          */
-        [[nodiscard]] const Vector3& getBasePosition() const noexcept { return basePosition_; }
+        [[nodiscard]] const Vec3& getBasePosition() const noexcept { return basePosition_; }
 
         /**
          * @brief Get current intensity (with fade applied)
@@ -95,7 +95,7 @@ namespace engine::camera {
          * @brief Set base position
          * @param position New base position
          */
-        void setBasePosition(const Vector3& position) {
+        void setBasePosition(const Vec3& position) {
             basePosition_ = position;
         }
 
@@ -126,7 +126,7 @@ namespace engine::camera {
          * @brief Get the shaken position
          * @return Base position plus current offset
          */
-        Vector3 getShakenPosition() const {
+        Vec3 getShakenPosition() const {
             return basePosition_ + currentOffset_;
         }
 
@@ -134,9 +134,9 @@ namespace engine::camera {
         CameraID cameraId_ = INVALID_CAMERA_ID; ///< Camera being shaken
         ShakeConfig config_; ///< Shake configuration
         float currentTime_ = 0.0f; ///< Current shake time
-        Vector3 currentOffset_; ///< Current shake offset
+        Vec3 currentOffset_; ///< Current shake offset
         bool active_ = false; ///< Whether shake is active
-        Vector3 basePosition_; ///< Original position before shake
+        Vec3 basePosition_; ///< Original position before shake
 
         /**
          * @brief Generate shake offset base on pattern
@@ -146,101 +146,7 @@ namespace engine::camera {
          * @param frequency Shake frequency
          * @return Shake offset vector
          */
-        static Vector3 generateOffset(ShakePattern pattern, float intensity,
-                                      float time, float frequency) {
-            thread_local std::mt19937 generator(std::random_device{}());
-            thread_local std::uniform_real_distribution<float> distribution(-1.0f, 1.0f);
-
-            Vector3 offset;
-
-            switch (pattern) {
-                case ShakePattern::RANDOM: {
-                    offset.x = distribution(generator) * intensity;
-                    offset.y = distribution(generator) * intensity;
-                    offset.z = distribution(generator) * intensity * 0.5f;
-                    break;
-                }
-
-                case ShakePattern::HORIZONTAL: {
-                    offset.x = distribution(generator) * intensity;
-                    offset.y = 0.0f;
-                    offset.z = 0.0f;
-                    break;
-                }
-
-                case ShakePattern::VERTICAL: {
-                    offset.x = 0.0f;
-                    offset.y = distribution(generator) * intensity;
-                    offset.z = 0.0f;
-                    break;
-                }
-
-                case ShakePattern::CIRCULAR: {
-                    float angle = time * frequency * 2.0f * M_PI;
-                    offset.x = std::cos(angle) * intensity;
-                    offset.y = std::sin(angle) * intensity;
-                    offset.z = 0.0f;
-                    break;
-                }
-
-                case ShakePattern::EXPLOSION: {
-                    float explosionT = std::max(0.0f, 1.0f - time * 2.0f);
-                    float explosionIntensity = intensity * explosionT * explosionT;
-                    offset.x = distribution(generator) * explosionIntensity;
-                    offset.y = distribution(generator) * explosionIntensity;
-                    offset.z = distribution(generator) * explosionIntensity * 0.3f;
-                    break;
-                }
-
-                case ShakePattern::EARTHQUAKE: {
-                    float lowFreq = frequency * 0.3f;
-                    float noise1 = std::sin(time * lowFreq * 2.0f * M_PI) * intensity;
-                    float noise2 = std::sin(time * lowFreq * 2.0f * M_PI * 1.7f) * intensity * 0.7f;
-                    offset.x = noise1 + distribution(generator) * intensity * 0.2f;
-                    offset.y = noise2 + distribution(generator) * intensity * 0.1f;
-                    offset.z = distribution(generator) * intensity * 0.1f;
-                    break;
-                }
-
-                case ShakePattern::HANDHELD: {
-                    // Low frequency, smooth movement
-                    float angle1 = time * frequency;
-                    float angle2 = time * frequency * 1.3f;
-                    offset.x = std::sin(angle1) * intensity * 0.5f;
-                    offset.y = std::sin(angle2) * intensity * 0.3f;
-                    offset.z = std::sin(angle1 * 0.7f) * intensity * 0.1f;
-                    break;
-                }
-
-                case ShakePattern::VIBRATION: {
-                    // High frequency, low amplitude
-                    offset.x = distribution(generator) * intensity * 0.3f;
-                    offset.y = distribution(generator) * intensity * 0.3f;
-                    offset.z = 0.0f;
-                    break;
-                }
-
-                case ShakePattern::IMPACT: {
-                    // Single direction with decay
-                    float decay = std::max(0.0f, 1.0f - time * 5.0f);
-                    offset = Vector3(intensity * decay, 0.0f, 0.0f);
-                    break;
-                }
-
-                case ShakePattern::WAVE: {
-                    float wave = std::sin(time * frequency * 2.0f * M_PI);
-                    offset.x = wave * intensity;
-                    offset.y = wave * intensity * 0.5f;
-                    offset.z = 0.0f;
-                    break;
-                }
-
-                default:
-                    offset = math::constants::VEC3_ZERO;
-                    break;
-            }
-
-            return offset;
-        }
+        static Vec3 generateOffset(ShakePattern pattern, float intensity,
+                                      float time, float frequency);
     };
 } // namespace engine::camera

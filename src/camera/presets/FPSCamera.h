@@ -15,7 +15,7 @@ namespace engine::camera {
      * @brief FPS camera preset configuration
      */
     struct FPSCameraConfig {
-        Vector3 position{0.0f, 1.7f, 0.0f}; ///< Initial position (eye height)
+        Vec3 position{0.0f, 1.7f, 0.0f}; ///< Initial position (eye height)
         float mouseSensitivity = 2.0f; ///< Mouse look sensitivity
         float moveSpeed = 5.0f; ///< Movement speed (m/s)
         float sprintMultiplier = 2.0f; ///< Sprint speed multiplier

@@ -191,7 +191,7 @@ public:
         }
 
         // 8. CONFIGURE VIEWPORT FOR CAMERA
-        engine::math::Viewport viewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+        Viewport viewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
         cameraManager_->setViewport(viewport);
 
         // 9. SETUP WORLD AND CAMERA
@@ -212,7 +212,7 @@ public:
         }
 
         // CHANGE: Initialize player position
-        playerPosition_ = Vector2(WORLD_WIDTH / 2.0f, WORLD_HEIGHT / 2.0f);
+        playerPosition_ = Vec2(WORLD_WIDTH / 2.0f, WORLD_HEIGHT / 2.0f);
 
         // Set camera to follow player
         Camera2D* mainCamera = cameraManager_->getCamera2D(mainCameraId_);
@@ -248,7 +248,7 @@ public:
 
         // 3. SETUP CAMERA FOR TOP-DOWN VIEW
         mainCamera->setMode(CameraMode::TOP_DOWN);
-        mainCamera->setPosition(Vector2(WORLD_WIDTH / 2, WORLD_HEIGHT / 2));
+        mainCamera->setPosition(Vec2(WORLD_WIDTH / 2, WORLD_HEIGHT / 2));
         mainCamera->setZoom(1.0f);
         mainCamera->setFollowSpeed(6.0f);
         mainCamera->setZoomLimits(0.5f, 2.0f);
@@ -256,10 +256,10 @@ public:
 
         // 4. CONFIGURE WORLD BOUNDS (sin el tercer parámetro)
         CameraBounds worldBounds(
-            Vector3(0.0f, 0.0f, -1.0f),
-            Vector3(WORLD_WIDTH, WORLD_HEIGHT, 1.0f)
+            Vec3(0.0f, 0.0f, -1.0f),
+            Vec3(WORLD_WIDTH, WORLD_HEIGHT, 1.0f)
         );
-        worldBounds.enabled = true; // Asegurarse de que estén habilitados
+        worldBounds.setEnabled(true); // Asegurarse de que estén habilitados
 
         mainCamera->setBounds(worldBounds);
         mainCamera->setMode(CameraMode::FOLLOW_TARGET);
@@ -277,7 +277,7 @@ public:
         if (freeCameraId_ != INVALID_CAMERA_ID) {
             Camera2D* freeCamera = cameraManager_->getCamera2D(freeCameraId_);
             if (freeCamera) {
-                freeCamera->setPosition(Vector2(WORLD_WIDTH / 2, WORLD_HEIGHT / 2));
+                freeCamera->setPosition(Vec2(WORLD_WIDTH / 2, WORLD_HEIGHT / 2));
                 freeCamera->setBounds(worldBounds);
                 freeCamera->setMode(CameraMode::STATIC);
                 std::cout << "✓ Free camera created for manual control" << std::endl;
@@ -553,8 +553,8 @@ public:
             float cameraVertical = inputManager_->getAxisValue(cameraVerticalAxis_);
 
             if (std::abs(cameraHorizontal) > 0.1f || std::abs(cameraVertical) > 0.1f) {
-                Vector2 currentPos = activeCamera->getPosition2D();
-                Vector2 movement(cameraHorizontal * CAMERA_SPEED * deltaTime,
+                Vec2 currentPos = activeCamera->getPosition2D();
+                Vec2 movement(cameraHorizontal * CAMERA_SPEED * deltaTime,
                                  cameraVertical * CAMERA_SPEED * deltaTime);
                 activeCamera->setPosition(currentPos + movement);
             }
@@ -585,7 +585,7 @@ public:
      */
     void updateGameLogic(float deltaTime) {
         // Movement variables
-        Vector2 movement{0.0f, 0.0f};
+        Vec2 movement{0.0f, 0.0f};
         bool isMoving = false;
 
         // DETECT MOVEMENT
@@ -668,7 +668,7 @@ public:
         SDL_RenderClear(renderer_);
 
         // 2. GET CAMERA POSITION FOR RENDERING
-        Vector2 cameraOffset = getCameraPosition();
+        Vec2 cameraOffset = getCameraPosition();
 
         // 3. RENDER WORLD BACKGROUND
         renderWorldBackground(cameraOffset);
@@ -687,7 +687,7 @@ public:
      * @brief Render the player sprite
      * CHANGE: New method to render player without animation system
      */
-    void renderPlayer(const Vector2& cameraOffset) {
+    void renderPlayer(const Vec2& cameraOffset) {
         if (!playerSDLTexture_) return;
 
         // Calculate screen position from world position
@@ -709,24 +709,24 @@ public:
     /**
      * @brief Get current camera position
      */
-    Vector2 getCameraPosition() {
+    Vec2 getCameraPosition() {
         const BaseCamera* activeCamera = cameraManager_->getActiveCamera();
         if (activeCamera) {
-            Vector3 pos3D = activeCamera->getPosition();
-            Vector2 cameraWorldPos(pos3D.x, pos3D.y);
-            Vector2 renderOffset(
+            Vec3 pos3D = activeCamera->getPosition();
+            Vec2 cameraWorldPos(pos3D.x, pos3D.y);
+            Vec2 renderOffset(
                 cameraWorldPos.x - WINDOW_WIDTH / 2.0f,
                 cameraWorldPos.y - WINDOW_HEIGHT / 2.0f
             );
             return renderOffset;
         }
-        return Vector2{0.0f, 0.0f};
+        return Vec2{0.0f, 0.0f};
     }
 
     /**
      * @brief Render world background
      */
-    void renderWorldBackground(const Vector2& cameraOffset) {
+    void renderWorldBackground(const Vec2& cameraOffset) {
         const int TILE_SIZE = 64;
         const int GRASS_VARIANT_COUNT = 3;
 
@@ -785,7 +785,7 @@ public:
     /**
      * @brief Render visual world boundaries
      */
-    void renderWorldBoundaries(const Vector2& cameraOffset) {
+    void renderWorldBoundaries(const Vec2& cameraOffset) {
         SDL_SetRenderDrawColor(renderer_, 100, 50, 50, 255);
 
         int leftBorder = -static_cast<int>(cameraOffset.x);
@@ -936,8 +936,8 @@ public:
         // Camera visible area in minimap
         const BaseCamera* activeCamera = cameraManager_->getActiveCamera();
         if (activeCamera) {
-            Vector3 cameraPos3D = activeCamera->getPosition();
-            Vector2 cameraPos(cameraPos3D.x, cameraPos3D.y);
+            Vec3 cameraPos3D = activeCamera->getPosition();
+            Vec2 cameraPos(cameraPos3D.x, cameraPos3D.y);
 
             const Camera2D* camera2D = cameraManager_->getCamera2D(cameraManager_->getActiveCameraId());
             float zoom = camera2D ? camera2D->getZoom() : 1.0f;
@@ -990,7 +990,7 @@ public:
         // Camera position and zoom
         const BaseCamera* activeCamera = cameraManager_->getActiveCamera();
         if (activeCamera) {
-            Vector3 cameraPos = activeCamera->getPosition();
+            Vec3 cameraPos = activeCamera->getPosition();
             std::cout << "Camera Position: (" << cameraPos.x << ", " << cameraPos.y << ")" << std::endl;
 
             const Camera2D* camera2D = cameraManager_->getCamera2D(cameraManager_->getActiveCameraId());
@@ -1149,7 +1149,7 @@ private:
 
     // === GAME STATE ===
     // CHANGE: Simplified - no animation system
-    Vector2 playerPosition_;
+    Vec2 playerPosition_;
     SDL_Rect currentSpriteFrame_; // Current frame to display from sprite sheet
 
     // === CAMERA IDS ===

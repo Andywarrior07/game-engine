@@ -21,7 +21,7 @@ namespace engine::camera {
         float frequency = 30.0f; ///< Shake frequency in Hz
         float duration = 1.0f; ///< Duration in seconds (-1 for infinite)
         ShakePattern pattern = ShakePattern::RANDOM; ///< Shake pattern type
-        Vector3 axes{1.0f, 1.0f, 0.5f}; ///< Relative shake strength per axis
+        Vec3 axes{1.0f, 1.0f, 0.5f}; ///< Relative shake strength per axis
         bool fadeOut = true; ///< Whether to fade out over time
         bool fadeIn = false; ///< Whether to fade in at start
         float fadeInDuration = 0.1f; ///< Fade in duration in seconds
@@ -75,7 +75,7 @@ namespace engine::camera {
             config.fadeIn = true;
             config.fadeInDuration = 0.5f;
             config.fadeOutDuration = 1.0f;
-            config.axes = Vector3(1.0f, 0.3f, 0.1f);
+            config.axes = Vec3(1.0f, 0.3f, 0.1f);
             return config;
         }
 
@@ -102,7 +102,7 @@ namespace engine::camera {
          * @param direction Direction of impact (normalized automatically)
          * @return Configured shake for impact
         */
-        static ShakeConfig impact(const float intensity = 3.0f, const Vector3& direction = Vector3(1, 0, 0)) {
+        static ShakeConfig impact(const float intensity = 3.0f, const Vec3& direction = Vec3(1, 0, 0)) {
             ShakeConfig config;
             config.intensity = intensity;
             config.duration = 0.3f;

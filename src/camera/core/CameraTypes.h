@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include "../../Math/MathTypes.h"
+#include "../../math/core/MathTypes.h"
 
 #include <functional>
 
@@ -19,10 +19,10 @@ namespace engine::camera {
     /**
      * @brief Math type aliases from engine math system
      */
-    using Vector2 = math::Vector2;
-    using Vector3 = math::Vector3;
-    using Matrix4 = math::Matrix4;
-    using Viewport = math::Viewport;
+    using Vec2 = math::Vec2;
+    using Vec3 = math::Vec3;
+    using Vec4 = math::Vec4;
+    using Mat4 = math::Mat4;
 
     /**
      * @brief Strong typing for camera identifiers
@@ -126,7 +126,7 @@ namespace engine::camera {
      * @param position New camera position
      * @param target New camera target (for 3D cameras)
      */
-    using CameraCallback = std::function<void(CameraID cameraId, const Vector3& position, const Vector3& target)>;
+    using CameraCallback = std::function<void(CameraID cameraId, const Vec3& position, const Vec3& target)>;
 
     /**
      * @brief Callback function type for transition completion

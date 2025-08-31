@@ -315,7 +315,7 @@ namespace engine::camera {
     // CAMERA TRANSITIONS
     // ========================================================================
 
-    TransitionID CameraManager::transitionToPosition(CameraID cameraId, const Vector3& targetPosition,
+    TransitionID CameraManager::transitionToPosition(CameraID cameraId, const Vec3& targetPosition,
                                                      const TransitionConfig& config) {
         if (!initialized_ || !config_.enableTransitions) {
             return INVALID_TRANSITION_ID;
@@ -351,7 +351,7 @@ namespace engine::camera {
         return transitionId;
     }
 
-    TransitionID CameraManager::transitionToTarget(CameraID cameraId, const Vector3& targetLookAt,
+    TransitionID CameraManager::transitionToTarget(CameraID cameraId, const Vec3& targetLookAt,
                                                    const TransitionConfig& config) {
         if (!initialized_ || !config_.enableTransitions) {
             return INVALID_TRANSITION_ID;
@@ -679,25 +679,25 @@ namespace engine::camera {
         if (const auto camera3D = dynamic_cast<Camera3D*>(activeCamera)) {
             if (camera3D->getMode() == CameraMode::FREE_LOOK) {
                 // FPS-style movement
-                const Vector3 forwardDir = camera3D->getForward();
-                const Vector3 rightDir = camera3D->getRight();
-                const Vector3 upDir = camera3D->getUp();
+                const Vec3 forwardDir = camera3D->getForward();
+                const Vec3 rightDir = camera3D->getRight();
+                const Vec3 upDir = camera3D->getUp();
 
                 // Calculate movement vector
-                Vector3 movement = forwardDir * forward + rightDir * right + upDir * up;
+                Vec3 movement = forwardDir * forward + rightDir * right + upDir * up;
                 movement *= 10.0f * deltaTime; // Movement speed
 
                 // Apply movement
-                const Vector3 newPosition = camera3D->getPosition() + movement;
+                const Vec3 newPosition = camera3D->getPosition() + movement;
                 camera3D->setPosition(newPosition);
             }
         }
         else if (const auto camera2D = dynamic_cast<Camera2D*>(activeCamera)) {
             // 2D camera movement
-            Vector2 movement(right, -forward); // Invert forward for screen coordinates
+            Vec2 movement(right, -forward); // Invert forward for screen coordinates
             movement *= 100.0f * deltaTime; // Movement speed
 
-            const Vector2 newPosition = camera2D->getPosition2D() + movement;
+            const Vec2 newPosition = camera2D->getPosition2D() + movement;
             camera2D->setPosition(newPosition);
         }
     }
@@ -706,62 +706,63 @@ namespace engine::camera {
     // VIEWPORT AND TRANSFORMATIONS
     // ========================================================================
 
-    Vector2 CameraManager::worldToScreen(const Vector3& worldPos) const {
+    Vec2 CameraManager::worldToScreen(const Vec3& worldPos) const {
         const BaseCamera* activeCamera = getActiveCamera();
         if (!activeCamera) {
-            return math::constants::VEC2_ZERO;
+            return math::VEC2_ZERO;
         }
 
         if (const auto camera2D = dynamic_cast<const Camera2D*>(activeCamera)) {
-            return camera2D->worldToScreen(Vector2(worldPos.x, worldPos.y), viewport_);
+            return camera2D->worldToScreen(Vec2(worldPos.x, worldPos.y), viewport_);
         }
         else if (const auto camera3D = dynamic_cast<const Camera3D*>(activeCamera)) {
             return camera3D->worldToScreen(worldPos, viewport_);
         }
 
-        return math::constants::VEC2_ZERO;
+        return math::VEC2_ZERO;
     }
 
-    Vector3 CameraManager::screenToWorld(const Vector2& screenPos, const float depth) const {
+    Vec3 CameraManager::screenToWorld(const Vec2& screenPos, const float depth) const {
         const BaseCamera* activeCamera = getActiveCamera();
         if (!activeCamera) {
-            return math::constants::VEC3_ZERO;
+            return math::VEC3_ZERO;
         }
 
         if (const auto camera2D = dynamic_cast<const Camera2D*>(activeCamera)) {
-            const Vector2 worldPos2D = camera2D->screenToWorld(screenPos, viewport_);
-            return Vector3(worldPos2D.x, worldPos2D.y, depth);
+            const Vec2 worldPos2D = camera2D->screenToWorld(screenPos, viewport_);
+            return Vec3(worldPos2D.x, worldPos2D.y, depth);
         }
 
         if (const auto camera3D = dynamic_cast<const Camera3D*>(activeCamera)) {
             return camera3D->screenToWorld(screenPos, viewport_, depth);
         }
 
-        return math::constants::VEC3_ZERO;
+        return math::VEC3_ZERO;
     }
 
-    math::Bounds3D CameraManager::getViewBounds() const {
+    math::AABB CameraManager::getViewBounds() const {
         const BaseCamera* activeCamera = getActiveCamera();
         if (!activeCamera) {
-            return math::Bounds3D{};
+            return math::AABB{}; // AABB vacío (inválido por defecto)
         }
 
         if (const auto camera2D = dynamic_cast<const Camera2D*>(activeCamera)) {
-            return static_cast<math::Bounds3D>(camera2D->getViewBounds(viewport_));
+            // Asumiendo que Camera2D tiene un método similar que devuelve AABB
+            const CameraBounds bounds = camera2D->getViewBounds(viewport_);
+            return bounds.getAABB();
         }
 
         if (const auto camera3D = dynamic_cast<const Camera3D*>(activeCamera)) {
-            // For 3D cameras, create bounds from projection
-            const Vector3 position = camera3D->getPosition();
-            constexpr float distance = 10.0f; // Default distance for bounds calculation
+            const Vec3 position = camera3D->getPosition();
+            constexpr float distance = 10.0f;
 
-            return math::Bounds3D(
-                position - Vector3(distance, distance, distance),
-                position + Vector3(distance, distance, distance)
+            return math::AABB(
+                position - Vec3(distance, distance, distance),
+                position + Vec3(distance, distance, distance)
             );
         }
 
-        return math::Bounds3D{};
+        return math::AABB{}; // AABB vacío
     }
 
     // ========================================================================
@@ -891,7 +892,7 @@ namespace engine::camera {
                 if (!completed) {
                     // ESTO ES LO QUE FALTA - aplicar el offset a la cámara
                     if (BaseCamera* camera = getCamera(cameraId)) {
-                        Vector3 shakenPosition = shake->getShakenPosition();
+                        Vec3 shakenPosition = shake->getShakenPosition();
                         camera->setPosition(shakenPosition);
                     }
                 }

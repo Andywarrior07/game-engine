@@ -9,6 +9,8 @@
 
 #include "TransitionEasing.h"
 
+#include "../../math/core/MathFunctions.h"
+
 namespace engine::camera {
     CameraTransition::CameraTransition(const TransitionID id, const CameraID cameraId, const TransitionConfig& config)
         : id_(id)
@@ -21,13 +23,13 @@ namespace engine::camera {
         return TransitionEasing::ease(config_.type, getProgress());
     }
 
-    void CameraTransition::setupPosition(const Vector3& start, const Vector3& target) {
+    void CameraTransition::setupPosition(const Vec3& start, const Vec3& target) {
         hasPosition_ = true;
         startPosition_ = start;
         targetPosition_ = config_.relative ? start + target : target;
     }
 
-    void CameraTransition::setupTarget(const Vector3& start, const Vector3& target) {
+    void CameraTransition::setupTarget(const Vec3& start, const Vec3& target) {
         hasTarget_ = true;
         startTarget_ = start;
         targetLookAt_ = config_.relative ? start + target : target;
@@ -51,14 +53,14 @@ namespace engine::camera {
         targetFOV_ = config_.relative ? start + target : target;
     }
 
-    Vector3 CameraTransition::getInterpolatedPosition() const {
+    Vec3 CameraTransition::getInterpolatedPosition() const {
         if (!hasPosition_) return startPosition_;
 
         const float t = getEasedProgress();
         return math::lerp(startPosition_, targetPosition_, t);
     }
 
-    Vector3 CameraTransition::getInterpolatedTarget() const {
+    Vec3 CameraTransition::getInterpolatedTarget() const {
         if (!hasTarget_) return startTarget_;
 
         const float t = getEasedProgress();

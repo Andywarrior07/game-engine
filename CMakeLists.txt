@@ -2,6 +2,19 @@ cmake_minimum_required(VERSION 3.31)
 project(simple_game)
 
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# --- FIX PARA HEADERS DE C++ EN MACOS ---
+if(APPLE)
+    execute_process(
+            COMMAND xcrun --show-sdk-path
+            OUTPUT_VARIABLE CMAKE_OSX_SYSROOT
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
+endif()
+# ----------------------------------------
 
 #find_package(PkgConfig REQUIRED)
 find_package(OpenGL REQUIRED)
@@ -25,17 +38,91 @@ link_libraries(${SDL2_LIBRARY} ${SDL2_IMAGE_LIBRARY})
 
 find_package(Bullet REQUIRED)
 add_executable(simple_game src/main.cpp
-        src/Input/InputManager.cpp
         Game.cpp
         src/Animation/AnimationManager.cpp
-        src/Physics/PhysicsManager.cpp
+        src/Input/InputManager.cpp
+#        src/Physics/PhysicsManager.cpp
+        src/camera/CameraSystem.h
+        src/camera/cameras/BaseCamera.cpp
+        src/camera/cameras/BaseCamera.h
+        src/camera/cameras/Camera2D.cpp
+        src/camera/cameras/Camera2D.h
+        src/camera/cameras/Camera3D.cpp
+        src/camera/cameras/Camera3D.h
+        src/camera/core/CameraBounds.cpp
+        src/camera/core/CameraBounds.h
+        src/camera/core/CameraTypes.h
+        src/camera/effects/CameraShake.cpp
+        src/camera/effects/CameraShake.h
+        src/camera/effects/ShakeConfig.h
+        src/camera/effects/ShakePattern.h
+        src/camera/input/CameraInputHandler.cpp
+        src/camera/input/CameraInputHandler.h
+        src/camera/manager/CameraManager.cpp
+        src/camera/manager/CameraManager.h
+        src/camera/manager/CameraManagerConfig.h
+        src/camera/manager/CameraRegistry.cpp
+        src/camera/manager/CameraRegistry.h
+        src/camera/presets/FPSCamera.cpp
+        src/camera/presets/FPSCamera.h
+        src/camera/presets/IsometricCamera.cpp
+        src/camera/presets/IsometricCamera.h
+        src/camera/presets/SideScrollerCamera.cpp
+        src/camera/presets/SideScrollerCamera.h
+        src/camera/presets/ThirdPersonCamera.cpp
+        src/camera/presets/ThirdPersonCamera.h
+        src/camera/presets/TopDownCamera.cpp
+        src/camera/presets/TopDownCamera.h
+        src/camera/transitions/CameraTransition.cpp
+        src/camera/transitions/CameraTransition.h
+        src/camera/transitions/TransitionConfig.h
+        src/camera/transitions/TransitionEasing.cpp
+        src/camera/transitions/TransitionEasing.h
+        src/camera/utils/CameraDebugger.cpp
+        src/camera/utils/CameraDebugger.h
+        src/camera/utils/CoordinateTransform.cpp
+        src/camera/utils/CoordinateTransform.h
+        src/math/MathSystem.h
+        src/math/animation/AnimationMath.cpp
+        src/math/animation/AnimationMath.h
+        src/math/animation/DualQuaternion.cpp
+        src/math/animation/DualQuaternion.h
+        src/math/core/FastMath.h
+        src/math/core/MathConstants.h
+        src/math/core/MathFunctions.h
+        src/math/core/MathTypes.h
+        src/math/geometry/Distance.h
+        src/math/geometry/Intersections.h
+        src/math/geometry/Primitives.h
+        src/math/graphics/ColorSpace.h
+        src/math/graphics/TangentSpace.cpp
+        src/math/graphics/TangentSpace.h
+        src/math/interpolation/Curves.h
+        src/math/interpolation/Easing.h
+        src/math/interpolation/Interpolation.h
+        src/math/noise/PerlinNoise.cpp
+        src/math/noise/PerlinNoise.h
+        src/math/spatial/MortonCode.cpp
+        src/math/spatial/MortonCode.h
+        src/math/spatial/Octree.h
+        src/math/spatial/SpatialHash.h
+        src/math/transform/Transform.cpp
+        src/math/transform/Transform.h
+        src/math/transform/TransformHierarchy.cpp
+        src/math/transform/TransformHierarchy.h
+        src/math/utils/Random.cpp
+        src/math/utils/Random.h
         src/memory/MemorySystem.h
+        src/memory/allocators/HeapAllocator.cpp
+        src/memory/allocators/HeapAllocator.h
         src/memory/allocators/LinearAllocator.cpp
         src/memory/allocators/LinearAllocator.h
         src/memory/allocators/PoolAllocator.cpp
         src/memory/allocators/RingBufferAllocator.cpp
         src/memory/allocators/RingBufferAllocator.h
         src/memory/allocators/StackAllocator.cpp
+        src/memory/allocators/SystemAllocator.cpp
+        src/memory/allocators/SystemAllocator.h
         src/memory/core/IAllocator.cpp
         src/memory/core/SystemInfo.h
         src/memory/manager/MemoryConfig.h
@@ -69,60 +156,27 @@ add_executable(simple_game src/main.cpp
         src/resources/packaging/ResourcePackage.h
         src/resources/streaming/StreamableResource.cpp
         src/resources/streaming/StreamableResource.h
+        src/resources/types/texture/TextureDesc.cpp
+        src/resources/types/texture/TextureDesc.h
         src/resources/types/texture/TextureFormat.h
+        src/resources/types/texture/TextureFormatUtils.cpp
+        src/resources/types/texture/TextureFormatUtils.h
         src/resources/types/texture/TextureResource.cpp
         src/resources/types/texture/TextureResource.h
         src/resources/utils/ResourceDependencyGraph.cpp
         src/resources/utils/ResourceDependencyGraph.h
         src/resources/utils/ResourcePool.h
-        src/resources/types/texture/TextureFormatUtils.cpp
-        src/resources/types/texture/TextureFormatUtils.h
-        src/resources/types/texture/TextureDesc.cpp
-        src/resources/types/texture/TextureDesc.h
-        src/memory/allocators/HeapAllocator.cpp
-        src/memory/allocators/HeapAllocator.h
-        src/memory/allocators/SystemAllocator.cpp
-        src/memory/allocators/SystemAllocator.h
-        src/camera/CameraSystem.h
-        src/camera/cameras/BaseCamera.cpp
-        src/camera/cameras/BaseCamera.h
-        src/camera/cameras/Camera2D.cpp
-        src/camera/cameras/Camera2D.h
-        src/camera/cameras/Camera3D.cpp
-        src/camera/cameras/Camera3D.h
-        src/camera/core/CameraBounds.cpp
-        src/camera/core/CameraBounds.h
-        src/camera/core/CameraTypes.h
-        src/camera/effects/CameraShake.cpp
-        src/camera/effects/CameraShake.h
-        src/camera/effects/ShakeConfig.h
-        src/camera/effects/ShakePattern.h
-        src/camera/input/CameraInputHandler.cpp
-        src/camera/input/CameraInputHandler.h
-        src/camera/manager/CameraManagerConfig.h
-        src/camera/transitions/TransitionConfig.h
-        src/camera/transitions/TransitionEasing.cpp
-        src/camera/transitions/TransitionEasing.h
-        src/camera/manager/CameraManager.cpp
-        src/camera/manager/CameraManager.h
-        src/camera/transitions/CameraTransition.cpp
-        src/camera/transitions/CameraTransition.h
-        src/camera/presets/FPSCamera.cpp
-        src/camera/presets/FPSCamera.h
-        src/camera/presets/ThirdPersonCamera.cpp
-        src/camera/presets/ThirdPersonCamera.h
-        src/camera/presets/TopDownCamera.cpp
-        src/camera/presets/TopDownCamera.h
-        src/camera/presets/SideSCrollerCamera.cpp
-        src/camera/presets/SideSCrollerCamera.h
-        src/camera/presets/ISometricCamera.cpp
-        src/camera/presets/ISometricCamera.h
-        src/camera/utils/CoordinateTransform.cpp
-        src/camera/utils/CoordinateTransform.h
-        src/camera/utils/CameraDebugger.cpp
-        src/camera/utils/CameraDebugger.h
-        src/camera/manager/CameraRegistry.cpp
-        src/camera/manager/CameraRegistry.h
+        src/math/graphics/ProjectionMatrix.cpp
+        src/math/graphics/ProjectionMatrix.h
+        src/math/simd/SimdTypes.h
+        src/math/simd/SimdMath.h
+        src/math/utils/MathDebug.h
+        src/math/noise/SimplexNoise.cpp
+        src/math/noise/SimplexNoise.h
+        src/math/noise/WorleyNoise.cpp
+        src/math/noise/WorleyNoise.h
+        src/camera/core/Viewport.cpp
+        #        src/camera/core/Viewport.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}
