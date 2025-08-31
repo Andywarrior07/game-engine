@@ -5,7 +5,7 @@
  * @date 26-08-2025
  */
 
-#include "ISometricCamera.h"
+#include "IsometricCamera.h"
 
 namespace engine::camera {
     CameraID IsometricCamera::create(CameraManager& manager,
@@ -42,7 +42,7 @@ namespace engine::camera {
         camera->setOrthographicSize(config.orthographicSize);
 
         // Calculate isometric position
-        const Vector3 position = calculateIsometricPosition(config.target,
+        const Vec3 position = calculateIsometricPosition(config.target,
                                                             config.angle,
                                                             config.rotation,
                                                             20.0f); // Fixed distance
@@ -50,7 +50,7 @@ namespace engine::camera {
         camera->setTarget(config.target);
 
         // Set up vector for proper isometric view
-        camera->setUp(Vector3(0, 1, 0));
+        camera->setUp(Vec3(0, 1, 0));
 
         // Set smoothing
         camera->setSmoothingSpeed(config.smoothing);
@@ -62,26 +62,26 @@ namespace engine::camera {
     }
 
     void IsometricCamera::pan(Camera3D* camera,
-                              const Vector2& direction,
+                              const Vec2& direction,
                               const IsometricCameraConfig& config,
                               const float deltaTime) {
         if (!camera) return;
 
         // Convert screen direction to world space
         // Account for isometric rotation
-        const float angleRad = config.rotation * math::constants::DEG_TO_RAD;
+        const float angleRad = config.rotation * math::DEG_TO_RAD<math::Float>;
 
-        const Vector3 worldDir(
+        const Vec3 worldDir(
             direction.x * std::cos(angleRad) - direction.y * std::sin(angleRad),
             0.0f,
             direction.x * std::sin(angleRad) + direction.y * std::cos(angleRad)
         );
 
         // Apply movement
-        const Vector3 currentPos = camera->getPosition();
-        const Vector3 currentTarget = camera->getTarget();
+        const Vec3 currentPos = camera->getPosition();
+        const Vec3 currentTarget = camera->getTarget();
 
-        Vector3 movement = worldDir * config.panSpeed * deltaTime;
+        Vec3 movement = worldDir * config.panSpeed * deltaTime;
 
         // Apply grid snap if enabled
         if (config.enableGridSnap) {
@@ -113,10 +113,10 @@ namespace engine::camera {
         const float newRotation = config.rotation + angleDelta;
 
         // Recalculate camera position
-        const Vector3 target = camera->getTarget();
+        const Vec3 target = camera->getTarget();
         const float distance = glm::length(camera->getPosition() - target);
 
-        const Vector3 newPosition = calculateIsometricPosition(target,
+        const Vec3 newPosition = calculateIsometricPosition(target,
                                                                config.angle,
                                                                newRotation,
                                                                distance);
@@ -124,13 +124,13 @@ namespace engine::camera {
     }
 
     void IsometricCamera::focusOn(Camera3D* camera,
-                                  const Vector3& worldPosition,
+                                  const Vec3& worldPosition,
                                   const bool instant = false) {
         if (!camera) return;
 
-        const Vector3 currentPos = camera->getPosition();
-        const Vector3 currentTarget = camera->getTarget();
-        const Vector3 offset = currentPos - currentTarget;
+        const Vec3 currentPos = camera->getPosition();
+        const Vec3 currentTarget = camera->getTarget();
+        const Vec3 offset = currentPos - currentTarget;
 
         if (instant) {
             camera->setTarget(worldPosition);
@@ -144,13 +144,13 @@ namespace engine::camera {
     }
 
     void IsometricCamera::handleEdgePan(Camera3D* camera,
-                                        const Vector2& mousePos,
-                                        const Vector2& screenSize,
+                                        const Vec2& mousePos,
+                                        const Vec2& screenSize,
                                         const IsometricCameraConfig& config,
                                         const float deltaTime) {
         if (!camera || !config.enableEdgePan) return;
 
-        Vector2 panDirection(0.0f, 0.0f);
+        Vec2 panDirection(0.0f, 0.0f);
 
         // Check screen edges
         if (mousePos.x < config.edgePanZone) {
@@ -174,11 +174,11 @@ namespace engine::camera {
         }
     }
 
-    Vector3 IsometricCamera::screenToWorld(const Camera3D* camera,
-                                           const Vector2& screenPos,
+    Vec3 IsometricCamera::screenToWorld(const Camera3D* camera,
+                                           const Vec2& screenPos,
                                            const Viewport& viewport,
                                            const float groundHeight = 0.0f) {
-        if (!camera) return Vector3(0, 0, 0);
+        if (!camera) return Vec3(0, 0, 0);
 
         // Get ray from camera
         auto [rayOrigin, rayDirection] = camera->screenToWorldRay(screenPos, viewport);
@@ -186,42 +186,42 @@ namespace engine::camera {
         // Intersect with ground plane (Y = groundHeight)
         if (std::abs(rayDirection.y) < 0.001f) {
             // Ray is parallel to ground
-            return Vector3(0, groundHeight, 0);
+            return Vec3(0, groundHeight, 0);
         }
 
         const float t = (groundHeight - rayOrigin.y) / rayDirection.y;
         if (t < 0) {
             // Intersection behind camera
-            return Vector3(0, groundHeight, 0);
+            return Vec3(0, groundHeight, 0);
         }
 
         return rayOrigin + rayDirection * t;
     }
 
-    Vector2 IsometricCamera::worldToGrid(const Vector3& worldPos, float gridSize) {
-        return Vector2(
+    Vec2 IsometricCamera::worldToGrid(const Vec3& worldPos, float gridSize) {
+        return Vec2(
             std::floor(worldPos.x / gridSize),
             std::floor(worldPos.z / gridSize)
         );
     }
 
-    Vector3 IsometricCamera::gridToWorld(const Vector2& gridPos, const float gridSize, const float height = 0.0f) {
-        return Vector3(
+    Vec3 IsometricCamera::gridToWorld(const Vec2& gridPos, const float gridSize, const float height = 0.0f) {
+        return Vec3(
             gridPos.x * gridSize + gridSize * 0.5f,
             height,
             gridPos.y * gridSize + gridSize * 0.5f
         );
     }
 
-    Vector3 IsometricCamera::calculateIsometricPosition(const Vector3& target,
+    Vec3 IsometricCamera::calculateIsometricPosition(const Vec3& target,
                                                         const float angle,
                                                         const float rotation,
                                                         const float distance) {
-        const float angleRad = angle * math::constants::DEG_TO_RAD;
-        const float rotationRad = rotation * math::constants::DEG_TO_RAD;
+        const float angleRad = angle * math::DEG_TO_RAD<math::Float>;
+        const float rotationRad = rotation * math::DEG_TO_RAD<math::Float>;
 
         // Calculate position offset
-        const Vector3 offset(
+        const Vec3 offset(
             std::sin(rotationRad) * std::cos(angleRad) * distance,
             std::sin(angleRad) * distance,
             std::cos(rotationRad) * std::cos(angleRad) * distance
@@ -230,8 +230,8 @@ namespace engine::camera {
         return target + offset;
     }
 
-    Vector3 IsometricCamera::snapToGrid(const Vector3& movement, const float gridSize) {
-        return Vector3(
+    Vec3 IsometricCamera::snapToGrid(const Vec3& movement, const float gridSize) {
+        return Vec3(
             std::round(movement.x / gridSize) * gridSize,
             movement.y,
             std::round(movement.z / gridSize) * gridSize

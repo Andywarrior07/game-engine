@@ -49,13 +49,13 @@ namespace engine::camera {
          * @brief Get camera position (2D cameras return z=0)
          * @return Current camera position
          */
-        [[nodiscard]] virtual Vector3 getPosition() const = 0;
+        [[nodiscard]] virtual Vec3 getPosition() const = 0;
 
         /**
          * @brief Set camera position
          * @param position New camera position
          */
-        virtual void setPosition(const Vector3& position) = 0;
+        virtual void setPosition(const Vec3& position) = 0;
 
         /**
          * @brief Update camera state
@@ -210,7 +210,7 @@ namespace engine::camera {
          * @param position Position to constrain
          * @return Constrained position
          */
-        [[nodiscard]] Vector3 applyBounds(const Vector3& position) const {
+        [[nodiscard]] Vec3 applyBounds(const Vec3& position) const {
             return bounds_.clamp(position);
         }
 
@@ -219,7 +219,7 @@ namespace engine::camera {
          * @param position Current position
          * @param target Current target
          */
-        void triggerCallback(const Vector3& position, const Vector3& target) const;
+        void triggerCallback(const Vec3& position, const Vec3& target) const;
 
         /**
          * @brief Apply smoothing to scalar value
@@ -237,7 +237,7 @@ namespace engine::camera {
          * @param deltaTime Time step
          * @return Smoothed vector
          */
-        [[nodiscard]] Vector2 applySmoothing(const Vector2& current, const Vector2& target, float deltaTime) const;
+        [[nodiscard]] Vec2 applySmoothing(const Vec2& current, const Vec2& target, float deltaTime) const;
 
         /**
          * @brief Apply smoothing to 3D vector
@@ -246,6 +246,6 @@ namespace engine::camera {
          * @param deltaTime Time step
          * @return Smoothed vector
          */
-        [[nodiscard]] Vector3 applySmoothing(const Vector3& current, const Vector3& target, float deltaTime) const;
+        [[nodiscard]] Vec3 applySmoothing(const Vec3& current, const Vec3& target, float deltaTime) const;
     };
 } // namespace engine::camera

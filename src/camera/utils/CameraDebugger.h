@@ -40,9 +40,9 @@ namespace engine::camera {
         bool showAxes = true;                  ///< Show camera axes
         bool showGrid = false;                 ///< Show world grid
         bool showStats = true;                 ///< Show statistics overlay
-        Vector3 frustumColor{1, 1, 0};         ///< Frustum color
-        Vector3 boundsColor{0, 1, 0};          ///< Bounds color
-        Vector3 pathColor{0, 0, 1};            ///< Path color
+        Vec3 frustumColor{1, 1, 0};         ///< Frustum color
+        Vec3 boundsColor{0, 1, 0};          ///< Bounds color
+        Vec3 pathColor{0, 0, 1};            ///< Path color
         float lineWidth = 1.0f;                ///< Debug line width
     };
 
@@ -114,7 +114,7 @@ namespace engine::camera {
          * @brief Get recorded path
          * @return Vector of recorded positions
          */
-        const std::vector<Vector3>& getRecordedPath() const {
+        const std::vector<Vec3>& getRecordedPath() const {
             return pathHistory_;
         }
 
@@ -160,14 +160,14 @@ namespace engine::camera {
          * @param viewport Current viewport
          * @return Frustum vertices (8 points)
          */
-        std::vector<Vector3> getFrustumVertices(CameraID cameraId, const Viewport& viewport) const;
+        std::vector<Vec3> getFrustumVertices(CameraID cameraId, const Viewport& viewport) const;
 
         /**
          * @brief Get debug lines for visualization
          * @param options Visualization options
          * @return Vector of line segments (pairs of points)
          */
-        std::vector<std::pair<Vector3, Vector3>> getDebugLines(const DebugVisualizationOptions& options) const;
+        std::vector<std::pair<Vec3, Vec3>> getDebugLines(const DebugVisualizationOptions& options) const;
 
         // ========================================================================
         // CONFIGURATION
@@ -202,7 +202,7 @@ namespace engine::camera {
         DebugVisualizationOptions visualizationOptions_;      ///< Visualization settings
 
         // Path tracking
-        std::vector<Vector3> pathHistory_;                    ///< Recorded camera path
+        std::vector<Vec3> pathHistory_;                    ///< Recorded camera path
         CameraID recordingCameraId_ = INVALID_CAMERA_ID;     ///< Camera being recorded
         bool isRecording_ = false;                            ///< Whether recording is active
         std::size_t maxPathHistory_ = 1000;                   ///< Maximum path history size

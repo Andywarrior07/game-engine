@@ -83,7 +83,7 @@ namespace engine::camera {
                                  const bool isSprinting) {
         headBobTime_ += deltaTime * config.headBobFrequency * (isSprinting ? 1.5f : 1.0f);
 
-        Vector3 position = camera->getPosition();
+        Vec3 position = camera->getPosition();
 
         // Vertical bob (sine wave)
         const float bobY = std::sin(headBobTime_ * 2.0f) * config.headBobIntensity;
@@ -92,8 +92,8 @@ namespace engine::camera {
         const float bobX = std::sin(headBobTime_) * config.headBobIntensity * 0.5f;
 
         // Apply bob relative to camera orientation
-        const Vector3 right = camera->getRight();
-        const Vector3 up = camera->getUp();
+        const Vec3 right = camera->getRight();
+        const Vec3 up = camera->getUp();
 
         position += right * bobX + up * bobY;
         camera->setPosition(position);

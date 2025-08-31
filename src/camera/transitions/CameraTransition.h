@@ -107,14 +107,14 @@ namespace engine::camera {
          * @param start Starting position
          * @param target Target position
          */
-        void setupPosition(const Vector3& start, const Vector3& target);
+        void setupPosition(const Vec3& start, const Vec3& target);
 
         /**
          * @brief Setup target transition (for 3D cameras)
          * @param start Starting look-at point
          * @param target Target look-at point
          */
-        void setupTarget(const Vector3& start, const Vector3& target);
+        void setupTarget(const Vec3& start, const Vec3& target);
 
         /**
          * @brief Setup zoom transition (for 2D cameras)
@@ -145,13 +145,13 @@ namespace engine::camera {
          * @brief Get interpolated position
          * @return Current position based on progress
          */
-        Vector3 getInterpolatedPosition() const;
+        Vec3 getInterpolatedPosition() const;
 
         /**
          * @brief Get interpolated target
          * @return Current target based on progress
          */
-        Vector3 getInterpolatedTarget() const;
+        Vec3 getInterpolatedTarget() const;
 
         /**
          * @brief Get interpolated zoom
@@ -214,12 +214,12 @@ namespace engine::camera {
         bool hasFOV_ = false; ///< Whether FOV is being transitioned
 
         // Position data
-        Vector3 startPosition_{}; ///< Starting position
-        Vector3 targetPosition_{}; ///< Target position
+        Vec3 startPosition_{}; ///< Starting position
+        Vec3 targetPosition_{}; ///< Target position
 
         // Target data (3D cameras)
-        Vector3 startTarget_{}; ///< Starting look-at point
-        Vector3 targetLookAt_{}; ///< Target look-at point
+        Vec3 startTarget_{}; ///< Starting look-at point
+        Vec3 targetLookAt_{}; ///< Target look-at point
 
         // Zoom data (2D cameras)
         float startZoom_ = 1.0f; ///< Starting zoom

@@ -9,6 +9,8 @@
 
 #include "BaseCamera.h"
 
+#include "../core/Viewport.h"
+
 namespace engine::camera {
     /**
      * @brief 3D Camera implementation for 3D scene rendering
@@ -39,8 +41,8 @@ namespace engine::camera {
         // BASE CAMERA IMPLEMENTATION
         // ========================================================================
 
-        [[nodiscard]] Vector3 getPosition() const override { return position_; }
-        void setPosition(const Vector3& position) override;
+        [[nodiscard]] Vec3 getPosition() const override { return position_; }
+        void setPosition(const Vec3& position) override;
         void update(float deltaTime) override;
         void reset() override;
         [[nodiscard]] std::string getDebugInfo() const override;
@@ -54,19 +56,19 @@ namespace engine::camera {
          * @brief Set camera target (look-at point)
          * @param target Point to look at
          */
-        void setTarget(const Vector3& target);
+        void setTarget(const Vec3& target);
 
         /**
          * @brief Get camera target
          * @return Current target position
          */
-        [[nodiscard]] const Vector3& getTarget() const noexcept { return target_; }
+        [[nodiscard]] const Vec3& getTarget() const noexcept { return target_; }
 
         /**
          * @brief Set camera up vector
          * @param up Up direction vector
          */
-        void setUp(const Vector3& up) {
+        void setUp(const Vec3& up) {
             up_ = glm::normalize(up);
         }
 
@@ -74,13 +76,13 @@ namespace engine::camera {
          * @brief Get camera up vector
          * @return Current up direction
          */
-        [[nodiscard]] const Vector3& getUp() const noexcept { return up_; }
+        [[nodiscard]] const Vec3& getUp() const noexcept { return up_; }
 
         /**
          * @brief Get camera forward direction
          * @return Normalized forward vector
          */
-        [[nodiscard]] Vector3 getForward() const {
+        [[nodiscard]] Vec3 getForward() const {
             return glm::normalize(target_ - position_);
         }
 
@@ -88,7 +90,7 @@ namespace engine::camera {
          * @brief Get camera right direction
          * @return Normalized right vector
          */
-        [[nodiscard]] Vector3 getRight() const {
+        [[nodiscard]] Vec3 getRight() const {
             return glm::normalize(glm::cross(getForward(), up_));
         }
 
@@ -97,7 +99,7 @@ namespace engine::camera {
          * @param target Point to look at
          * @param up Up vector (default is world up)
          */
-        void lookAt(const Vector3& target, const Vector3& up = math::constants::VEC3_UP) {
+        void lookAt(const Vec3& target, const Vec3& up = math::VEC3_UP) {
             target_ = target;
             up_ = glm::normalize(up);
         }
@@ -220,13 +222,13 @@ namespace engine::camera {
          * @brief Set follow target for third-person modes
          * @param target Target position to follow
          */
-        void setFollowTarget(const Vector3& target);
+        void setFollowTarget(const Vec3& target);
 
         /**
          * @brief Get follow target
          * @return Current follow target
          */
-        [[nodiscard]] const Vector3& getFollowTarget() const noexcept { return followTarget_; }
+        [[nodiscard]] const Vec3& getFollowTarget() const noexcept { return followTarget_; }
 
         /**
          * @brief Set distance from follow target
@@ -318,7 +320,7 @@ namespace engine::camera {
          * @param viewport Viewport for conversion
          * @return Screen coordinates
          */
-        [[nodiscard]] Vector2 worldToScreen(const Vector3& worldPos, const Viewport& viewport) const;
+        [[nodiscard]] Vec2 worldToScreen(const Vec3& worldPos, const Viewport& viewport) const;
 
         /**
          * @brief Convert screen coordinates to world ray
@@ -326,7 +328,7 @@ namespace engine::camera {
          * @param viewport Viewport for conversion
          * @return Pair of (ray origin, ray direction)
          */
-        std::pair<Vector3, Vector3> screenToWorldRay(const Vector2& screenPos, const Viewport& viewport) const;
+        std::pair<Vec3, Vec3> screenToWorldRay(const Vec2& screenPos, const Viewport& viewport) const;
 
         /**
          * @brief Convert screen coordinates to world position at given depth
@@ -335,38 +337,36 @@ namespace engine::camera {
          * @param depth Depth in world units
          * @return World position at specified depth
          */
-        [[nodiscard]] Vector3 screenToWorld(const Vector2& screenPos, const Viewport& viewport, float depth) const;
+        [[nodiscard]] Vec3 screenToWorld(const Vec2& screenPos, const Viewport& viewport, float depth) const;
 
         /**
          * @brief Calculate view matrix for this camera
          * @return 4x4 view matrix (for integration with rendering system)
          */
-        [[nodiscard]] Matrix4 calculateViewMatrix() const {
-            return math::lookAt(position_, target_, up_);
-        }
+        [[nodiscard]] Mat4 calculateViewMatrix() const;
 
         /**
          * @brief Calculate projection matrix for this camera
          * @param viewport Viewport to calculate projection for
          * @return 4x4 projection matrix
          */
-        Matrix4 calculateProjectionMatrix(const Viewport& viewport) const;
+        Mat4 calculateProjectionMatrix(const Viewport& viewport) const;
 
         /**
          * @brief Get view-projection matrix
          * @param viewport Viewport for projection
          * @return Combined view-projection matrix
          */
-        Matrix4 getViewProjectionMatrix(const Viewport& viewport) const;
+        Mat4 getViewProjectionMatrix(const Viewport& viewport) const;
 
     private:
         // ========================================================================
         // 3D CAMERA PROPERTIES
         // ========================================================================
 
-        Vector3 position_{0.0f, 0.0f, 5.0f}; ///< Current camera position
-        Vector3 target_{0.0f, 0.0f, 0.0f}; ///< Point camera is looking at
-        Vector3 up_{0.0f, 1.0f, 0.0f}; ///< Up direction vector
+        Vec3 position_{0.0f, 0.0f, 5.0f}; ///< Current camera position
+        Vec3 target_{0.0f, 0.0f, 0.0f}; ///< Point camera is looking at
+        Vec3 up_{0.0f, 1.0f, 0.0f}; ///< Up direction vector
 
         // Projection properties
         float fov_ = defaults::CAMERA_FOV; ///< Field of view in degrees
@@ -383,7 +383,7 @@ namespace engine::camera {
         float maxPitch_ = defaults::MAX_PITCH; ///< Maximum pitch constraint
 
         // Following properties
-        Vector3 followTarget_{0.0f, 0.0f, 0.0f}; ///< Target to follow
+        Vec3 followTarget_{0.0f, 0.0f, 0.0f}; ///< Target to follow
         float followDistance_ = 5.0f; ///< Distance from follow target
         float followHeight_ = 2.0f; ///< Height offset from target
         float followSpeed_ = defaults::FOLLOW_SPEED; ///< Speed for following movement

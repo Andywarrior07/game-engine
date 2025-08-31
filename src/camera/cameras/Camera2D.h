@@ -9,6 +9,8 @@
 
 #include "BaseCamera.h"
 
+#include "../core/Viewport.h"
+
 #include <utility>
 
 namespace engine::camera {
@@ -35,7 +37,7 @@ namespace engine::camera {
          */
         ~Camera2D() override = default;
 
-        [[nodiscard]] Vector3 getPosition() const override {
+        [[nodiscard]] Vec3 getPosition() const override {
             return {position_.x, position_.y, 0.0f};
         }
 
@@ -43,7 +45,7 @@ namespace engine::camera {
         // BASE CAMERA IMPLEMENTATION
         // ========================================================================
 
-        void setPosition(const Vector3& position) override { setPosition(Vector2(position.x, position.y)); };
+        void setPosition(const Vec3& position) override { setPosition(Vec2(position.x, position.y)); };
         void update(float deltaTime) override;
         void reset() override;
         [[nodiscard]] std::string getDebugInfo() const override;
@@ -58,13 +60,13 @@ namespace engine::camera {
          * @brief Set 2D position
          * @param position New 2D position
          */
-        void setPosition(const Vector2& position);
+        void setPosition(const Vec2& position);
 
         /**
          * @brief Get 2D position
          * @return Current 2D position
          */
-        [[nodiscard]] const Vector2& getPosition2D() const noexcept { return position_; }
+        [[nodiscard]] const Vec2& getPosition2D() const noexcept { return position_; }
 
         /**
          * @brief Set camera zoom level
@@ -120,12 +122,12 @@ namespace engine::camera {
          * @brief Set camera offset from center
          * @param offset Offset in screen pixels
          */
-        void setOffset(const Vector2& offset) { offset_ = offset; }
+        void setOffset(const Vec2& offset) { offset_ = offset; }
 
         /**
          * @brief Get camera offset
          */
-        [[nodiscard]] const Vector2& getOffset() const noexcept { return offset_; }
+        [[nodiscard]] const Vec2& getOffset() const noexcept { return offset_; }
 
         // ========================================================================
         // TARGET FOLLOWING
@@ -135,13 +137,13 @@ namespace engine::camera {
          * @brief Set target position for following modes
          * @param target Target position to follow
          */
-        void setTarget(const Vector2& target);
+        void setTarget(const Vec2& target);
 
         /**
          * @brief Get current target position
          * @return Current target position
          */
-        [[nodiscard]] const Vector2& getTarget() const noexcept { return targetPosition_; }
+        [[nodiscard]] const Vec2& getTarget() const noexcept { return targetPosition_; }
 
         /**
          * @brief Set follow speed for target following
@@ -161,7 +163,7 @@ namespace engine::camera {
          * @brief Get camera velocity
          * @return Current velocity
          */
-        [[nodiscard]] const Vector2& getVelocity() const noexcept { return velocity_; }
+        [[nodiscard]] const Vec2& getVelocity() const noexcept { return velocity_; }
 
         // ========================================================================
         // ZOOM CONFIGURATION
@@ -190,7 +192,7 @@ namespace engine::camera {
          * @param viewport Viewport for conversion
          * @return Screen coordinate
          */
-        [[nodiscard]] Vector2 worldToScreen(const Vector2& worldPos, const math::Viewport& viewport) const;
+        [[nodiscard]] Vec2 worldToScreen(const Vec2& worldPos, const Viewport& viewport) const;
 
         /**
          * @brief Convert screen coordinates to world position
@@ -198,14 +200,14 @@ namespace engine::camera {
          * @param viewport Viewport for conversion
          * @return World coordinates
          */
-        [[nodiscard]] Vector2 screenToWorld(const Vector2& screenPos, const math::Viewport& viewport) const;
+        [[nodiscard]] Vec2 screenToWorld(const Vec2& screenPos, const Viewport& viewport) const;
 
         /**
          * @brief Get camera view bounds in world space
          * @param viewport Viewport to calculate bounds for
          * @return Camera bounds that define visible area
          */
-        [[nodiscard]] CameraBounds getViewBounds(const math::Viewport& viewport) const;
+        [[nodiscard]] CameraBounds getViewBounds(const Viewport& viewport) const;
 
         /**
          * @brief Check if world position is visible
@@ -213,12 +215,12 @@ namespace engine::camera {
          * @param viewport Current viewport
          * @return true if position is visible
          */
-        [[nodiscard]] bool isVisible(const Vector2& worldPos, const math::Viewport& viewport) const;
+        [[nodiscard]] bool isVisible(const Vec2& worldPos, const Viewport& viewport) const;
 
     private:
-        Vector2 position_{0.0f, 0.0f}; ///< Current camera position
-        Vector2 targetPosition_{0.0f, 0.0f}; ///< Target position for following modes
-        Vector2 offset_{0.0f, 0.0f}; ///< Offset from center (for UI cameras)
+        Vec2 position_{0.0f, 0.0f}; ///< Current camera position
+        Vec2 targetPosition_{0.0f, 0.0f}; ///< Target position for following modes
+        Vec2 offset_{0.0f, 0.0f}; ///< Offset from center (for UI cameras)
 
         float zoom_ = 1.0f; ///< Zoom level (1.0 = normal scale)
         float targetZoom_ = 1.0f; ///< Target zoom for smooth zooming
@@ -226,7 +228,7 @@ namespace engine::camera {
         float targetRotation_ = 0.0f; ///< Target rotation for smooth rotation
 
         float followSpeed_ = defaults::FOLLOW_SPEED; ///< Speed for following target
-        Vector2 velocity_{0.0f, 0.0f}; ///< Current movement velocity
+        Vec2 velocity_{0.0f, 0.0f}; ///< Current movement velocity
 
         float minZoom_ = defaults::MIN_ZOOM; ///< Minimum zoom level
         float maxZoom_ = defaults::MAX_ZOOM; ///< Maximum zoom level

@@ -107,7 +107,7 @@ namespace engine::camera {
          * @brief Get movement vector from input
          * @return Movement vector based on current input
          */
-        [[nodiscard]] Vector3 getMovementVector() const;
+        [[nodiscard]] Vec3 getMovementVector() const;
 
         /**
          * @brief Check if speed boost is active
@@ -145,7 +145,7 @@ namespace engine::camera {
         float sprintMultiplier_ = 2.0f;
 
         // Mouse input
-        Vector2 mouseDelta_{0, 0};
+        Vec2 mouseDelta_{0, 0};
         float scrollDelta_ = 0.0f;
 
         /**

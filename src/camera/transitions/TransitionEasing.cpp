@@ -7,6 +7,8 @@
 
 #include "TransitionEasing.h"
 
+#include "../../math/interpolation/Easing.h"
+
 namespace engine::camera {
     float TransitionEasing::ease(const TransitionType type, float t) {
         t = std::clamp(t, 0.0f, 1.0f);

@@ -52,19 +52,19 @@ namespace engine::camera {
     }
 
     void TopDownCamera::followWithDeadzone(Camera2D* camera,
-                                           const Vector2& targetPosition,
+                                           const Vec2& targetPosition,
                                            const TopDownCameraConfig& config,
                                            const float deltaTime) {
         if (!camera) return;
 
-        const Vector2 cameraPos = camera->getPosition2D();
-        const Vector2 diff = targetPosition - cameraPos;
+        const Vec2 cameraPos = camera->getPosition2D();
+        const Vec2 diff = targetPosition - cameraPos;
 
         // Check if target is outside deadzone
         const bool outsideX = std::abs(diff.x) > config.deadzone.x;
         const bool outsideY = std::abs(diff.y) > config.deadzone.y;
 
-        Vector2 newPosition = cameraPos;
+        Vec2 newPosition = cameraPos;
 
         // Move camera to keep target within deadzone
         if (outsideX) {
@@ -83,13 +83,13 @@ namespace engine::camera {
     }
 
     void TopDownCamera::handleEdgeScrolling(Camera2D* camera,
-                                            const Vector2& mousePos,
-                                            const Vector2& screenSize,
+                                            const Vec2& mousePos,
+                                            const Vec2& screenSize,
                                             const TopDownCameraConfig& config,
                                             const float deltaTime) {
         if (!camera || !config.enableEdgeScrolling) return;
 
-        Vector2 scrollVelocity(0.0f, 0.0f);
+        Vec2 scrollVelocity(0.0f, 0.0f);
 
         // Check edges
         if (mousePos.x < config.edgeScrollZone) {
@@ -108,26 +108,26 @@ namespace engine::camera {
 
         // Apply scrolling
         if (scrollVelocity.x != 0.0f || scrollVelocity.y != 0.0f) {
-            const Vector2 currentPos = camera->getPosition2D();
-            const Vector2 newPos = currentPos + scrollVelocity * deltaTime / camera->getZoom();
+            const Vec2 currentPos = camera->getPosition2D();
+            const Vec2 newPos = currentPos + scrollVelocity * deltaTime / camera->getZoom();
             camera->setPosition(newPos);
         }
     }
 
     void TopDownCamera::handleDragPan(Camera2D* camera,
-                                      const Vector2& mouseDelta,
+                                      const Vec2& mouseDelta,
                                       const bool isDragging,
                                       const TopDownCameraConfig& config) {
         if (!camera || !config.enableDragPan || !isDragging) return;
 
         // Convert mouse delta to world space
-        Vector2 worldDelta = mouseDelta * config.dragSensitivity / camera->getZoom();
+        Vec2 worldDelta = mouseDelta * config.dragSensitivity / camera->getZoom();
 
         // Invert Y for intuitive dragging
         worldDelta.y = -worldDelta.y;
 
         // Apply panning
-        Vector2 currentPos = camera->getPosition2D();
+        Vec2 currentPos = camera->getPosition2D();
         camera->setPosition(currentPos - worldDelta);
     }
 
@@ -138,15 +138,15 @@ namespace engine::camera {
         if (!camera) return;
 
         // Calculate center of bounds
-        const Vector3 center3D = bounds.getCenter();
-        const Vector2 center(center3D.x, center3D.y);
+        const Vec3 center3D = bounds.getCenter();
+        const Vec2 center(center3D.x, center3D.y);
 
         // Calculate required zoom to fit bounds
-        const Vector3 size3D = bounds.getSize();
-        const Vector2 size(size3D.x, size3D.y);
+        const Vec3 size3D = bounds.getSize();
+        const Vec2 size(size3D.x, size3D.y);
 
-        const float zoomX = viewport.width / (size.x * (1.0f + padding));
-        const float zoomY = viewport.height / (size.y * (1.0f + padding));
+        const float zoomX = viewport.getWidth() / (size.x * (1.0f + padding));
+        const float zoomY = viewport.getHeight() / (size.y * (1.0f + padding));
         const float zoom = std::min(zoomX, zoomY);
 
         // Apply camera settings
@@ -155,15 +155,15 @@ namespace engine::camera {
     }
 
     void TopDownCamera::smoothTransition(Camera2D* camera,
-                                         const Vector2& targetPosition,
+                                         const Vec2& targetPosition,
                                          const float targetZoom,
                                          const float speed,
                                          const float deltaTime) {
         if (!camera) return;
 
         // Smooth position transition
-        const Vector2 currentPos = camera->getPosition2D();
-        const Vector2 newPos = currentPos + (targetPosition - currentPos) * speed * deltaTime;
+        const Vec2 currentPos = camera->getPosition2D();
+        const Vec2 newPos = currentPos + (targetPosition - currentPos) * speed * deltaTime;
         camera->setPosition(newPos);
 
         // Smooth zoom transition

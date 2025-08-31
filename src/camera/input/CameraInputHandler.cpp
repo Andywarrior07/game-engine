@@ -132,7 +132,7 @@ namespace engine::camera {
         if (!activeCamera) return;
 
         // Get movement input
-        Vector3 movement = getMovementVector();
+        Vec3 movement = getMovementVector();
 
         // Apply speed boost if active
         float currentSpeed = moveSpeed_;
@@ -154,7 +154,7 @@ namespace engine::camera {
                 deltaTime
             );
             // Reset mouse delta after processing
-            mouseDelta_ = Vector2(0, 0);
+            mouseDelta_ = Vec2(0, 0);
         }
 
         // Process zoom
@@ -174,10 +174,10 @@ namespace engine::camera {
         }
     }
 
-    Vector3 CameraInputHandler::getMovementVector() const  {
-        if (!inputManager_) return Vector3(0, 0, 0);
+    Vec3 CameraInputHandler::getMovementVector() const  {
+        if (!inputManager_) return Vec3(0, 0, 0);
 
-        return Vector3(
+        return Vec3(
             inputManager_->getAxisValue(axisIds_.at(CameraAxis::HORIZONTAL)),
             inputManager_->getAxisValue(axisIds_.at(CameraAxis::ELEVATION)),
             -inputManager_->getAxisValue(axisIds_.at(CameraAxis::VERTICAL))  // Negative for forward

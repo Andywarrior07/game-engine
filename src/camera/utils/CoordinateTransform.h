@@ -30,9 +30,9 @@ namespace engine::camera {
          * @param projectionMatrix Projection matrix
          * @return Position in NDC space (-1 to 1)
          */
-        static Vector3 worldToNDC(const Vector3& worldPos,
-                                 const Matrix4& viewMatrix,
-                                 const Matrix4& projectionMatrix);
+        static Vec3 worldToNDC(const Vec3& worldPos,
+                                 const Mat4& viewMatrix,
+                                 const Mat4& projectionMatrix);
 
         /**
          * @brief Transform NDC to screen coordinates
@@ -40,7 +40,7 @@ namespace engine::camera {
          * @param viewport Target viewport
          * @return Screen coordinates in pixels
          */
-        static Vector2 ndcToScreen(const Vector3& ndc, const Viewport& viewport);
+        static Vec2 ndcToScreen(const Vec3& ndc, const Viewport& viewport);
 
         /**
          * @brief Transform screen coordinates to NDC
@@ -48,7 +48,7 @@ namespace engine::camera {
          * @param viewport Source viewport
          * @return Position in NDC space (-1 to 1)
          */
-        static Vector3 screenToNDC(const Vector2& screenPos, const Viewport& viewport);
+        static Vec3 screenToNDC(const Vec2& screenPos, const Viewport& viewport);
 
         /**
          * @brief Transform NDC to world space
@@ -57,9 +57,9 @@ namespace engine::camera {
          * @param invProjMatrix Inverse projection matrix
          * @return World position
          */
-        static Vector3 ndcToWorld(const Vector3& ndc,
-                                 const Matrix4& invViewMatrix,
-                                 const Matrix4& invProjMatrix);
+        static Vec3 ndcToWorld(const Vec3& ndc,
+                                 const Mat4& invViewMatrix,
+                                 const Mat4& invProjMatrix);
 
         /**
          * @brief Create ray from screen position
@@ -69,10 +69,10 @@ namespace engine::camera {
          * @param invProjMatrix Inverse projection matrix
          * @return Pair of (ray origin, ray direction)
          */
-        static std::pair<Vector3, Vector3> screenToRay(const Vector2& screenPos,
+        static std::pair<Vec3, Vec3> screenToRay(const Vec2& screenPos,
                                                        const Viewport& viewport,
-                                                       const Matrix4& invViewMatrix,
-                                                       const Matrix4& invProjMatrix);
+                                                       const Mat4& invViewMatrix,
+                                                       const Mat4& invProjMatrix);
 
         /**
          * @brief Project 3D point to 2D screen space
@@ -81,7 +81,7 @@ namespace engine::camera {
          * @param viewport Target viewport
          * @return Screen position (negative if behind camera)
          */
-        static Vector2 project(const Vector3& worldPos,
+        static Vec2 project(const Vec3& worldPos,
                               const BaseCamera* camera,
                               const Viewport& viewport);
 
@@ -93,7 +93,7 @@ namespace engine::camera {
          * @param viewport Source viewport
          * @return World position
          */
-        static Vector3 unproject(const Vector2& screenPos,
+        static Vec3 unproject(const Vec2& screenPos,
                                 float depth,
                                 const BaseCamera* camera,
                                 const Viewport& viewport);
@@ -106,9 +106,9 @@ namespace engine::camera {
          * @param viewport Target viewport
          * @return Screen space bounding box (min, max)
          */
-        static std::pair<Vector2, Vector2> calculateScreenBounds(const CameraBounds& worldBounds,
-                                                                const Matrix4& viewMatrix,
-                                                                const Matrix4& projectionMatrix,
+        static std::pair<Vec2, Vec2> calculateScreenBounds(const CameraBounds& worldBounds,
+                                                                const Mat4& viewMatrix,
+                                                                const Mat4& projectionMatrix,
                                                                 const Viewport& viewport);
 
         /**
@@ -119,7 +119,7 @@ namespace engine::camera {
          * @param margin Screen margin in pixels
          * @return true if position is visible
          */
-        static bool isVisible(const Vector3& worldPos,
+        static bool isVisible(const Vec3& worldPos,
                             const BaseCamera* camera,
                             const Viewport& viewport,
                             float margin);
@@ -130,7 +130,7 @@ namespace engine::camera {
          * @param camera Camera
          * @return Distance to camera
          */
-        static float distanceToCamera(const Vector3& worldPos, const BaseCamera* camera);
+        static float distanceToCamera(const Vec3& worldPos, const BaseCamera* camera);
 
         /**
          * @brief Calculate view-space depth
@@ -138,7 +138,7 @@ namespace engine::camera {
          * @param viewMatrix View matrix
          * @return Depth in view space (negative for points in front)
          */
-        static float calculateViewDepth(const Vector3& worldPos, const Matrix4& viewMatrix);
+        static float calculateViewDepth(const Vec3& worldPos, const Mat4& viewMatrix);
     };
 
 } // namespace engine::camera

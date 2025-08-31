@@ -16,7 +16,7 @@ namespace engine::camera {
      * @brief Side-scroller camera configuration
      */
     struct SideScrollerCameraConfig {
-        Vector2 position{0.0f, 0.0f};           ///< Initial camera position
+        Vec2 position{0.0f, 0.0f};           ///< Initial camera position
         float zoom = 1.0f;                      ///< Zoom level
         float followSpeed = 10.0f;              ///< Horizontal follow speed
         float verticalFollowSpeed = 5.0f;       ///< Vertical follow speed
@@ -74,8 +74,8 @@ namespace engine::camera {
          * @param deltaTime Time step
          */
         static void followPlayer(Camera2D* camera,
-                                const Vector2& playerPosition,
-                                const Vector2& playerVelocity,
+                                const Vec2& playerPosition,
+                                const Vec2& playerVelocity,
                                 const SideScrollerCameraConfig& config,
                                 float deltaTime);
 
@@ -112,7 +112,7 @@ namespace engine::camera {
          * @param layerCount Number of parallax layers
          * @return Calculated offsets for each layer
          */
-        static std::vector<Vector2> calculateParallaxOffsets(const Camera2D* camera,
+        static std::vector<Vec2> calculateParallaxOffsets(const Camera2D* camera,
                                                             const float* layerDepths,
                                                             int layerCount);
 
@@ -127,8 +127,8 @@ namespace engine::camera {
          */
         static TransitionID transitionToRoom(CameraManager& manager,
                                             CameraID cameraId,
-                                            const Vector2& newRoomCenter,
-                                            const Vector2& newRoomSize,
+                                            const Vec2& newRoomCenter,
+                                            const Vec2& newRoomSize,
                                             float transitionDuration);
 
         /**

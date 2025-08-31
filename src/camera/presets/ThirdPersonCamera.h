@@ -15,7 +15,7 @@ namespace engine::camera {
      * @brief Third-person camera configuration
      */
     struct ThirdPersonCameraConfig {
-        Vector3 targetPosition{0.0f, 0.0f, 0.0f}; ///< Initial target position
+        Vec3 targetPosition{0.0f, 0.0f, 0.0f}; ///< Initial target position
         float distance = 5.0f; ///< Distance from target
         float minDistance = 1.0f; ///< Minimum zoom distance
         float maxDistance = 20.0f; ///< Maximum zoom distance
@@ -25,7 +25,7 @@ namespace engine::camera {
         float followSpeed = 8.0f; ///< Camera follow speed
         float rotationSpeed = 2.0f; ///< Rotation speed
         float fov = 60.0f; ///< Field of view
-        Vector3 targetOffset{0.0f, 1.0f, 0.0f}; ///< Offset from target center
+        Vec3 targetOffset{0.0f, 1.0f, 0.0f}; ///< Offset from target center
         bool enableCollision = true; ///< Enable collision detection
         float collisionRadius = 0.5f; ///< Collision sphere radius
         bool autoRotate = false; ///< Auto-rotate behind target
@@ -97,8 +97,8 @@ namespace engine::camera {
          * @param deltaTime Time step
          */
         static void updateFollow(Camera3D* camera,
-                                 const Vector3& targetPosition,
-                                 const Vector3& targetForward,
+                                 const Vec3& targetPosition,
+                                 const Vec3& targetForward,
                                  const ThirdPersonCameraConfig& config,
                                  float deltaTime);
 
@@ -110,8 +110,8 @@ namespace engine::camera {
          * @param config Configuration
          * @return Adjusted camera position
          */
-        static Vector3 handleCollision(const Camera3D* camera,
-                                       const Vector3& targetPosition,
+        static Vec3 handleCollision(const Camera3D* camera,
+                                       const Vec3& targetPosition,
                                        const ThirdPersonCameraConfig& config);
 
         /**
@@ -150,7 +150,7 @@ namespace engine::camera {
          * @param deltaTime Time step
          */
         static void autoRotateBehindTarget(Camera3D* camera,
-                                           const Vector3& targetForward,
+                                           const Vec3& targetForward,
                                            const ThirdPersonCameraConfig& config,
                                            float deltaTime);
     };

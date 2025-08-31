@@ -5,7 +5,7 @@
  * @date 26-08-2025
  */
 
-#include "SideSCrollerCamera.h"
+#include "SideScrollerCamera.h"
 
 namespace engine::camera {
     CameraID SideScrollerCamera::create(CameraManager& manager,
@@ -42,21 +42,21 @@ namespace engine::camera {
         if (config.lockVertical) {
             CameraBounds bounds;
             bounds.setBounds(
-                Vector3(-10000.0f, config.minY, -1.0f),
-                Vector3(10000.0f, config.maxY, 1.0f)
+                Vec3(-10000.0f, config.minY, -1.0f),
+                Vec3(10000.0f, config.maxY, 1.0f)
             );
             camera->setBounds(bounds);
         }
     }
 
     void SideScrollerCamera::followPlayer(Camera2D* camera,
-                                          const Vector2& playerPosition,
-                                          const Vector2& playerVelocity,
+                                          const Vec2& playerPosition,
+                                          const Vec2& playerVelocity,
                                           const SideScrollerCameraConfig& config,
                                           const float deltaTime) {
         if (!camera) return;
 
-        Vector2 targetPosition = playerPosition;
+        Vec2 targetPosition = playerPosition;
 
         // Add offsets
         targetPosition.x += config.horizontalOffset;
@@ -71,7 +71,7 @@ namespace engine::camera {
         }
 
         // Handle vertical following with deadzone
-        const Vector2 currentPos = camera->getPosition2D();
+        const Vec2 currentPos = camera->getPosition2D();
         const float verticalDiff = targetPosition.y - currentPos.y;
 
         if (config.lockVertical) {
@@ -121,35 +121,35 @@ namespace engine::camera {
         if (!camera) return;
 
         // Get current position
-        const Vector2 currentPos = camera->getPosition2D();
-        const Vector3 min = platformBounds.getMin();
-        const Vector3 max = platformBounds.getMax();
+        const Vec2 currentPos = camera->getPosition2D();
+        const Vec3 min = platformBounds.getMin();
+        const Vec3 max = platformBounds.getMax();
 
         // Clamp to platform bounds
-        const Vector2 clampedPos(
+        const Vec2 clampedPos(
             math::clamp(currentPos.x, min.x, max.x),
             math::clamp(currentPos.y, min.y, max.y)
         );
 
         // Smooth transition to clamped position
-        const Vector2 newPos = currentPos + (clampedPos - currentPos) * transitionSpeed * deltaTime;
+        const Vec2 newPos = currentPos + (clampedPos - currentPos) * transitionSpeed * deltaTime;
         camera->setPosition(newPos);
     }
 
-    std::vector<Vector2> SideScrollerCamera::calculateParallaxOffsets(const Camera2D* camera,
+    std::vector<Vec2> SideScrollerCamera::calculateParallaxOffsets(const Camera2D* camera,
                                                                       const float* layerDepths,
                                                                       const int layerCount) {
         if (!camera) return {};
 
-        std::vector<Vector2> offsets;
+        std::vector<Vec2> offsets;
         offsets.reserve(layerCount);
 
-        const Vector2 cameraPos = camera->getPosition2D();
+        const Vec2 cameraPos = camera->getPosition2D();
 
         for (int i = 0; i < layerCount; ++i) {
             const float depth = layerDepths[i];
             // Parallax effect: farther layers move slower
-            Vector2 layerOffset = cameraPos * (1.0f - depth);
+            Vec2 layerOffset = cameraPos * (1.0f - depth);
             offsets.push_back(layerOffset);
         }
 
@@ -158,13 +158,13 @@ namespace engine::camera {
 
     TransitionID SideScrollerCamera::transitionToRoom(CameraManager& manager,
                                                       const CameraID cameraId,
-                                                      const Vector2& newRoomCenter,
-                                                      const Vector2& newRoomSize,
+                                                      const Vec2& newRoomCenter,
+                                                      const Vec2& newRoomSize,
                                                       const float transitionDuration = 1.0f) {
         if (const Camera2D* camera = manager.getCamera2D(cameraId); !camera) return INVALID_TRANSITION_ID;
 
         // Calculate camera position for room
-        const Vector3 targetPos(newRoomCenter.x, newRoomCenter.y, 0.0f);
+        const Vec3 targetPos(newRoomCenter.x, newRoomCenter.y, 0.0f);
 
         // Create transition
         TransitionConfig config;
@@ -180,7 +180,7 @@ namespace engine::camera {
                                               const float duration = 0.3f) {
         ShakeConfig shakeConfig = ShakeConfig::impact(intensity);
         shakeConfig.duration = duration;
-        shakeConfig.axes = Vector3(1.0f, 0.5f, 0.0f); // More horizontal shake
+        shakeConfig.axes = Vec3(1.0f, 0.5f, 0.0f); // More horizontal shake
         manager.startCameraShake(cameraId, shakeConfig);
     }
 } // namespace engine::camera

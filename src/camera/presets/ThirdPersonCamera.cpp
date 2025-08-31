@@ -55,14 +55,14 @@ namespace engine::camera {
     }
 
     void ThirdPersonCamera::updateFollow(Camera3D* camera,
-                                 const Vector3& targetPosition,
-                                 const Vector3& targetForward,
+                                 const Vec3& targetPosition,
+                                 const Vec3& targetForward,
                                  const ThirdPersonCameraConfig& config,
                                  const float deltaTime) {
         if (!camera) return;
 
         // Update follow target
-        const Vector3 followPoint = targetPosition + config.targetOffset;
+        const Vec3 followPoint = targetPosition + config.targetOffset;
         camera->setFollowTarget(followPoint);
 
         // Auto-rotate behind target if enabled
@@ -74,16 +74,16 @@ namespace engine::camera {
         updateCameraPosition(camera, config);
     }
 
-    Vector3 ThirdPersonCamera::handleCollision(const Camera3D* camera,
-                                       const Vector3& targetPosition,
+    Vec3 ThirdPersonCamera::handleCollision(const Camera3D* camera,
+                                       const Vec3& targetPosition,
                                        const ThirdPersonCameraConfig& config) {
         // Revisar esto: Pointer may be null
         if (!camera || !config.enableCollision) {
             return camera->getPosition();
         }
 
-        const Vector3 cameraPos = camera->getPosition();
-        const Vector3 direction = glm::normalize(cameraPos - targetPosition);
+        const Vec3 cameraPos = camera->getPosition();
+        const Vec3 direction = glm::normalize(cameraPos - targetPosition);
 
         // Simple sphere cast from target to camera
         // In a real implementation, this would interface with physics system
@@ -93,7 +93,7 @@ namespace engine::camera {
         // For now, just return the current position
 
         return targetPosition + direction * adjustedDistance +
-            Vector3(0, config.height, 0);
+            Vec3(0, config.height, 0);
     }
 
     void ThirdPersonCamera::adjustDistance(Camera3D* camera,
@@ -119,11 +119,11 @@ namespace engine::camera {
     }
 
     void ThirdPersonCamera::updateCameraPosition(Camera3D* camera, const ThirdPersonCameraConfig& config) {
-        const Vector3 target = camera->getFollowTarget();
-        const float yaw = camera->getYaw() * math::constants::DEG_TO_RAD;
+        const Vec3 target = camera->getFollowTarget();
+        const float yaw = camera->getYaw() * math::DEG_TO_RAD<math::Float>;
 
         // Calculate position offset
-        const Vector3 offset(
+        const Vec3 offset(
             std::sin(yaw) * config.distance,
             config.height,
             std::cos(yaw) * config.distance
@@ -134,11 +134,11 @@ namespace engine::camera {
     }
 
     void ThirdPersonCamera::autoRotateBehindTarget(Camera3D* camera,
-                                           const Vector3& targetForward,
+                                           const Vec3& targetForward,
                                            const ThirdPersonCameraConfig& config,
                                            const float deltaTime) {
         // Calculate target yaw from forward direction
-        const float targetYaw = std::atan2(targetForward.x, targetForward.z) * math::constants::RAD_TO_DEG;
+        const float targetYaw = std::atan2(targetForward.x, targetForward.z) * math::RAD_TO_DEG<math::Float>;
         const float currentYaw = camera->getYaw();
 
         // Smooth rotation
