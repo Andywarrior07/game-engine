@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # --- FIX PARA HEADERS DE C++ EN MACOS ---
-if(APPLE)
+if (APPLE)
     execute_process(
             COMMAND xcrun --show-sdk-path
             OUTPUT_VARIABLE CMAKE_OSX_SYSROOT
@@ -13,7 +13,7 @@ if(APPLE)
     )
 
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
-endif()
+endif ()
 # ----------------------------------------
 
 #find_package(PkgConfig REQUIRED)
@@ -38,10 +38,8 @@ link_libraries(${SDL2_LIBRARY} ${SDL2_IMAGE_LIBRARY})
 
 find_package(Bullet REQUIRED)
 add_executable(simple_game src/main.cpp
-        Game.cpp
         src/Animation/AnimationManager.cpp
         src/Input/InputManager.cpp
-#        src/Physics/PhysicsManager.cpp
         src/camera/CameraSystem.h
         src/camera/cameras/BaseCamera.cpp
         src/camera/cameras/BaseCamera.h
@@ -52,6 +50,8 @@ add_executable(simple_game src/main.cpp
         src/camera/core/CameraBounds.cpp
         src/camera/core/CameraBounds.h
         src/camera/core/CameraTypes.h
+        src/camera/core/Viewport.cpp
+        src/camera/core/Viewport.cpp
         src/camera/effects/CameraShake.cpp
         src/camera/effects/CameraShake.h
         src/camera/effects/ShakeConfig.h
@@ -95,6 +95,8 @@ add_executable(simple_game src/main.cpp
         src/math/geometry/Intersections.h
         src/math/geometry/Primitives.h
         src/math/graphics/ColorSpace.h
+        src/math/graphics/ProjectionMatrix.cpp
+        src/math/graphics/ProjectionMatrix.h
         src/math/graphics/TangentSpace.cpp
         src/math/graphics/TangentSpace.h
         src/math/interpolation/Curves.h
@@ -102,6 +104,12 @@ add_executable(simple_game src/main.cpp
         src/math/interpolation/Interpolation.h
         src/math/noise/PerlinNoise.cpp
         src/math/noise/PerlinNoise.h
+        src/math/noise/SimplexNoise.cpp
+        src/math/noise/SimplexNoise.h
+        src/math/noise/WorleyNoise.cpp
+        src/math/noise/WorleyNoise.h
+        src/math/simd/SimdMath.h
+        src/math/simd/SimdTypes.h
         src/math/spatial/MortonCode.cpp
         src/math/spatial/MortonCode.h
         src/math/spatial/Octree.h
@@ -110,6 +118,7 @@ add_executable(simple_game src/main.cpp
         src/math/transform/Transform.h
         src/math/transform/TransformHierarchy.cpp
         src/math/transform/TransformHierarchy.h
+        src/math/utils/MathDebug.h
         src/math/utils/Random.cpp
         src/math/utils/Random.h
         src/memory/MemorySystem.h
@@ -166,17 +175,6 @@ add_executable(simple_game src/main.cpp
         src/resources/utils/ResourceDependencyGraph.cpp
         src/resources/utils/ResourceDependencyGraph.h
         src/resources/utils/ResourcePool.h
-        src/math/graphics/ProjectionMatrix.cpp
-        src/math/graphics/ProjectionMatrix.h
-        src/math/simd/SimdTypes.h
-        src/math/simd/SimdMath.h
-        src/math/utils/MathDebug.h
-        src/math/noise/SimplexNoise.cpp
-        src/math/noise/SimplexNoise.h
-        src/math/noise/WorleyNoise.cpp
-        src/math/noise/WorleyNoise.h
-        src/camera/core/Viewport.cpp
-        #        src/camera/core/Viewport.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}
