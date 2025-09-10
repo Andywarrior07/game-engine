@@ -1,3 +1,5 @@
+// MAIN TEST
+
 #include <SDL.h>
 #include <SDL_image.h>
 #include <iostream>
@@ -139,7 +141,7 @@ public:
         // CHANGE: Step 5 - Initialize the NEW ResourceManager
         std::cout << "\n=== Initializing Resource Manager ===" << std::endl;
 
-        resourceManager_ = std::make_unique<ResourceManager>(memoryManager_.get());
+        resourceManager_ = std::make_unique<ResourceManager>(*memoryManager_);
 
         ResourceManagerConfig resourceConfig;
         resourceConfig.maxMemory = 256 * 1024 * 1024; // 256MB limit

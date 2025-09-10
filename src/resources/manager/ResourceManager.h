@@ -60,7 +60,7 @@ namespace engine::resources {
     // Main resource manager class
     class ResourceManager {
     public:
-        explicit ResourceManager(memory::MemoryManager* memoryManager);
+        explicit ResourceManager(memory::MemoryManager& memoryManager);
         ~ResourceManager();
 
         // Delete copy, allow move
@@ -157,7 +157,7 @@ namespace engine::resources {
         // Configuration
         ResourceManagerConfig config_;
 
-        memory::MemoryManager* memoryManager_;
+        memory::MemoryManager& memoryManager_;
 
         // Resources
         std::unordered_map<ResourceID, ResourcePtr<Resource>> resources_;

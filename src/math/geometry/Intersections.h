@@ -29,8 +29,8 @@ namespace engine::math {
         Float distance;     // Distance along ray to hit point
         Vec2 uv;           // UV coordinates (for triangles)
         void* userData;     // Optional user data pointer
-        
-        RaycastHit() noexcept 
+
+        RaycastHit() noexcept
             : point(0), normal(0,1,0), distance(0), uv(0), userData(nullptr) {}
     };
     

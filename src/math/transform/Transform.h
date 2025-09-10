@@ -43,8 +43,8 @@ namespace engine::math {
 
         // TODO: Preguntar por la inicializacion variables
         explicit Transform(const Vec3& position,
-                           const Quat& rotation = Quat(1, 0, 0, 0),
-                           const Vec3& scale = Vec3(1)) noexcept;
+                           const Quat& rotation = QUAT_IDENTITY,
+                           const Vec3& scale = VEC3_ONE) noexcept;
 
         // ============================================================================
         // Local Transform Getters

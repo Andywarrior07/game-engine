@@ -175,6 +175,67 @@ add_executable(simple_game src/main.cpp
         src/resources/utils/ResourceDependencyGraph.cpp
         src/resources/utils/ResourceDependencyGraph.h
         src/resources/utils/ResourcePool.h
+        src/physics/core/PhysicsConstants.h
+        src/physics/core/PhysicsTypes.h
+        src/physics/core/PhysicsConfig.h
+        src/physics/core/PhysicsWorld.cpp
+        src/physics/core/PhysicsWorld.h
+        src/physics/utils/PhysicsDebug.cpp
+        src/physics/utils/PhysicsDebug.h
+        src/physics/manager/PhysicsManager.cpp
+        src/physics/manager/PhysicsManager.h
+        src/physics/dynamics/RigidBody.cpp
+        src/physics/dynamics/RigidBody.h
+        src/physics/collision/CollisionShapes.cpp
+        src/physics/collision/CollisionShapes.h
+        src/physics/gameplay/CharacterController.cpp
+        src/physics/gameplay/CharacterController.h
+        src/physics/manager/PhysicsProfiler.cpp
+        src/physics/manager/PhysicsProfiler.h
+        src/physics/gameplay/VehiclePhysics.cpp
+        src/physics/gameplay/VehiclePhysics.h
+        src/physics/dynamics/ForceGenerators.cpp
+        src/physics/dynamics/ForceGenerators.h
+        src/physics/streaming/PhysicsLOD.cpp
+        src/physics/streaming/PhysicsLOD.h
+        src/physics/gameplay/TriggerSystem.cpp
+        src/physics/gameplay/TriggerSystem.h
+        src/physics/collision/BroadPhase.cpp
+        src/physics/collision/BroadPhase.h
+        src/physics/collision/NarrowPhase.cpp
+        src/physics/collision/NarrowPhase.h
+        src/physics/collision/CollisionDetection.cpp
+        src/physics/collision/CollisionDetection.h
+        src/physics/constraints/ConstraintSolver.cpp
+        src/physics/constraints/ConstraintSolver.h
+        src/physics/constraints/ConstraintTypes.cpp
+        src/physics/constraints/ConstraintTypes.h
+        src/physics/constraints/MotorConstraints.cpp
+        src/physics/constraints/MotorConstraints.h
+        src/physics/dynamics/Integration.cpp
+        src/physics/dynamics/Integration.h
+        src/physics/dynamics/SoftBody.cpp
+        src/physics/dynamics/SoftBody.h
+        src/physics/gameplay/DestructionSystem.cpp
+        src/physics/gameplay/DestructionSystem.h
+        src/physics/integration/BulletIntegration.cpp
+        src/physics/integration/BulletIntegration.h
+        src/physics/integration/BulletWrappers.cpp
+        src/physics/integration/BulletWrappers.h
+        src/physics/integration/ComponentBridge.cpp
+        src/physics/integration/ComponentBridge.h
+        src/physics/queries/PhysicsQueries.cpp
+        src/physics/queries/PhysicsQueries.h
+        src/physics/queries/RaycastSystem.cpp
+        src/physics/queries/RaycastSystem.h
+        src/physics/PhysicsSystem.cpp
+        src/physics/PhysicsSystem.h
+        src/physics/collision/CollisionFiltering.cpp
+        src/physics/collision/CollisionFiltering.h
+        src/physics/utils/PhysicsUtils.cpp
+        src/physics/utils/PhysicsUtils.h
+        src/memory/manager/ObjectPool.h
+        src/physics/core/PhysicsTypes.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}
