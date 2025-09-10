@@ -12,7 +12,7 @@
 #include "../loader/IResourceLoader.h"
 
 namespace engine::resources {
-    ResourceManager::ResourceManager(memory::MemoryManager* memoryManager)
+    ResourceManager::ResourceManager(memory::MemoryManager& memoryManager)
         : memoryManager_(memoryManager) {
     }
 
@@ -576,10 +576,10 @@ namespace engine::resources {
 
     void* ResourceManager::allocateResourceMemory(const ResourceSize size,
                                                   const memory::MemoryCategory category) const {
-        return memoryManager_->allocate(size, category);
+        return memoryManager_.allocate(size, category);
     }
 
     void ResourceManager::deallocateResourceMemory(void* ptr, const memory::MemoryCategory category) const {
-        memoryManager_->deallocate(ptr, category);
+        memoryManager_.deallocate(ptr, category);
     }
 }

@@ -119,23 +119,23 @@ namespace engine::math {
     // Physics Constants
     // ============================================================================
 
-    namespace physics {
-        // Gravity constant (m/s²)
-        inline constexpr Float GRAVITY_EARTH = 9.80665f;
-        inline constexpr Float GRAVITY_MOON = 1.62f;
-        inline constexpr Float GRAVITY_MARS = 3.71f;
-
-        // Universal gravitational constant (m³/kg·s²)
-        inline constexpr Double G = 6.67430e-11;
-
-        // Speed of light in vacuum (m/s)
-        inline constexpr Double C = 299792458.0;
-
-        // Common physics timesteps
-        inline constexpr Float FIXED_TIMESTEP_60HZ = 1.0f / 60.0f;
-        inline constexpr Float FIXED_TIMESTEP_120HZ = 1.0f / 120.0f;
-        inline constexpr Float FIXED_TIMESTEP_30HZ = 1.0f / 30.0f;
-    }
+    // namespace physics {
+    //     // Gravity constant (m/s²)
+    //     inline constexpr Float GRAVITY_EARTH = 9.80665f;
+    //     inline constexpr Float GRAVITY_MOON = 1.62f;
+    //     inline constexpr Float GRAVITY_MARS = 3.71f;
+    //
+    //     // Universal gravitational constant (m³/kg·s²)
+    //     inline constexpr Double G = 6.67430e-11;
+    //
+    //     // Speed of light in vacuum (m/s)
+    //     inline constexpr Double C = 299792458.0;
+    //
+    //     // Common physics timesteps
+    //     inline constexpr Float FIXED_TIMESTEP_60HZ = 1.0f / 60.0f;
+    //     inline constexpr Float FIXED_TIMESTEP_120HZ = 1.0f / 120.0f;
+    //     inline constexpr Float FIXED_TIMESTEP_30HZ = 1.0f / 30.0f;
+    // }
 
     // ============================================================================
     // Limits and Thresholds
