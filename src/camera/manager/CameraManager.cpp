@@ -6,11 +6,13 @@
  */
 
 #include "CameraManager.h"
+
 #include "../cameras/Camera2D.h"
 #include "../cameras/Camera3D.h"
 #include "../effects/CameraShake.h"
 #include "../transitions/CameraTransition.h"
-#include "../input/CameraInputHandler.h"
+// #include "../input/CameraInputHandler.h"
+
 #include <iostream>
 #include <algorithm>
 
@@ -102,9 +104,9 @@ namespace engine::camera {
         const auto startTime = std::chrono::steady_clock::now();
 
         // Update input handler if available
-        if (inputHandler_) {
-            inputHandler_->update(deltaTime);
-        }
+        // if (inputHandler_) {
+        //     inputHandler_->update(deltaTime);
+        // }
 
         // Update all enabled cameras
         registry_->forEachCamera([&](BaseCamera* camera) {
@@ -606,12 +608,12 @@ namespace engine::camera {
     // INPUT HANDLING
     // ========================================================================
 
-    void CameraManager::setInputManager(InputManager* inputManager) {
-        inputManager_ = inputManager;
-        if (inputManager_) {
-            inputHandler_ = std::make_unique<CameraInputHandler>(this, inputManager_);
-        }
-    }
+    // void CameraManager::setInputManager(InputManager* inputManager) {
+    //     inputManager_ = inputManager;
+    //     if (inputManager_) {
+    //         inputHandler_ = std::make_unique<CameraInputHandler>(this, inputManager_);
+    //     }
+    // }
 
     void CameraManager::processMouseLook(const float deltaX, const float deltaY, const float deltaTime) {
         BaseCamera* activeCamera = getActiveCamera();

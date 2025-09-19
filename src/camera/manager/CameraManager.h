@@ -15,7 +15,7 @@
 #include "../cameras/Camera3D.h"
 #include "../effects/CameraShake.h"
 #include "../transitions/CameraTransition.h"
-#include "../input/CameraInputHandler.h"
+// #include "../input/CameraInputHandler.h"
 #include "../core/Viewport.h"
 
 #include <memory>
@@ -267,14 +267,14 @@ namespace engine::camera {
         // INPUT HANDLING
         // ========================================================================
 
-        void setInputManager(InputManager* inputManager);
+        // void setInputManager(InputManager* inputManager);
 
         /**
          * @brief Get input handler
          * @return Pointer to input handler
          */
-        CameraInputHandler* getInputHandler() { return inputHandler_.get(); }
-        const CameraInputHandler* getInputHandler() const { return inputHandler_.get(); }
+        // CameraInputHandler* getInputHandler() { return inputHandler_.get(); }
+        // const CameraInputHandler* getInputHandler() const { return inputHandler_.get(); }
 
         /**
          * @brief Process mouse look input for active camera
@@ -400,8 +400,8 @@ namespace engine::camera {
         // Core components
         CameraManagerConfig config_;                          ///< Configuration parameters
         std::unique_ptr<CameraRegistry> registry_;            ///< Camera registry
-        InputManager* inputManager_ = nullptr;                ///< Input manager
-        std::unique_ptr<CameraInputHandler> inputHandler_;    ///< Input handler
+        // InputManager* inputManager_ = nullptr;                ///< Input manager
+        // std::unique_ptr<CameraInputHandler> inputHandler_;    ///< Input handler
 
         // State
         bool initialized_ = false;                            ///< Initialization state

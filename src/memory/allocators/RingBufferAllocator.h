@@ -19,7 +19,7 @@ namespace engine::memory {
         RingBufferAllocator& operator=(RingBufferAllocator&& other) noexcept;
 
         void* allocate(MemorySize size, MemorySize alignment = DEFAULT_ALIGNMENT,
-                      AllocationFlags flags = AllocationFlags::NONE) override;
+                       AllocationFlags flags = AllocationFlags::NONE) override;
         void deallocate(void* ptr) override;
         MemorySize getCapacity() const override { return capacity_; }
         MemorySize getUsedMemory() const override;
@@ -31,6 +31,79 @@ namespace engine::memory {
         std::uint64_t createFence();
         void waitForFence(std::uint64_t fence);
         bool canAllocateWithoutWrap(MemorySize size) const;
+
+        /**
+ * @brief Get current write offset in the ring buffer
+ * @return Current head position (write offset) in bytes from buffer start
+ *
+ * This method is crucial for temporal operations like:
+ * - Input history tracking
+ * - Frame synchronization in networking
+ * - Rollback/replay systems
+ * - Debug temporal navigation
+ */
+        MemorySize getCurrentOffset() const noexcept {
+            return head_.load(std::memory_order_acquire);
+        }
+
+        /**
+         * @brief Get current read offset in the ring buffer
+         * @return Current tail position (read offset) in bytes from buffer start
+         */
+        MemorySize getReadOffset() const noexcept {
+            return tail_.load(std::memory_order_acquire);
+        }
+
+        /**
+         * @brief Get offset range currently in use
+         * @return Pair of {tail_offset, head_offset} representing the active range
+         *
+         * Useful for:
+         * - Determining valid history range
+         * - Memory usage visualization
+         * - Debugging buffer state
+         */
+        std::pair<MemorySize, MemorySize> getActiveRange() const noexcept {
+            const MemorySize currentTail = tail_.load(std::memory_order_acquire);
+            const MemorySize currentHead = head_.load(std::memory_order_acquire);
+            return {currentTail, currentHead};
+        }
+
+        /**
+         * @brief Check if a given offset is still valid (not overwritten)
+         * @param offset Offset to check
+         * @return true if offset is within the active range
+         *
+         * Critical for input history validation:
+         * - Ensures we don't access overwritten data
+         * - Validates historical input queries
+         */
+        bool isOffsetValid(const MemorySize offset) const noexcept {
+            const auto [tailOffset, headOffset] = getActiveRange();
+
+            if (tailOffset <= headOffset) {
+                // Linear case: [tail...head]
+                return offset >= tailOffset && offset < headOffset;
+            }
+
+            // Wrapped case: [0...head] + [tail...capacity]
+            return offset >= tailOffset || offset < headOffset;
+        }
+
+        /**
+         * @brief Calculate distance between two offsets in ring buffer
+         * @param fromOffset Starting offset
+         * @param toOffset Ending offset
+         * @return Distance in bytes, accounting for wrap-around
+         */
+        MemorySize getOffsetDistance(const MemorySize fromOffset, const MemorySize toOffset) const noexcept {
+            if (toOffset >= fromOffset) {
+                return toOffset - fromOffset;
+            }
+
+            // Wrapped case
+            return (capacity_ - fromOffset) + toOffset;
+        }
 
     private:
         struct AllocationHeader {

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.31)
-project(simple_game)
+project(game_engine)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -37,9 +37,8 @@ link_libraries(${SDL2_LIBRARY} ${SDL2_IMAGE_LIBRARY})
 #pkg_check_modules(SDL2 REQUIRED sdl2)
 
 find_package(Bullet REQUIRED)
-add_executable(simple_game src/main.cpp
+add_executable(game_engine src/main.cpp
         src/Animation/AnimationManager.cpp
-        src/Input/InputManager.cpp
         src/camera/CameraSystem.h
         src/camera/cameras/BaseCamera.cpp
         src/camera/cameras/BaseCamera.h
@@ -56,8 +55,8 @@ add_executable(simple_game src/main.cpp
         src/camera/effects/CameraShake.h
         src/camera/effects/ShakeConfig.h
         src/camera/effects/ShakePattern.h
-        src/camera/input/CameraInputHandler.cpp
-        src/camera/input/CameraInputHandler.h
+#        src/camera/input/CameraInputHandler.cpp
+#        src/camera/input/CameraInputHandler.h
         src/camera/manager/CameraManager.cpp
         src/camera/manager/CameraManager.h
         src/camera/manager/CameraManagerConfig.h
@@ -236,6 +235,66 @@ add_executable(simple_game src/main.cpp
         src/physics/utils/PhysicsUtils.h
         src/memory/manager/ObjectPool.h
         src/physics/core/PhysicsTypes.cpp
+        src/input/core/InputTypes.h
+        src/input/core/InputEvent.h
+        src/input/core/InputSnapshot.h
+        src/input/devices/base/InputDevice.h
+        src/input/platform/sdl2/SDLInputBackend.cpp
+        src/input/platform/sdl2/SDLInputBackend.h
+        src/input/platform/sdl2/SDLKeyMap.h
+        src/input/manager/InputService.cpp
+        src/input/manager/InputService.h
+        src/input/mapping/ActionMap.h
+        src/input/mapping/InputBinding.h
+        src/input/mapping/InputContext.h
+        src/input/core/InputConfig.h
+        src/input/core/InputConstants.h
+        src/input/core/InputEventQueue.h
+        src/input/core/InputMemoryPools.h
+        src/input/devices/base/DeviceState.h
+        src/input/devices/base/DeviceService.h
+        src/input/devices/keyboard/KeyboardDevice.cpp
+        src/input/devices/keyboard/KeyboardDevice.h
+        src/input/devices/keyboard/KeyboardState.h
+        src/input/devices/mouse/MouseState.h
+        src/input/devices/mouse/MouseDevice.cpp
+        src/input/devices/mouse/MouseDevice.h
+        src/input/devices/mouse/MouseLock.h
+        src/input/utils/InputUtils.h
+        src/input/devices/base/DeviceCapabilities.h
+        src/input/devices/base/DeviceService.cpp
+        src/input/devices/gamepad/GamepadDevice.cpp
+        src/input/devices/gamepad/GamepadDevice.h
+        src/input/devices/gamepad/GamepadState.h
+        src/input/processing/stages/FilterStage.h
+        src/input/processing/stages/DeadzoneStage.h
+        src/input/processing/stages/SensitivityStage.h
+        src/input/processing/EventProcessor.cpp
+        src/input/processing/EventProcessor.h
+        src/input/processing/SnapshotManager.cpp
+        src/input/processing/SnapshotManager.h
+        src/input/mapping/BindingResolver.h
+        src/input/mapping/ContextStack.h
+        src/input/core/InputMemoryPools.cpp
+        src/input/platform/sdl2/SDLKeyMap.cpp
+        src/input/manager/InputLifecycle.h
+        src/input/utils/ConfigLoader.h
+        src/input/debug/InputLogger.h
+        src/input/debug/InputDebugOverlay.h
+        src/input/InputSystem.cpp
+        src/input/InputSystem.h
+        src/input/devices/base/DeviceConnectionStat.h
+        src/input/devices/mouse/MouseDevice.cpp
+        src/PlayerController.cpp
+        src/PlayerController.h
+        src/input/processing/stages/DeadzoneStage.cpp
+        src/input/processing/stages/SensitivityStage.cpp
+        src/input/processing/stages/FilterStage.cpp
+        src/input/manager/InputLifecycle.cpp
+        src/input/debug/InputLogger.cpp
+        src/input/debug/InputDebugOverlay.cpp
+        src/input/mapping/ContextStack.cpp
+        src/input/utils/ConfigLoader.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}
