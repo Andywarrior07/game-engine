@@ -39,7 +39,6 @@ link_libraries(${SDL2_LIBRARY} ${SDL2_IMAGE_LIBRARY})
 find_package(Bullet REQUIRED)
 add_executable(game_engine src/main.cpp
         src/Animation/AnimationManager.cpp
-#        src/Input-old/InputManager.cpp
         src/camera/CameraSystem.h
         src/camera/cameras/BaseCamera.cpp
         src/camera/cameras/BaseCamera.h

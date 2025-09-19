@@ -205,31 +205,29 @@ namespace engine::input {
         }
 
         // Get input service from lifecycle
-        pImpl->service = std::unique_ptr<InputService>(pImpl->lifecycle->getInputService());
-        if (!pImpl->service) {
-            // Create service if lifecycle didn't create it
-            pImpl->service = std::make_unique<InputService>(pImpl->memoryManager);
 
-            InputServiceConfig serviceConfig;
-            serviceConfig.eventPoolSize = config.eventPoolSize;
-            serviceConfig.snapshotPoolSize = config.snapshotPoolSize;
-            serviceConfig.historyFrameCount = config.historyFrameCount;
-            serviceConfig.enableKeyboard = config.enableKeyboard;
-            serviceConfig.enableMouse = config.enableMouse;
-            serviceConfig.enableGamepad = config.enableGamepad;
-            serviceConfig.enableTouch = config.enableTouch;
-            serviceConfig.analogDeadzone = config.analogDeadzone;
-            serviceConfig.triggerThreshold = config.triggerThreshold;
-            serviceConfig.mouseSensitivity = config.mouseSensitivity;
-            serviceConfig.enableInputBuffering = config.enableInputBuffering;
-            serviceConfig.inputBufferFrames = config.inputBufferFrames;
-            serviceConfig.enableDebugLogging = config.enableDebugLogging;
-            serviceConfig.recordInputForReplay = config.recordForReplay;
+        // Create service if lifecycle didn't create it
+        pImpl->service = std::make_unique<InputService>(pImpl->memoryManager);
 
-            if (!pImpl->service->initialize(serviceConfig)) {
-                pImpl->shutdown();
-                return false;
-            }
+        InputServiceConfig serviceConfig;
+        serviceConfig.eventPoolSize = config.eventPoolSize;
+        serviceConfig.snapshotPoolSize = config.snapshotPoolSize;
+        serviceConfig.historyFrameCount = config.historyFrameCount;
+        serviceConfig.enableKeyboard = config.enableKeyboard;
+        serviceConfig.enableMouse = config.enableMouse;
+        serviceConfig.enableGamepad = config.enableGamepad;
+        serviceConfig.enableTouch = config.enableTouch;
+        serviceConfig.analogDeadzone = config.analogDeadzone;
+        serviceConfig.triggerThreshold = config.triggerThreshold;
+        serviceConfig.mouseSensitivity = config.mouseSensitivity;
+        serviceConfig.enableInputBuffering = config.enableInputBuffering;
+        serviceConfig.inputBufferFrames = config.inputBufferFrames;
+        serviceConfig.enableDebugLogging = config.enableDebugLogging;
+        serviceConfig.recordInputForReplay = config.recordForReplay;
+
+        if (!pImpl->service->initialize(serviceConfig)) {
+            pImpl->shutdown();
+            return false;
         }
 
         // Initialize debug components if enabled
@@ -612,7 +610,8 @@ std::filesystem::path getUserConfigPath() {
     // Device Control
     // ============================================================================
 
-    bool InputSystem::setGamepadRumble(const PlayerID player, const float leftMotor, const float rightMotor, const float duration) const {
+    bool InputSystem::setGamepadRumble(const PlayerID player, const float leftMotor, const float rightMotor,
+                                       const float duration) const {
         if (pImpl && pImpl->service) {
             return pImpl->service->setGamepadRumble(player, leftMotor, rightMotor, duration);
         }
