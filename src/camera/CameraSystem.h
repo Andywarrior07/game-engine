@@ -30,7 +30,7 @@
 #include "transitions/TransitionEasing.h"
 
 // Input handling
-#include "input/CameraInputHandler.h"
+// #include "../camera/input/CameraInputHandler.h"
 
 // Camera management
 #include "manager/CameraManager.h"

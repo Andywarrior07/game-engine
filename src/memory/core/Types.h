@@ -3,7 +3,6 @@
 //
 
 #pragma once
-#include <cstddef>
 
 namespace engine::memory {
     // Type aliases

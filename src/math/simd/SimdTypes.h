@@ -1,5 +1,5 @@
 /**
- * @file SimdTypes_portable.h
+ * @file SimdTypes.h
  * @brief Portable SIMD wrapper types (x86 SSE/AVX, ARM NEON, scalar fallback)
  *
  * This header provides small vector types and helpers that compile on:
@@ -82,7 +82,7 @@ public:
     // Constructors
     Float4() noexcept { v = vdupq_n_f32(0.0f); }
     explicit Float4(Float s) noexcept { v = vdupq_n_f32(s); }
-    Float4(Float _x, Float _y, Float _z, Float _w) noexcept {
+    Float4(const Float _x, const Float _y, const Float _z, const Float _w) noexcept {
         float tmp[4] = {_x, _y, _z, _w};
         v = vld1q_f32(tmp);
     }
