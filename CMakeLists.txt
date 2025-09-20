@@ -302,6 +302,8 @@ add_executable(game_engine src/main.cpp
         src/memory/allocators/TimelineDataAllocator.cpp
         src/memory/allocators/TimelineDataAllocator.h
         src/time/core/TimeTypes.h
+        src/time/core/TimelineType.h
+        src/time/core/TimestepMode.h
 )
 
 target_link_libraries(${PROJECT_NAME}
