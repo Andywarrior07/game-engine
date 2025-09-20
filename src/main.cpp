@@ -24,7 +24,7 @@
 
 using namespace engine::memory;
 using namespace engine::resources;
-using namespace engine::input;  // CHANGE: Now using new input namespace
+using namespace engine::input; // CHANGE: Now using new input namespace
 using namespace engine::math;
 using namespace engine::camera;
 
@@ -62,8 +62,8 @@ public:
         ACTION_TOGGLE_GRID = 14,
         ACTION_TOGGLE_DEBUG = 15,
         // CHANGE: New composite actions for 2D movement
-        ACTION_PLAYER_MOVE = 20,  // Composite 2D for player movement
-        ACTION_CAMERA_MOVE = 21,   // Composite 2D for camera movement
+        ACTION_PLAYER_MOVE = 20, // Composite 2D for player movement
+        ACTION_CAMERA_MOVE = 21, // Composite 2D for camera movement
     };
 
     /**
@@ -85,7 +85,8 @@ public:
             std::cout << "Quick shutdown mode enabled - disabling memory checks" << std::endl;
             memConfig.enableLeakDetection = false;
             memConfig.enableBoundsChecking = false;
-        } else {
+        }
+        else {
             memConfig.enableLeakDetection = true;
             memConfig.enableBoundsChecking = true;
             std::cout << "Debug mode: Memory checks enabled" << std::endl;
@@ -502,7 +503,7 @@ public:
             if (std::abs(cameraHorizontal) > 0.1f || std::abs(cameraVertical) > 0.1f) {
                 Vec2 currentPos = activeCamera->getPosition2D();
                 Vec2 movement(cameraHorizontal * CAMERA_SPEED * deltaTime,
-                             cameraVertical * CAMERA_SPEED * deltaTime);
+                              cameraVertical * CAMERA_SPEED * deltaTime);
                 activeCamera->setPosition(currentPos + movement);
             }
         }
@@ -558,33 +559,34 @@ public:
             // Determine animation based on largest movement axis
             if (std::abs(gamepadMove.x) > std::abs(gamepadMove.y)) {
                 currentAnimation = gamepadMove.x > 0 ? PlayerAnimation::RIGHT : PlayerAnimation::LEFT;
-            } else {
+            }
+            else {
                 currentAnimation = gamepadMove.y > 0 ? PlayerAnimation::DOWN : PlayerAnimation::UP;
             }
         }
 
         // Update sprite frame based on animation
-        switch(currentAnimation) {
-            case PlayerAnimation::UP:
-                currentSpriteFrame_.x = 0;
-                currentSpriteFrame_.y = 930;
-                break;
-            case PlayerAnimation::DOWN:
-                currentSpriteFrame_.x = 0;
-                currentSpriteFrame_.y = 600;
-                break;
-            case PlayerAnimation::LEFT:
-                currentSpriteFrame_.x = 0;
-                currentSpriteFrame_.y = 772;
-                break;
-            case PlayerAnimation::RIGHT:
-                currentSpriteFrame_.x = 0;
-                currentSpriteFrame_.y = 1068;
-                break;
-            default: // IDLE
-                currentSpriteFrame_.x = 0;
-                currentSpriteFrame_.y = 0;
-                break;
+        switch (currentAnimation) {
+        case PlayerAnimation::UP:
+            currentSpriteFrame_.x = 0;
+            currentSpriteFrame_.y = 930;
+            break;
+        case PlayerAnimation::DOWN:
+            currentSpriteFrame_.x = 0;
+            currentSpriteFrame_.y = 600;
+            break;
+        case PlayerAnimation::LEFT:
+            currentSpriteFrame_.x = 0;
+            currentSpriteFrame_.y = 772;
+            break;
+        case PlayerAnimation::RIGHT:
+            currentSpriteFrame_.x = 0;
+            currentSpriteFrame_.y = 1068;
+            break;
+        default: // IDLE
+            currentSpriteFrame_.x = 0;
+            currentSpriteFrame_.y = 0;
+            break;
         }
 
         // Apply movement
@@ -1043,6 +1045,7 @@ private:
     bool showGrid_ = false;
     bool showDebugInfo_ = true;
 };
+
 /**
  * @brief Main function
  * CHANGE: Updated description for new resource system

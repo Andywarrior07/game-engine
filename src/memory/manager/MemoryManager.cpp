@@ -88,6 +88,8 @@ namespace engine::memory {
                     DEFAULT_ALIGNMENT,
                     "PhysicsPool"
                 );
+
+                categoryAllocators_[static_cast<std::size_t>(MemoryCategory::PHYSICS)] = std::move(physicsPool);
             }
 
             // Audio ring buffer - for streaming audio

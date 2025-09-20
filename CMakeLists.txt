@@ -295,6 +295,12 @@ add_executable(game_engine src/main.cpp
         src/input/debug/InputDebugOverlay.cpp
         src/input/mapping/ContextStack.cpp
         src/input/utils/ConfigLoader.cpp
+        src/memory/allocators/CircularBufferAllocator.cpp
+        src/memory/allocators/CircularBufferAllocator.h
+        src/memory/allocators/TimerPoolAllocator.cpp
+        src/memory/allocators/TimerPoolAllocator.h
+        src/memory/allocators/TimelineDataAllocator.cpp
+        src/memory/allocators/TimelineDataAllocator.h
 )
 
 target_link_libraries(${PROJECT_NAME}
