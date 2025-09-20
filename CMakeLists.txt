@@ -301,6 +301,7 @@ add_executable(game_engine src/main.cpp
         src/memory/allocators/TimerPoolAllocator.h
         src/memory/allocators/TimelineDataAllocator.cpp
         src/memory/allocators/TimelineDataAllocator.h
+        src/time/core/TimeTypes.h
 )
 
 target_link_libraries(${PROJECT_NAME}
