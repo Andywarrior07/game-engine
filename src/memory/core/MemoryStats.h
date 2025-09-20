@@ -26,5 +26,12 @@ namespace engine::memory {
         // Timing statistics
         std::atomic<std::uint64_t> totalAllocationTime{0}; // Total time spent allocating (microseconds)
         std::atomic<std::uint64_t> totalFreeTime{0}; // Total time spent freeing (microseconds)
+
+        MemoryStats() = default;
+        MemoryStats(const MemoryStats&) = delete;             // prohibir copia
+        MemoryStats& operator=(const MemoryStats&) = delete;  // prohibir copia
+
+        MemoryStats(MemoryStats&&) noexcept = default;        // habilitar movimiento
+        MemoryStats& operator=(MemoryStats&&) noexcept = default;
     };
 }

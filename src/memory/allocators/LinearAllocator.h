@@ -29,6 +29,13 @@ namespace engine::memory {
 
         std::size_t getAllocationCount() const;
 
+        /**
+         * @brief Calculate the offset of a pointer from the beginning of the allocator's memory block
+         * @param ptr Pointer to calculate offset for
+         * @return Offset in bytes from the start of memory_, or SIZE_MAX if pointer doesn't belong to this allocator
+         */
+        MemorySize getOffset(const void* ptr) const;
+
     private:
         void* memory_;
         MemorySize capacity_;

@@ -112,8 +112,8 @@ namespace engine::memory {
 
         MemorySize expected = currentPos;
         while (!current_.compare_exchange_weak(expected, newPos,
-                                              std::memory_order_acq_rel,
-                                              std::memory_order_acquire)) {
+                                               std::memory_order_acq_rel,
+                                               std::memory_order_acquire)) {
             currentPos = expected;
             currentAddress = static_cast<std::uint8_t*>(memory_) + currentPos;
             alignedAddress = alignPointer(currentAddress, alignment);
@@ -230,4 +230,14 @@ namespace engine::memory {
         return allocationCount_.load(std::memory_order_acquire);
     }
 
+    MemorySize LinearAllocator::getOffset(const void* ptr) const {
+        if (!owns(ptr)) {
+            return SIZE_MAX; // Invalid offset indicator
+        }
+
+        const auto* bytePtr = static_cast<const std::uint8_t*>(ptr);
+        const auto* memStart = static_cast<const std::uint8_t*>(memory_);
+
+        return bytePtr - memStart;
+    }
 }
