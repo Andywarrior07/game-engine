@@ -306,6 +306,9 @@ add_executable(game_engine src/main.cpp
         src/time/core/TimestepMode.h
         src/time/profiling/Profilingconfig.h
         src/time/core/TimeConfig.h
+        src/time/manager/TimeManagerConfig.h
+        src/time/timers/Timer.cpp
+        src/time/timers/Timer.h
 )
 
 target_link_libraries(${PROJECT_NAME}
