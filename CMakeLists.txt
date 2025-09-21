@@ -311,6 +311,9 @@ add_executable(game_engine src/main.cpp
         src/time/timers/Timer.h
         src/time/profiling/TimeStats.h
         src/time/timers/TimerHandle.h
+        src/time/core/ITimeBackend.h
+        src/time/backends/SDLTimeBackend.cpp
+        src/time/backends/SDLTimeBackend.h
 )
 
 target_link_libraries(${PROJECT_NAME}
