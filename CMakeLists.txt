@@ -310,6 +310,7 @@ add_executable(game_engine src/main.cpp
         src/time/timers/Timer.cpp
         src/time/timers/Timer.h
         src/time/profiling/TimeStats.h
+        src/time/timers/TimerHandle.h
 )
 
 target_link_libraries(${PROJECT_NAME}
