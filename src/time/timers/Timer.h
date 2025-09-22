@@ -12,7 +12,7 @@
 #pragma once
 
 #include "../core/TimeTypes.h"
-#include "../core/TimelineType.h"
+
 #include <functional>
 #include <atomic>
 #include <optional>
@@ -99,6 +99,7 @@ namespace engine::time {
               , duration_(Duration::zero())
               , remaining_(Duration::zero())
               , elapsed_(Duration::zero())
+              , initialDelay_(Duration::zero())
               , executionCount_(0)
               , maxExecutions_(0)
               , timelineId_(constants::INVALID_TIMELINE_ID)
@@ -195,7 +196,7 @@ namespace engine::time {
          * @brief Reset timer to initial state
          * @param restart If true, start immediately
          */
-        void reset(bool restart = true) {
+        void reset(const bool restart = true) {
             elapsed_ = Duration::zero();
             remaining_ = initialDelay_ > Duration::zero() ? initialDelay_ : duration_;
             executionCount_ = 0;
@@ -277,14 +278,22 @@ namespace engine::time {
          * @param deltaTime Time elapsed since last update
          * @return True if timer fired
          */
-        bool update(Duration deltaTime) {
+        bool update(const Duration deltaTime) {
             if (state_ != TimerState::PENDING) {
                 return false;
             }
 
-            // Update elapsed time
-            elapsed_ += deltaTime;
-            remaining_ -= deltaTime;
+            // Load current values
+            const Duration currentElapsed = elapsed_.load(std::memory_order_relaxed);
+            const Duration currentRemaining = remaining_.load(std::memory_order_relaxed);
+
+            // Calculate new values
+            const Duration newElapsed = currentElapsed + deltaTime;
+            const Duration newRemaining = currentRemaining - deltaTime;
+
+            // Store new values
+            elapsed_.store(newElapsed, std::memory_order_relaxed);
+            remaining_.store(newRemaining, std::memory_order_relaxed);
 
             // Check condition for conditional timers
             if (type_ == TimerType::CONDITIONAL) {
@@ -295,7 +304,7 @@ namespace engine::time {
             }
 
             // Check if timer should fire
-            if (remaining_ <= Duration::zero()) {
+            if (newRemaining <= Duration::zero()) {
                 return fire();
             }
 
@@ -316,7 +325,7 @@ namespace engine::time {
             // Execute callback
             callback_(TimerHandle{id_, generation_});
 
-            executionCount_++;
+            ++executionCount_;
 
             // Handle post-execution state
             switch (type_) {
@@ -331,7 +340,8 @@ namespace engine::time {
                 break;
 
             case TimerType::INTERVAL:
-                // After first execution, use regular duration
+                // After first execution, use regular duration xd
+                // TODO: Revisar esto
                 if (executionCount_ == 1 && initialDelay_ > Duration::zero()) {
                     remaining_ = duration_;
                 }
@@ -496,7 +506,7 @@ namespace engine::time {
          * @brief Set timer duration (for recurring timers)
          * @param duration New duration
          */
-        void setDuration(Duration duration) {
+        void setDuration(const Duration duration) {
             if (type_ == TimerType::RECURRING ||
                 type_ == TimerType::INTERVAL) {
                 duration_ = duration;
@@ -525,7 +535,7 @@ namespace engine::time {
          * @brief Set max executions
          * @param count Maximum execution count (0 = unlimited)
          */
-        void setMaxExecutions(std::uint32_t count) {
+        void setMaxExecutions(const std::uint32_t count) {
             maxExecutions_ = count;
         }
 
@@ -533,7 +543,7 @@ namespace engine::time {
          * @brief Set priority
          * @param priority New priority
          */
-        void setPriority(TimerPriority priority) {
+        void setPriority(const TimerPriority priority) {
             priority_ = priority;
         }
 
