@@ -314,6 +314,9 @@ add_executable(game_engine src/main.cpp
         src/time/core/ITimeBackend.h
         src/time/backends/SDLTimeBackend.cpp
         src/time/backends/SDLTimeBackend.h
+        src/time/timelines/RealTimeline.cpp
+        src/time/timelines/RealTimeline.h
+        src/time/core/Timeline.h
 )
 
 target_link_libraries(${PROJECT_NAME}

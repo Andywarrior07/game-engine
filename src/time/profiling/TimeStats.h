@@ -93,12 +93,22 @@ namespace engine::time {
             }
 
             // Accumulate sum and count
-            sum.fetch_add(value, std::memory_order_relaxed);
+            // sum.fetch_add(value, std::memory_order_relaxed);
+            // TODO: Temporal, ya que std::atomic<Duration> da muchos problemas
+            // Problema: Puede crear "thundering herd" - todos los hilos compiten por la misma ubicación de memoria.
+            Duration currentSum = sum.load(std::memory_order_relaxed);
+            Duration newSum;
+            do {
+                newSum = currentSum + value;
+            } while (!sum.compare_exchange_weak(currentSum, newSum, //< Intenta actualizar el valor de sum (temas de thread safe)
+                                               std::memory_order_release,
+                                               std::memory_order_relaxed));
 
             // Update timestamps
             if (const auto count = sampleCount.fetch_add(1, std::memory_order_relaxed); count == 0) {
                 firstSampleTime.store(timestamp, std::memory_order_relaxed);
             }
+
             lastSampleTime.store(timestamp, std::memory_order_relaxed);
             lastValue.store(value, std::memory_order_relaxed);
         }
@@ -222,6 +232,41 @@ namespace engine::time {
          */
         void resetDropStreak() noexcept {
             consecutiveDrops.store(0, std::memory_order_relaxed);
+        }
+
+        /**
+ * @brief Reset all frame statistics to initial state
+ * @details Resets all atomic counters and nested BasicTimeStats.
+ *          Thread-safe operation that can be called from any thread.
+ */
+        void reset() noexcept {
+            // Reset basic frame metrics
+            frameDuration.reset();
+            cpuTime.reset();
+            gpuTime.reset();
+            presentTime.reset();
+
+            // Reset frame rate metrics
+            instantFPS.store(0.0f, std::memory_order_relaxed);
+            averageFPS.store(0.0f, std::memory_order_relaxed);
+            percentile95FPS.store(0.0f, std::memory_order_relaxed);
+            percentile99FPS.store(0.0f, std::memory_order_relaxed);
+
+            // Reset consistency metrics
+            frameTimeVariance.store(Duration::zero(), std::memory_order_relaxed);
+            frameTimeStdDev.store(Duration::zero(), std::memory_order_relaxed);
+            frameTimeCV.store(0.0f, std::memory_order_relaxed);
+
+            // Reset frame drop tracking
+            droppedFrames.store(0, std::memory_order_relaxed);
+            consecutiveDrops.store(0, std::memory_order_relaxed);
+            maxConsecutiveDrops.store(0, std::memory_order_relaxed);
+            dropRate.store(0.0f, std::memory_order_relaxed);
+
+            // Reset VSync metrics
+            vsyncMisses.store(0, std::memory_order_relaxed);
+            tearingEvents.store(0, std::memory_order_relaxed);
+            vsyncEnabled.store(false, std::memory_order_relaxed);
         }
     };
 
