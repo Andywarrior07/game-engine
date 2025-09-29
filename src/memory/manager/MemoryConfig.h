@@ -25,6 +25,10 @@ namespace engine::memory {
         MemorySize physicsPoolSize = 64 * 1024 * 1024; // 64 MB for physics
         MemorySize audioRingBufferSize = 32 * 1024 * 1024; // 32 MB for audio streaming
         MemorySize networkBufferSize = 16 * 1024 * 1024; // 16 MB for networking
+        MemorySize timelineBaseSize = 64 * 1024 * 1024; // 64 MB base para timeline data
+        std::size_t maxConcurrentTimelines = 4; // Máximo 4 timelines concurrentes
+        bool enableTimelineTracking = true; // Habilitar tracking detallado
+        MemorySize timelineReservedSize = 8 * 1024 * 1024; // 8 MB reservados por timeline
 
         // Pool configurations
         struct PoolConfig {

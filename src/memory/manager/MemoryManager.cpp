@@ -37,7 +37,7 @@ namespace engine::memory {
         std::cout << "  Main Heap: " << (config_.mainHeapSize / (1024.0 * 1024.0)) << " MB" << std::endl;
         std::cout << "  Debug Heap: " << (config_.debugHeapSize / (1024.0 * 1024.0)) << " MB" << std::endl;
         std::cout << "  Frame Stack: " << (config_.frameStackSize / (1024.0 * 1024.0)) << " MB x "
-            << static_cast<int>(config_.frameBufferCount) << std::endl;
+                << static_cast<int>(config_.frameBufferCount) << std::endl;
 
         try {
             std::cout << "[MemoryManager] Creating main heap..." << std::endl;
@@ -54,14 +54,14 @@ namespace engine::memory {
 
             for (std::uint8_t i = 0; i < config_.frameBufferCount; ++i) {
                 frameAllocators_[i].stackAllocator = std::make_unique<StackAllocator>(
-                    config_.frameStackSize,
-                    ("FrameStack_" + std::to_string(i)).c_str()
-                    );
+                        config_.frameStackSize,
+                        ("FrameStack_" + std::to_string(i)).c_str()
+                        );
 
                 frameAllocators_[i].linearAllocator = std::make_unique<LinearAllocator>(
-                    config_.frameLinearSize,
-                    ("FrameLinear_" + std::to_string(i)).c_str()
-                );
+                        config_.frameLinearSize,
+                        ("FrameLinear_" + std::to_string(i)).c_str()
+                        );
 
                 frameAllocators_[i].frameNumber = 0;
             }
@@ -71,11 +71,12 @@ namespace engine::memory {
             // Rendering pool - for render commands, vertex data, etc.
             if (config_.renderingPoolSize > 0) {
                 auto renderPool = std::make_unique<PoolAllocator>(
-                    1024, // 1KB blocks for render commands
-                    config_.renderingPoolSize / 1024,
-                    DEFAULT_ALIGNMENT,
-                    "RenderPool"
-                );
+                        // 1KB blocks for render commands
+                        1024,
+                        config_.renderingPoolSize / 1024,
+                        DEFAULT_ALIGNMENT,
+                        "RenderPool"
+                        );
 
                 categoryAllocators_[static_cast<std::size_t>(MemoryCategory::RENDERING)] = std::move(renderPool);
             }
@@ -83,13 +84,25 @@ namespace engine::memory {
             // Physics pool - for rigid bodies, colliders, etc.
             if (config_.physicsPoolSize > 0) {
                 auto physicsPool = std::make_unique<PoolAllocator>(
-                    512, // 512 byte blocks for physics objects
-                    config_.physicsPoolSize / 512,
-                    DEFAULT_ALIGNMENT,
-                    "PhysicsPool"
-                );
+                        // 512 byte blocks for physics objects
+                        512,
+                        config_.physicsPoolSize / 512,
+                        DEFAULT_ALIGNMENT,
+                        "PhysicsPool"
+                        );
 
                 categoryAllocators_[static_cast<std::size_t>(MemoryCategory::PHYSICS)] = std::move(physicsPool);
+            }
+
+            // Create timeline base allocator
+            if (config_.timelineBaseSize > 0) {
+                timelineBaseAllocator_ = std::make_shared<LinearAllocator>(
+                        config_.timelineBaseSize,
+                        "TimelineBaseAllocator"
+                        );
+
+                std::cout << "[MemoryManager] Timeline base allocator created with "
+                        << (static_cast<double>(config_.timelineBaseSize) / (1024.0 * 1024.0)) << " MB" << std::endl;
             }
 
             // Audio ring buffer - for streaming audio
@@ -113,11 +126,11 @@ namespace engine::memory {
             // Create custom pools from configuration
             for (const auto& poolConfig : config_.customPools) {
                 auto pool = std::make_unique<PoolAllocator>(
-                    poolConfig.blockSize,
-                    poolConfig.blockCount,
-                    DEFAULT_ALIGNMENT,
-                    ("CustomPool_" + std::to_string(static_cast<int>(poolConfig.category))).c_str()
-                );
+                        poolConfig.blockSize,
+                        poolConfig.blockCount,
+                        DEFAULT_ALIGNMENT,
+                        ("CustomPool_" + std::to_string(static_cast<int>(poolConfig.category))).c_str()
+                        );
 
                 if (!categoryAllocators_[static_cast<std::size_t>(poolConfig.category)]) {
                     categoryAllocators_[static_cast<std::size_t>(poolConfig.category)] = std::move(pool);
@@ -136,8 +149,7 @@ namespace engine::memory {
             std::cout << "  Frame Linear: " << (config_.frameLinearSize / (1024.0 * 1024.0)) << " MB" << std::endl;
 
             return true;
-        }
-        catch (const std::exception& e) {
+        } catch (const std::exception& e) {
             std::cerr << "Failed to initialize MemoryManager: " << e.what() << std::endl;
             shutdown();
 
@@ -175,7 +187,7 @@ namespace engine::memory {
             // Dump leak information
             for (const auto& [ptr, record] : allocationRecords) {
                 std::cerr << "  Leaked " << record.size << " bytes from "
-                    << record.file << ":" << record.line << std::endl;
+                        << record.file << ":" << record.line << std::endl;
             }
         }
 #endif
@@ -185,6 +197,8 @@ namespace engine::memory {
         for (auto& allocator : categoryAllocators_) {
             allocator.reset();
         }
+
+        activeTimelines_.clear();
         customAllocators_.clear();
         mainHeap_.reset();
         debugHeap_.reset();
@@ -194,8 +208,12 @@ namespace engine::memory {
         std::cout << "MemoryManager shut down." << std::endl;
     }
 
-    void* MemoryManager::allocate(MemorySize size, MemoryCategory category, const MemorySize alignment,
-                                  const AllocationFlags flags) {
+    void* MemoryManager::allocate(
+            MemorySize size,
+            MemoryCategory category,
+            const MemorySize alignment,
+            const AllocationFlags flags
+            ) {
         if (!initialized_) {
             std::cerr << "Error: MemoryManager not initialized!" << std::endl;
             return nullptr;
@@ -247,7 +265,8 @@ namespace engine::memory {
     }
 
     void MemoryManager::deallocate(void* ptr, MemoryCategory category) {
-        if (!ptr) return;
+        if (!ptr)
+            return;
 
         if (!initialized_) {
             std::cerr << "Error: MemoryManager not initialized!" << std::endl;
@@ -306,9 +325,12 @@ namespace engine::memory {
         }
     }
 
-    void* MemoryManager::reallocate(void* ptr, const MemorySize newSize,
-                                    const MemoryCategory category,
-                                    const MemorySize alignment) {
+    void* MemoryManager::reallocate(
+            void* ptr,
+            const MemorySize newSize,
+            const MemoryCategory category,
+            const MemorySize alignment
+            ) {
         if (!ptr) {
             return allocate(newSize, category, alignment);
         }
@@ -388,8 +410,10 @@ namespace engine::memory {
         return categoryAllocators_[static_cast<std::size_t>(category)].get();
     }
 
-    void MemoryManager::registerAllocator(MemoryCategory category,
-                                          std::unique_ptr<IAllocator> allocator) {
+    void MemoryManager::registerAllocator(
+            MemoryCategory category,
+            std::unique_ptr<IAllocator> allocator
+            ) {
         if (category >= MemoryCategory::COUNT) {
             std::cerr << "Error: Invalid memory category!" << std::endl;
             return;
@@ -419,10 +443,9 @@ namespace engine::memory {
         if (autoConfigured_) {
             report << "Configuration: AUTO-DETECTED" << std::endl;
             report << "  System RAM: " << (systemInfo_.totalPhysicalMemory / (1024.0 * 1024.0 * 1024.0)) << " GB" <<
-                std::endl;
+                    std::endl;
             report << "  CPU Cores: " << systemInfo_.physicalCores << " physical" << std::endl;
-        }
-        else {
+        } else {
             report << "Configuration: MANUAL" << std::endl;
         }
 
@@ -431,7 +454,7 @@ namespace engine::memory {
         report << "  Current Usage: " << (getTotalMemoryUsage() / (1024.0 * 1024.0)) << " MB" << std::endl;
         report << "  Peak Usage: " << (globalStats_.peakUsage.load() / (1024.0 * 1024.0)) << " MB" << std::endl;
         report << "  Total Allocated: " << (globalStats_.totalAllocated.load() / (1024.0 * 1024.0)) << " MB" <<
-            std::endl;
+                std::endl;
         report << "  Total Freed: " << (globalStats_.totalFreed.load() / (1024.0 * 1024.0)) << " MB" << std::endl;
         report << "  Allocation Count: " << globalStats_.allocationCount.load() << std::endl;
         report << "  Free Count: " << globalStats_.freeCount.load() << std::endl;
@@ -445,12 +468,23 @@ namespace engine::memory {
             MemorySize usage = globalStats_.categoryUsage[i].load();
             if (usage > 0) {
                 const char* categoryNames[] = {
-                    "GENERAL", "RENDERING", "PHYSICS", "AUDIO", "GAMEPLAY",
-                    "NETWORKING", "SCRIPTING", "UI", "WORLD", "ANIMATION",
-                    "PARTICLES", "AI", "RESOURCES", "DEBUG"
-                };
+                                "GENERAL",
+                                "RENDERING",
+                                "PHYSICS",
+                                "AUDIO",
+                                "GAMEPLAY",
+                                "NETWORKING",
+                                "SCRIPTING",
+                                "UI",
+                                "WORLD",
+                                "ANIMATION",
+                                "PARTICLES",
+                                "AI",
+                                "RESOURCES",
+                                "DEBUG"
+                        };
                 report << "  " << std::setw(12) << categoryNames[i] << ": "
-                    << std::setw(10) << (usage / (1024.0 * 1024.0)) << " MB" << std::endl;
+                        << std::setw(10) << (usage / (1024.0 * 1024.0)) << " MB" << std::endl;
             }
         }
         report << std::endl;
@@ -460,8 +494,8 @@ namespace engine::memory {
 
         if (mainHeap_) {
             report << "  Main Heap: "
-                << (mainHeap_->getUsedMemory() / (1024.0 * 1024.0)) << " / "
-                << (mainHeap_->getCapacity() / (1024.0 * 1024.0)) << " MB" << std::endl;
+                    << (mainHeap_->getUsedMemory() / (1024.0 * 1024.0)) << " / "
+                    << (mainHeap_->getCapacity() / (1024.0 * 1024.0)) << " MB" << std::endl;
         }
 
         // Frame allocators
@@ -469,11 +503,26 @@ namespace engine::memory {
         for (std::uint8_t i = 0; i < config_.frameBufferCount; ++i) {
             std::string marker = (i == currentFrame) ? " [CURRENT]" : "";
             report << "  Frame " << static_cast<int>(i) << " Stack" << marker << ": "
-                << (frameAllocators_[i].stackAllocator->getUsedMemory() / (1024.0 * 1024.0)) << " / "
-                << (frameAllocators_[i].stackAllocator->getCapacity() / (1024.0 * 1024.0)) << " MB" << std::endl;
+                    << (frameAllocators_[i].stackAllocator->getUsedMemory() / (1024.0 * 1024.0)) << " / "
+                    << (frameAllocators_[i].stackAllocator->getCapacity() / (1024.0 * 1024.0)) << " MB" << std::endl;
             report << "  Frame " << static_cast<int>(i) << " Linear" << marker << ": "
-                << (frameAllocators_[i].linearAllocator->getUsedMemory() / (1024.0 * 1024.0)) << " / "
-                << (frameAllocators_[i].linearAllocator->getCapacity() / (1024.0 * 1024.0)) << " MB" << std::endl;
+                    << (frameAllocators_[i].linearAllocator->getUsedMemory() / (1024.0 * 1024.0)) << " / "
+                    << (frameAllocators_[i].linearAllocator->getCapacity() / (1024.0 * 1024.0)) << " MB" << std::endl;
+        }
+
+        {
+            std::shared_lock lock(timelinesMutex_);
+            if (!activeTimelines_.empty()) {
+                report << std::endl;
+                report << "Active Timelines: " << activeTimelines_.size() << std::endl;
+
+                for (const auto& [name, allocator] : activeTimelines_) {
+                    report << "  Timeline '" << name << "': "
+                            << (allocator->getUsedMemory() / (1024.0 * 1024.0)) << " / "
+                            << (allocator->getCapacity() / (1024.0 * 1024.0)) << " MB ("
+                            << allocator->getTimelineRuntime().count() << " ms runtime)" << std::endl;
+                }
+            }
         }
 
         return report.str();
@@ -496,11 +545,11 @@ namespace engine::memory {
             std::shared_lock<std::shared_mutex> lock(recordsMutex);
             for (const auto& [ptr, record] : allocationRecords) {
                 file << "Address: " << ptr
-                    << ", Size: " << record.size
-                    << ", Category: " << static_cast<int>(record.category)
-                    << ", File: " << record.file
-                    << ", Line: " << record.line
-                    << std::endl;
+                        << ", Size: " << record.size
+                        << ", Category: " << static_cast<int>(record.category)
+                        << ", File: " << record.file
+                        << ", Line: " << record.line
+                        << std::endl;
             }
         }
 #endif
@@ -518,6 +567,122 @@ namespace engine::memory {
         }
 #endif
         return 0;
+    }
+
+    std::shared_ptr<TimelineDataAllocator> MemoryManager::createTimeline(
+            const std::string& timelineName,
+            const TimelineDataAllocator::TimelineConfig& config
+            ) {
+        if (!initialized_) {
+            std::cerr << "Error: MemoryManager not initialized!" << std::endl;
+            return nullptr;
+        }
+
+        std::unique_lock lock(timelinesMutex_);
+
+        // Check if timeline already exists
+        if (activeTimelines_.find(timelineName) != activeTimelines_.end()) {
+            std::cerr << "Warning: Timeline '" << timelineName << "' already exists!" << std::endl;
+            return activeTimelines_[timelineName];
+        }
+
+        // Check if we've reached max concurrent timelines
+        if (activeTimelines_.size() >= config_.maxConcurrentTimelines) {
+            std::cerr << "Error: Maximum concurrent timelines ("
+                    << config_.maxConcurrentTimelines << ") reached!" << std::endl;
+            return nullptr;
+        }
+
+        // Create dedicated LinearAllocator for this timeline
+        auto timelineLinearAllocator = std::make_shared<LinearAllocator>(
+                config.reservedSize > 0 ? config.reservedSize : config_.timelineReservedSize,
+                ("Timeline_" + timelineName).c_str()
+                );
+
+        // Create TimelineDataAllocator
+        auto timelineAllocator = std::make_shared<TimelineDataAllocator>(
+                timelineLinearAllocator,
+                config,
+                ("TimelineAlloc_" + timelineName).c_str()
+                );
+
+        // Register timeline
+        activeTimelines_[timelineName] = timelineAllocator;
+
+        std::cout << "[MemoryManager] Created timeline '" << timelineName
+                << "' with " << (config.reservedSize / (1024.0 * 1024.0)) << " MB" << std::endl;
+
+        return timelineAllocator;
+    }
+
+    bool MemoryManager::destroyTimeline(const std::string& timelineName) {
+        std::unique_lock lock(timelinesMutex_);
+
+        auto it = activeTimelines_.find(timelineName);
+        if (it == activeTimelines_.end()) {
+            std::cerr << "Warning: Timeline '" << timelineName << "' not found!" << std::endl;
+            return false;
+        }
+
+        // Set timeline to cleanup phase before destruction
+        it->second->setTimelinePhase(TimelineDataAllocator::TimelinePhase::CLEANUP);
+
+        // Remove from active timelines (this will trigger destructor when ref count reaches 0)
+        activeTimelines_.erase(it);
+
+        std::cout << "[MemoryManager] Destroyed timeline '" << timelineName << "'" << std::endl;
+        return true;
+    }
+
+    std::shared_ptr<TimelineDataAllocator> MemoryManager::getTimeline(const std::string& timelineName) const {
+        std::shared_lock<std::shared_mutex> lock(timelinesMutex_);
+
+        auto it = activeTimelines_.find(timelineName);
+        if (it != activeTimelines_.end()) {
+            return it->second;
+        }
+
+        return nullptr;
+    }
+
+    std::vector<std::string> MemoryManager::getActiveTimelineNames() const {
+        std::shared_lock lock(timelinesMutex_);
+
+        std::vector<std::string> names;
+        names.reserve(activeTimelines_.size());
+
+        for (const auto& [name, allocator] : activeTimelines_) {
+            names.push_back(name);
+        }
+
+        return names;
+    }
+
+    void MemoryManager::resetAllTimelines() {
+        std::unique_lock lock(timelinesMutex_);
+
+        for (auto& [name, allocator] : activeTimelines_) {
+            allocator->reset();
+            std::cout << "[MemoryManager] Reset timeline '" << name << "'" << std::endl;
+        }
+    }
+
+    std::string MemoryManager::generateTimelineReport() const {
+        std::shared_lock lock(timelinesMutex_);
+
+        std::stringstream report;
+
+        report << "=== Active Timelines Report ===" << std::endl;
+        report << "Active Timelines: " << activeTimelines_.size()
+                << " / " << config_.maxConcurrentTimelines << std::endl;
+        report << std::endl;
+
+        for (const auto& [name, allocator] : activeTimelines_) {
+            report << "Timeline: " << name << std::endl;
+            report << allocator->generateTimelineReport() << std::endl;
+        }
+
+        return report.str();
     }
 
     void MemoryManager::registerMemoryPressureCallback(MemoryPressureCallback callback) {
@@ -548,10 +713,12 @@ namespace engine::memory {
         return freedBytes;
     }
 
-    void MemoryManager::getSystemMemoryInfo(MemorySize& totalPhysical,
-                                            MemorySize& availablePhysical,
-                                            MemorySize& totalVirtual,
-                                            MemorySize& availableVirtual) {
+    void MemoryManager::getSystemMemoryInfo(
+            MemorySize& totalPhysical,
+            MemorySize& availablePhysical,
+            MemorySize& totalVirtual,
+            MemorySize& availableVirtual
+            ) {
 #ifdef _WIN32
         MEMORYSTATUSEX memStatus;
         memStatus.dwLength = sizeof(memStatus);
@@ -604,8 +771,11 @@ namespace engine::memory {
 #endif
     }
 
-    IAllocator* MemoryManager::selectAllocator(MemoryCategory category, const MemorySize size,
-                                               const AllocationFlags flags) const {
+    IAllocator* MemoryManager::selectAllocator(
+            MemoryCategory category,
+            const MemorySize size,
+            const AllocationFlags flags
+            ) const {
         // Check for a thread-local flag
         if (hasFlags(flags, AllocationFlags::THREAD_LOCAL)) {
             // Use frame stack for thread-local allocations
@@ -633,7 +803,7 @@ namespace engine::memory {
         globalStats_.failedAllocations.fetch_add(1, std::memory_order_relaxed);
 
         std::cerr << "Memory allocation failed: " << size << " bytes, category: "
-            << static_cast<int>(category) << std::endl;
+                << static_cast<int>(category) << std::endl;
 
         // Try to recover by triggering cleanup
         if (const MemorySize freed = performMemoryCleanup(size); freed < size) {
@@ -652,9 +822,26 @@ namespace engine::memory {
         }
     }
 
+    TimelineDataAllocator::TimelineConfig MemoryManager::getDefaultTimelineConfig() {
+        TimelineDataAllocator::TimelineConfig config;
+        config.name = "DefaultTimeline";
+        config.reservedSize = 32 * 1024 * 1024; // 32 MB default
+        config.allowGrowth = true;
+        config.growthFactor = 1.5f;
+        config.duration = std::chrono::milliseconds(60000); // 60 seconds default
+        config.persistAcrossScenes = false;
+
+        return config;
+    }
+
 #ifdef _DEBUG
-    void MemoryManager::recordAllocation(void* ptr, MemorySize size, MemoryCategory category,
-                                         const char* file, int line) {
+    void MemoryManager::recordAllocation(
+            void* ptr,
+            MemorySize size,
+            MemoryCategory category,
+            const char* file,
+            int line
+            ) {
         AllocationRecord record;
         record.address = ptr;
         record.size = size;

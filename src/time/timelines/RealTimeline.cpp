@@ -46,8 +46,9 @@ namespace engine::time {
 
         // Always use actual elapsed time, ignore provided delta
         const TimeStamp now = backend_.now();
-        const Duration actualDelta = std::chrono::duration_cast<Duration>(
-            now - lastUpdateTime_);
+        const auto actualDelta = std::chrono::duration_cast<Duration>(
+                now - lastUpdateTime_
+                );
 
         // Update timing
         lastUpdateTime_ = now;
@@ -65,13 +66,15 @@ namespace engine::time {
         updateMetrics(actualDelta);
 
         return TimelineUpdateResult{
-            .actualDeltaTime = actualDelta,
-            .scaledDeltaTime = actualDelta, // No scaling for real time
-            .fixedStepsExecuted = 0, // Variable timestep
-            .timersProcessed = timersProcessed,
-            .wasThrottled = false,
-            .budgetExceeded = false
-        };
+                        .actualDeltaTime = actualDelta,
+                        .scaledDeltaTime = actualDelta,
+                        // No scaling for real time
+                        .fixedStepsExecuted = 0,
+                        // Variable timestep
+                        .timersProcessed = timersProcessed,
+                        .wasThrottled = false,
+                        .budgetExceeded = false
+                };
     }
 
     void RealTimeline::reset() {
@@ -92,13 +95,13 @@ namespace engine::time {
         const TimeStamp fireTime = backend_.now() + duration;
 
         RealTimer timer{
-            .id = id,
-            .fireTime = fireTime,
-            .duration = duration,
-            .callback = std::move(callback),
-            .recurring = recurring,
-            .generation = 1
-        };
+                        .id = id,
+                        .fireTime = fireTime,
+                        .duration = duration,
+                        .callback = std::move(callback),
+                        .recurring = recurring,
+                        .generation = 1
+                };
 
         const TimerHandle handle{id, timer.generation};
         timers_.emplace(id, std::move(timer));
@@ -114,7 +117,8 @@ namespace engine::time {
 
         const auto it = timers_.find(handle.getId());
 
-        if (it == timers_.end() || it->second.generation != handle.getGeneration()) return false;
+        if (it == timers_.end() || it->second.generation != handle.getGeneration())
+            return false;
 
         it->second.cancelled = true;
         timers_.erase(it);
@@ -146,7 +150,8 @@ namespace engine::time {
     void RealTimeline::synchronizeWith(const TimeStamp externalTime, const Duration latency) {
         const TimeStamp localTime = backend_.now();
         const Duration offset = std::chrono::duration_cast<Duration>(
-            externalTime - localTime) + latency;
+                externalTime - localTime
+                ) + latency;
 
         timeSyncOffset_ = offset;
         lastSyncTime_ = localTime;
@@ -188,8 +193,7 @@ namespace engine::time {
                         // Reschedule recurring timer
                         it->second.fireTime = currentTime + it->second.duration;
                         timerQueue_.push({it->second.fireTime, it->second.id});
-                    }
-                    else {
+                    } else {
                         // Remove one-shot timer
                         timers_.erase(it);
                     }

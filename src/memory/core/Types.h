@@ -19,16 +19,15 @@ namespace engine::memory {
 
     // Enums
     enum class AllocationFlags : std::uint32_t {
-        NONE = 0,
-        ZERO_MEMORY = 1 << 0, // Zero-initialize allocated memory
-        PERSISTENT = 1 << 1, // Memory persists across levels
-        TEMPORARY = 1 << 2, // Short-lived allocation
+        NONE           = 0, ZERO_MEMORY = 1 << 0, // Zero-initialize allocated memory
+        PERSISTENT     = 1 << 1, // Memory persists across levels
+        TEMPORARY      = 1 << 2, // Short-lived allocation
         GPU_ACCESSIBLE = 1 << 3, // Memory accessible by GPU
-        CPU_CACHED = 1 << 4, // Optimize for CPU cache
-        THREAD_LOCAL = 1 << 5, // Thread-local allocation
-        DEBUG_FILL = 1 << 6, // Fill with debug pattern
-        NO_CACHE = 1 << 7, // Bypass CPU cache (streaming)
-        EXECUTABLE = 1 << 8 // Memory can contain executable code
+        CPU_CACHED     = 1 << 4, // Optimize for CPU cache
+        THREAD_LOCAL   = 1 << 5, // Thread-local allocation
+        DEBUG_FILL     = 1 << 6, // Fill with debug pattern
+        NO_CACHE       = 1 << 7, // Bypass CPU cache (streaming)
+        EXECUTABLE     = 1 << 8 // Memory can contain executable code
     };
 
     enum class MemoryCategory : std::uint8_t {
@@ -45,8 +44,9 @@ namespace engine::memory {
         PARTICLES, // Particle systems
         AI, // AI and pathfinding
         RESOURCES, // Resource loading
+        TIMELINE, // Timeline
         DEBUG, // Debug and development
-        COUNT // Number of categories
+        COUNT // Number of categories. Allways at the end
     };
 
     // Inline operators for flags

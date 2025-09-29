@@ -47,14 +47,15 @@ namespace engine::time {
          * @param backend Time backend for platform queries
          * @param name Timeline identifier
          */
-        explicit RealTimeline(ITimeBackend& backend,
-                              const std::string& name = "RealTime")
-            : Timeline(TimelineType::REAL_TIME, name)
-              , backend_(backend)
-              , frameCount_(0)
-              , startTime_(TimeStamp{})
-              , timerIdCounter_(1) {
-        }
+        explicit RealTimeline(
+                ITimeBackend& backend,
+                const std::string& name = "RealTime"
+                ) :
+            Timeline(TimelineType::REAL_TIME, name)
+            , backend_(backend)
+            , frameCount_(0)
+            , startTime_(TimeStamp{})
+            , timerIdCounter_(1) {}
 
         /**
          * @brief Destructor
@@ -123,9 +124,11 @@ namespace engine::time {
          * @param recurring True for repeating timer
          * @return Timer handle
          */
-        SafeTimerHandle createTimer(Duration duration,
-                                    TimerCallback callback,
-                                    bool recurring = false) override;
+        SafeTimerHandle createTimer(
+                Duration duration,
+                TimerCallback callback,
+                bool recurring
+                ) override;
 
         /**
          * @brief Cancel timer
@@ -221,7 +224,7 @@ namespace engine::time {
          * @param externalTime External timestamp
          * @param latency Network/processing latency
          */
-        void synchronizeWith(TimeStamp externalTime, Duration latency = Duration::zero());
+        void synchronizeWith(TimeStamp externalTime, Duration latency);
 
         /**
          * @brief Get synchronized time
@@ -256,7 +259,7 @@ namespace engine::time {
 
         struct TimerQueueEntry {
             TimeStamp fireTime;
-            TimerID id;
+            TimerID id{};
 
             bool operator>(const TimerQueueEntry& other) const {
                 return fireTime > other.fireTime;

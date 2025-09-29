@@ -317,6 +317,17 @@ add_executable(game_engine src/main.cpp
         src/time/timelines/RealTimeline.cpp
         src/time/timelines/RealTimeline.h
         src/time/core/Timeline.h
+        src/time/timelines/GameTimeline.cpp
+        src/time/timelines/GameTimeline.h
+        src/time/timelines/UITimeline.cpp
+        src/time/timelines/UITimeline.h
+        src/time/timelines/PhysicsTimeline.cpp
+        src/time/timelines/PhysicsTimeline.h
+        src/time/timelines/AudioTimeline.cpp
+        src/time/timelines/AudioTimeline.h
+        src/time/timelines/CustomTimeline.h
+        src/time/manager/TimelineManager.cpp
+        src/time/manager/TimelineManager.h
 )
 
 target_link_libraries(${PROJECT_NAME}

@@ -8,18 +8,25 @@
 #include <iostream>
 
 namespace engine::memory {
-    RingBufferAllocator::RingBufferAllocator(const MemorySize capacity, const char* name)
-        : memory_(nullptr)
-          , capacity_(capacity)
-          , head_(0)
-          , tail_(0)
-          , fenceCounter_(0)
-          , name_(name) {
-        memory_ = std::aligned_alloc(CACHE_LINE_SIZE, capacity);
+    RingBufferAllocator::RingBufferAllocator(const MemorySize capacity, const char* name) :
+        memory_(nullptr)
+        , capacity_(capacity)
+        , head_(0)
+        , tail_(0)
+        , fenceCounter_(0)
+        , name_(name) {
+        const MemorySize alignedCapacity = alignSize(capacity, CACHE_LINE_SIZE);
+
+        // std::cout << "[RingBufferAllocator] Allocating for " << name_ << ":" << std::endl;
+        // std::cout << "  Requested: " << (capacity / (1024.0 * 1024.0)) << " MB" << std::endl;
+        // std::cout << "  Aligned:   " << (alignedCapacity / (1024.0 * 1024.0)) << " MB" << std::endl;
+        // std::cout << "  Alignment: " << CACHE_LINE_SIZE << " bytes" << std::endl;
+
+        memory_ = std::aligned_alloc(CACHE_LINE_SIZE, alignedCapacity);
 
         if (!memory_) {
             std::cerr << "[RingBufferAllocator] Failed to allocate "
-                << (capacity / (1024.0 * 1024.0)) << " MB for " << name_ << std::endl;
+                    << (capacity / (1024.0 * 1024.0)) << " MB for " << name_ << std::endl;
             throw std::bad_alloc();
         }
 
@@ -35,14 +42,15 @@ namespace engine::memory {
     }
 
     RingBufferAllocator::~RingBufferAllocator() {
-        if (!memory_) return;
+        if (!memory_)
+            return;
 
 #ifdef _DEBUG
         MemorySize used = getUsedMemory();
         if (used > 0) {
             std::cerr << "Warning: RingBufferAllocator '" << name_
-                << "' destroyed with " << used
-                << " bytes still allocated!" << std::endl;
+                    << "' destroyed with " << used
+                    << " bytes still allocated!" << std::endl;
         }
 #endif
 
@@ -50,13 +58,13 @@ namespace engine::memory {
         memory_ = nullptr;
     }
 
-    RingBufferAllocator::RingBufferAllocator(RingBufferAllocator&& other) noexcept
-        : memory_(other.memory_)
-          , capacity_(other.capacity_)
-          , head_(other.head_.load())
-          , tail_(other.tail_.load())
-          , fenceCounter_(other.fenceCounter_.load())
-          , name_(other.name_) {
+    RingBufferAllocator::RingBufferAllocator(RingBufferAllocator&& other) noexcept :
+        memory_(other.memory_)
+        , capacity_(other.capacity_)
+        , head_(other.head_.load())
+        , tail_(other.tail_.load())
+        , fenceCounter_(other.fenceCounter_.load())
+        , name_(other.name_) {
         other.memory_ = nullptr;
         other.capacity_ = 0;
         other.head_ = 0;
@@ -89,8 +97,11 @@ namespace engine::memory {
         return *this;
     }
 
-    void* RingBufferAllocator::allocate(const MemorySize size, const MemorySize alignement,
-                                        const AllocationFlags flags) {
+    void* RingBufferAllocator::allocate(
+            const MemorySize size,
+            const MemorySize alignement,
+            const AllocationFlags flags
+            ) {
         std::lock_guard lock(allocationMutex_);
 
         assert(isPowerOfTwo(alignement) && "Alignment msut be power of 2");
@@ -105,8 +116,7 @@ namespace engine::memory {
         MemorySize available;
         if (currentHead >= currentTail) {
             available = capacity_ - currentHead + currentTail;
-        }
-        else {
+        } else {
             available = currentTail - currentHead;
         }
 
@@ -164,7 +174,7 @@ namespace engine::memory {
             static bool warningShown = false;
             if (!warningShown) {
                 std::cerr << "Warning: RingBufferAllocator does not support individual deallocation. "
-                    << "Use fence system or reset()." << std::endl;
+                        << "Use fence system or reset()." << std::endl;
                 warningShown = true;
             }
         }
@@ -198,7 +208,8 @@ namespace engine::memory {
     }
 
     bool RingBufferAllocator::owns(const void* ptr) const {
-        if (!ptr || !memory_) return false;
+        if (!ptr || !memory_)
+            return false;
 
         const auto* bytePtr = static_cast<const std::uint8_t*>(ptr);
         const auto* memStart = static_cast<const std::uint8_t*>(memory_);
@@ -208,7 +219,8 @@ namespace engine::memory {
     }
 
     MemorySize RingBufferAllocator::getAllocationSize(const void* ptr) const {
-        if (!owns(ptr)) return 0;
+        if (!owns(ptr))
+            return 0;
 
 #ifdef _DEBUG
         // Try to find the header before this allocation

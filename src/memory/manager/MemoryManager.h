@@ -4,7 +4,6 @@
 
 #pragma once
 
-
 #include <functional>
 #include <shared_mutex>
 #include <string>
@@ -15,6 +14,7 @@
 #include "../allocators/StackAllocator.h"
 #include "../allocators/PoolAllocator.h"
 #include "../allocators/RingBufferAllocator.h"
+#include "../allocators/TimelineDataAllocator.h"
 #include "../core/IAllocator.h"
 #include "../core/SystemInfo.h"
 
@@ -32,24 +32,29 @@ namespace engine::memory {
         void shutdown();
         bool isInitialized() const { return initialized_; }
 
-        void* allocate(MemorySize size,
-                       MemoryCategory category = MemoryCategory::GENERAL,
-                       MemorySize alignment = DEFAULT_ALIGNMENT,
-                       AllocationFlags flags = AllocationFlags::NONE);
+        void* allocate(
+                MemorySize size,
+                MemoryCategory category = MemoryCategory::GENERAL,
+                MemorySize alignment = DEFAULT_ALIGNMENT,
+                AllocationFlags flags = AllocationFlags::NONE
+                );
         void deallocate(void* ptr, MemoryCategory category = MemoryCategory::GENERAL);
-        void* reallocate(void* ptr, MemorySize newSize,
-                         MemoryCategory category = MemoryCategory::GENERAL,
-                         MemorySize alignment = DEFAULT_ALIGNMENT);
+        void* reallocate(
+                void* ptr,
+                MemorySize newSize,
+                MemoryCategory category = MemoryCategory::GENERAL,
+                MemorySize alignment = DEFAULT_ALIGNMENT
+                );
 
         template <typename T, typename... Args>
         T* allocateObject(MemoryCategory category, Args&&... args) {
             void* memory = allocate(sizeof(T), category, alignof(T));
-            if (!memory) return nullptr;
+            if (!memory)
+                return nullptr;
 
             try {
                 return new(memory) T(std::forward<Args>(args)...);
-            }
-            catch (...) {
+            } catch (...) {
                 deallocate(memory, category);
                 throw;
             }
@@ -57,7 +62,8 @@ namespace engine::memory {
 
         template <typename T>
         void deallocateObject(T* ptr, const MemoryCategory category) {
-            if (!ptr) return;
+            if (!ptr)
+                return;
 
             ptr->~T();
             deallocate(ptr, category);
@@ -67,7 +73,8 @@ namespace engine::memory {
         T* allocateArray(std::size_t count, MemoryCategory category) {
             MemorySize size = sizeof(T) * count + sizeof(std::size_t);
             void* memory = allocate(size, category, alignof(T));
-            if (!memory) return nullptr;
+            if (!memory)
+                return nullptr;
 
             // Store count at beginning
             *static_cast<std::size_t*>(memory) = count;
@@ -83,7 +90,8 @@ namespace engine::memory {
 
         template <typename T>
         void deallocateArray(T* array, const MemoryCategory category) {
-            if (!array) return;
+            if (!array)
+                return;
 
             // Get count from before array
             void* memory = reinterpret_cast<std::uint8_t*>(array) - sizeof(std::size_t);
@@ -106,12 +114,16 @@ namespace engine::memory {
         void registerAllocator(MemoryCategory category, std::unique_ptr<IAllocator> allocator);
 
         template <typename T>
-        PoolAllocator* createPoolAllocator(std::size_t objectCount,
-                                           const MemoryCategory category = MemoryCategory::GENERAL) {
+        PoolAllocator* createPoolAllocator(
+                std::size_t objectCount,
+                const MemoryCategory category = MemoryCategory::GENERAL
+                ) {
             auto pool = std::make_unique<PoolAllocator>(
-                sizeof(T), objectCount, alignof(T),
-                (std::string("Pool_") + typeid(T).name()).c_str()
-            );
+                    sizeof(T),
+                    objectCount,
+                    alignof(T),
+                    (std::string("Pool_") + typeid(T).name()).c_str()
+                    );
 
             registerAllocator(category, std::move(pool));
 
@@ -127,13 +139,25 @@ namespace engine::memory {
         bool dumpAllocations(const std::string& filename) const;
         static std::size_t checkForLeaks();
 
+        std::shared_ptr<TimelineDataAllocator> createTimeline(
+                const std::string& timelineName,
+                const TimelineDataAllocator::TimelineConfig& config = getDefaultTimelineConfig()
+                );
+        bool destroyTimeline(const std::string& timelineName);
+        std::shared_ptr<TimelineDataAllocator> getTimeline(const std::string& timelineName) const;
+        std::vector<std::string> getActiveTimelineNames() const;
+        void resetAllTimelines();
+        std::string generateTimelineReport() const;
+
         using MemoryPressureCallback = std::function<void(MemorySize available, MemorySize required)>;
         void registerMemoryPressureCallback(MemoryPressureCallback callback);
         MemorySize performMemoryCleanup(MemorySize targetBytes) const;
-        static void getSystemMemoryInfo(MemorySize& totalPhysical,
-                                        MemorySize& availablePhysical,
-                                        MemorySize& totalVirtual,
-                                        MemorySize& availableVirtual);
+        static void getSystemMemoryInfo(
+                MemorySize& totalPhysical,
+                MemorySize& availablePhysical,
+                MemorySize& totalVirtual,
+                MemorySize& availableVirtual
+                );
 
     private:
         MemoryManagerConfig config_;
@@ -155,6 +179,10 @@ namespace engine::memory {
         std::atomic<std::uint8_t> currentFrameIndex_{0};
 
         std::array<std::unique_ptr<IAllocator>, static_cast<std::size_t>(MemoryCategory::COUNT)> categoryAllocators_;
+
+        std::unordered_map<std::string, std::shared_ptr<TimelineDataAllocator>> activeTimelines_;
+        std::shared_ptr<LinearAllocator> timelineBaseAllocator_;
+        mutable std::shared_mutex timelinesMutex_;
 
         std::unordered_map<std::string, std::unique_ptr<IAllocator>> customAllocators_;
 
@@ -184,9 +212,16 @@ namespace engine::memory {
         void updateGlobalStats(const MemoryStats& allocatorStats);
         void handleAllocationFailure(MemorySize size, MemoryCategory category) const;
 
+        static TimelineDataAllocator::TimelineConfig getDefaultTimelineConfig();
+
 #ifdef _DEBUG
-        void recordAllocation(void* ptr, MemorySize size, MemoryCategory category,
-                              const char* file, int line);
+        void recordAllocation(
+                void* ptr,
+                MemorySize size,
+                MemoryCategory category,
+                const char* file,
+                int line
+                );
         void removeAllocationRecord(void* ptr);
         void validateAllocation(void* ptr) const;
 #endif

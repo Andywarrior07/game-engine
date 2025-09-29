@@ -100,9 +100,11 @@ namespace engine::time {
             Duration newSum;
             do {
                 newSum = currentSum + value;
-            } while (!sum.compare_exchange_weak(currentSum, newSum, //< Intenta actualizar el valor de sum (temas de thread safe)
-                                               std::memory_order_release,
-                                               std::memory_order_relaxed));
+            }
+            while (!sum.compare_exchange_weak(currentSum, newSum,
+                                              //< Intenta actualizar el valor de sum (temas de thread safe)
+                                              std::memory_order_release,
+                                              std::memory_order_relaxed));
 
             // Update timestamps
             if (const auto count = sampleCount.fetch_add(1, std::memory_order_relaxed); count == 0) {
@@ -304,6 +306,27 @@ namespace engine::time {
         std::atomic<std::size_t> memoryUsed{0}; ///< Current memory usage
         std::atomic<std::size_t> peakMemoryUsed{0}; ///< Peak memory usage
 
+        TimelineStats() = default;
+
+        // Constructor de copia
+        TimelineStats(const TimelineStats& other) noexcept
+            : id(other.id)
+            , type(other.type)
+            , updateDuration(other.updateDuration)
+            , updateCount(other.updateCount.load())
+            , skippedUpdates(other.skippedUpdates.load())
+            , activeTimers(other.activeTimers.load())
+            , totalTimersCreated(other.totalTimersCreated.load())
+            , timersFired(other.timersFired.load())
+            , timerProcessingTime(other.timerProcessingTime)
+            , isPaused(other.isPaused.load())
+            , currentScale(other.currentScale.load())
+            , totalPausedTime(other.totalPausedTime.load())
+            , totalScaledTime(other.totalScaledTime.load())
+            , memoryUsed(other.memoryUsed.load())
+            , peakMemoryUsed(other.peakMemoryUsed.load())
+        {}
+
         /**
          * @brief Update timeline statistics
          * @param duration Update duration
@@ -316,6 +339,31 @@ namespace engine::time {
             if (timersProcessed > 0) {
                 timersFired.fetch_add(timersProcessed, std::memory_order_relaxed);
             }
+        }
+
+        TimelineStats& operator=(const TimelineStats& other) noexcept {
+            if (this == &other) return *this;
+
+            // Copiar valores no atómicos
+            id = other.id;
+            type = other.type;
+            updateDuration = other.updateDuration;
+            timerProcessingTime = other.timerProcessingTime;
+
+            // Copiar valores atómicos uno por uno
+            updateCount.store(other.updateCount.load());
+            skippedUpdates.store(other.skippedUpdates.load());
+            activeTimers.store(other.activeTimers.load());
+            totalTimersCreated.store(other.totalTimersCreated.load());
+            timersFired.store(other.timersFired.load());
+            isPaused.store(other.isPaused.load());
+            currentScale.store(other.currentScale.load());
+            totalPausedTime.store(other.totalPausedTime.load());
+            totalScaledTime.store(other.totalScaledTime.load());
+            memoryUsed.store(other.memoryUsed.load());
+            peakMemoryUsed.store(other.peakMemoryUsed.load());
+
+            return *this;
         }
     };
 

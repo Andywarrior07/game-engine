@@ -46,24 +46,26 @@ public:
 
     // CHANGE: Define action IDs for the new input system
     enum Actions : ActionID {
-        ACTION_MOVE_FORWARD = 1,
+        ACTION_MOVE_FORWARD  = 1,
         ACTION_MOVE_BACKWARD = 2,
-        ACTION_MOVE_LEFT = 3,
-        ACTION_MOVE_RIGHT = 4,
-        ACTION_EXIT = 5,
+        ACTION_MOVE_LEFT     = 3,
+        ACTION_MOVE_RIGHT    = 4,
+        ACTION_EXIT          = 5,
         ACTION_SWITCH_CAMERA = 6,
-        ACTION_ZOOM_IN = 7,
-        ACTION_ZOOM_OUT = 8,
-        ACTION_CAMERA_SHAKE = 9,
-        ACTION_CAMERA_UP = 10,
-        ACTION_CAMERA_DOWN = 11,
-        ACTION_CAMERA_LEFT = 12,
-        ACTION_CAMERA_RIGHT = 13,
-        ACTION_TOGGLE_GRID = 14,
-        ACTION_TOGGLE_DEBUG = 15,
+        ACTION_ZOOM_IN       = 7,
+        ACTION_ZOOM_OUT      = 8,
+        ACTION_CAMERA_SHAKE  = 9,
+        ACTION_CAMERA_UP     = 10,
+        ACTION_CAMERA_DOWN   = 11,
+        ACTION_CAMERA_LEFT   = 12,
+        ACTION_CAMERA_RIGHT  = 13,
+        ACTION_TOGGLE_GRID   = 14,
+        ACTION_TOGGLE_DEBUG  = 15,
         // CHANGE: New composite actions for 2D movement
-        ACTION_PLAYER_MOVE = 20, // Composite 2D for player movement
-        ACTION_CAMERA_MOVE = 21, // Composite 2D for camera movement
+        ACTION_PLAYER_MOVE = 20,
+        // Composite 2D for player movement
+        ACTION_CAMERA_MOVE = 21,
+        // Composite 2D for camera movement
     };
 
     /**
@@ -85,8 +87,7 @@ public:
             std::cout << "Quick shutdown mode enabled - disabling memory checks" << std::endl;
             memConfig.enableLeakDetection = false;
             memConfig.enableBoundsChecking = false;
-        }
-        else {
+        } else {
             memConfig.enableLeakDetection = true;
             memConfig.enableBoundsChecking = true;
             std::cout << "Debug mode: Memory checks enabled" << std::endl;
@@ -119,11 +120,14 @@ public:
         }
 
         // 3. CREATE WINDOW
-        window_ = SDL_CreateWindow("Game Demo - New Input System",
-                                   SDL_WINDOWPOS_CENTERED,
-                                   SDL_WINDOWPOS_CENTERED,
-                                   WINDOW_WIDTH, WINDOW_HEIGHT,
-                                   SDL_WINDOW_SHOWN);
+        window_ = SDL_CreateWindow(
+            "Game Demo - New Input System",
+            SDL_WINDOWPOS_CENTERED,
+            SDL_WINDOWPOS_CENTERED,
+            WINDOW_WIDTH,
+            WINDOW_HEIGHT,
+            SDL_WINDOW_SHOWN
+        );
         if (!window_) {
             std::cerr << "Failed to create window: " << SDL_GetError() << std::endl;
             cleanup();
@@ -131,8 +135,11 @@ public:
         }
 
         // 4. CREATE RENDERER
-        renderer_ = SDL_CreateRenderer(window_, -1,
-                                       SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+        renderer_ = SDL_CreateRenderer(
+            window_,
+            -1,
+            SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC
+        );
         if (!renderer_) {
             std::cerr << "Failed to create renderer: " << SDL_GetError() << std::endl;
             cleanup();
@@ -373,7 +380,7 @@ public:
         playerTextureHandle_.updateCache(playerTexture);
 
         std::cout << "✓ Player sprite sheet loaded: " << playerTexture->getWidth()
-            << "x" << playerTexture->getHeight() << " pixels" << std::endl;
+                << "x" << playerTexture->getHeight() << " pixels" << std::endl;
 
         SDL_Surface* surface = playerTexture->getSDLSurface();
         if (surface) {
@@ -383,8 +390,7 @@ public:
                 return false;
             }
             std::cout << "✓ SDL texture created for rendering" << std::endl;
-        }
-        else {
+        } else {
             std::cerr << "Failed to get SDL surface from texture resource" << std::endl;
             return false;
         }
@@ -502,8 +508,10 @@ public:
 
             if (std::abs(cameraHorizontal) > 0.1f || std::abs(cameraVertical) > 0.1f) {
                 Vec2 currentPos = activeCamera->getPosition2D();
-                Vec2 movement(cameraHorizontal * CAMERA_SPEED * deltaTime,
-                              cameraVertical * CAMERA_SPEED * deltaTime);
+                Vec2 movement(
+                    cameraHorizontal * CAMERA_SPEED * deltaTime,
+                    cameraVertical * CAMERA_SPEED * deltaTime
+                );
                 activeCamera->setPosition(currentPos + movement);
             }
         }
@@ -559,34 +567,33 @@ public:
             // Determine animation based on largest movement axis
             if (std::abs(gamepadMove.x) > std::abs(gamepadMove.y)) {
                 currentAnimation = gamepadMove.x > 0 ? PlayerAnimation::RIGHT : PlayerAnimation::LEFT;
-            }
-            else {
+            } else {
                 currentAnimation = gamepadMove.y > 0 ? PlayerAnimation::DOWN : PlayerAnimation::UP;
             }
         }
 
         // Update sprite frame based on animation
         switch (currentAnimation) {
-        case PlayerAnimation::UP:
-            currentSpriteFrame_.x = 0;
-            currentSpriteFrame_.y = 930;
-            break;
-        case PlayerAnimation::DOWN:
-            currentSpriteFrame_.x = 0;
-            currentSpriteFrame_.y = 600;
-            break;
-        case PlayerAnimation::LEFT:
-            currentSpriteFrame_.x = 0;
-            currentSpriteFrame_.y = 772;
-            break;
-        case PlayerAnimation::RIGHT:
-            currentSpriteFrame_.x = 0;
-            currentSpriteFrame_.y = 1068;
-            break;
-        default: // IDLE
-            currentSpriteFrame_.x = 0;
-            currentSpriteFrame_.y = 0;
-            break;
+            case PlayerAnimation::UP:
+                currentSpriteFrame_.x = 0;
+                currentSpriteFrame_.y = 930;
+                break;
+            case PlayerAnimation::DOWN:
+                currentSpriteFrame_.x = 0;
+                currentSpriteFrame_.y = 600;
+                break;
+            case PlayerAnimation::LEFT:
+                currentSpriteFrame_.x = 0;
+                currentSpriteFrame_.y = 772;
+                break;
+            case PlayerAnimation::RIGHT:
+                currentSpriteFrame_.x = 0;
+                currentSpriteFrame_.y = 1068;
+                break;
+            default: // IDLE
+                currentSpriteFrame_.x = 0;
+                currentSpriteFrame_.y = 0;
+                break;
         }
 
         // Apply movement
@@ -609,12 +616,16 @@ public:
             const float SPRITE_HALF_WIDTH = 80.0f;
             const float SPRITE_HALF_HEIGHT = 70.0f;
 
-            playerPosition_.x = std::clamp(playerPosition_.x,
-                                           SPRITE_HALF_WIDTH,
-                                           static_cast<float>(WORLD_WIDTH) - SPRITE_HALF_WIDTH);
-            playerPosition_.y = std::clamp(playerPosition_.y,
-                                           SPRITE_HALF_HEIGHT,
-                                           static_cast<float>(WORLD_HEIGHT) - SPRITE_HALF_HEIGHT);
+            playerPosition_.x = std::clamp(
+                playerPosition_.x,
+                SPRITE_HALF_WIDTH,
+                static_cast<float>(WORLD_WIDTH) - SPRITE_HALF_WIDTH
+            );
+            playerPosition_.y = std::clamp(
+                playerPosition_.y,
+                SPRITE_HALF_HEIGHT,
+                static_cast<float>(WORLD_HEIGHT) - SPRITE_HALF_HEIGHT
+            );
 
             // Update camera target
             Camera2D* followCamera = cameraManager_->getCamera2D(mainCameraId_);
@@ -630,8 +641,7 @@ public:
         if (isFollowMode) {
             cameraManager_->setActiveCamera(freeCameraId_);
             std::cout << "Camera Mode: FREE CONTROL (use arrow keys)" << std::endl;
-        }
-        else {
+        } else {
             cameraManager_->setActiveCamera(mainCameraId_);
             std::cout << "Camera Mode: FOLLOW PLAYER" << std::endl;
         }
@@ -652,17 +662,18 @@ public:
     }
 
     void renderPlayer(const Vec2& cameraOffset) {
-        if (!playerSDLTexture_) return;
+        if (!playerSDLTexture_)
+            return;
 
         int screenX = static_cast<int>(playerPosition_.x - cameraOffset.x - currentSpriteFrame_.w / 2);
         int screenY = static_cast<int>(playerPosition_.y - cameraOffset.y - currentSpriteFrame_.h / 2);
 
         SDL_Rect destRect = {
-            screenX,
-            screenY,
-            currentSpriteFrame_.w,
-            currentSpriteFrame_.h
-        };
+                    screenX,
+                    screenY,
+                    currentSpriteFrame_.w,
+                    currentSpriteFrame_.h
+                };
 
         SDL_RenderCopy(renderer_, playerSDLTexture_, &currentSpriteFrame_, &destRect);
     }
@@ -708,15 +719,15 @@ public:
                 int variant = (x + y * 7) % GRASS_VARIANT_COUNT;
 
                 switch (variant) {
-                case 0:
-                    SDL_SetRenderDrawColor(renderer_, 50, 120, 50, 255);
-                    break;
-                case 1:
-                    SDL_SetRenderDrawColor(renderer_, 45, 115, 45, 255);
-                    break;
-                case 2:
-                    SDL_SetRenderDrawColor(renderer_, 55, 125, 55, 255);
-                    break;
+                    case 0:
+                        SDL_SetRenderDrawColor(renderer_, 50, 120, 50, 255);
+                        break;
+                    case 1:
+                        SDL_SetRenderDrawColor(renderer_, 45, 115, 45, 255);
+                        break;
+                    case 2:
+                        SDL_SetRenderDrawColor(renderer_, 55, 125, 55, 255);
+                        break;
                 }
 
                 SDL_RenderFillRect(renderer_, &tileRect);
@@ -765,17 +776,13 @@ public:
 
         if (currentSpriteFrame_.y == 0) {
             SDL_SetRenderDrawColor(renderer_, 255, 255, 255, 128); // White - IDLE
-        }
-        else if (currentSpriteFrame_.y == 930) {
+        } else if (currentSpriteFrame_.y == 930) {
             SDL_SetRenderDrawColor(renderer_, 0, 255, 0, 128); // Green - UP
-        }
-        else if (currentSpriteFrame_.y == 600) {
+        } else if (currentSpriteFrame_.y == 600) {
             SDL_SetRenderDrawColor(renderer_, 255, 0, 0, 128); // Red - DOWN
-        }
-        else if (currentSpriteFrame_.y == 772) {
+        } else if (currentSpriteFrame_.y == 772) {
             SDL_SetRenderDrawColor(renderer_, 0, 0, 255, 128); // Blue - LEFT
-        }
-        else if (currentSpriteFrame_.y == 1068) {
+        } else if (currentSpriteFrame_.y == 1068) {
             SDL_SetRenderDrawColor(renderer_, 255, 255, 0, 128); // Yellow - RIGHT
         }
         SDL_RenderFillRect(renderer_, &statusRect);
@@ -787,12 +794,10 @@ public:
         if (activeCamera) {
             if (activeCamera->getId() == mainCameraId_) {
                 SDL_SetRenderDrawColor(renderer_, 0, 255, 255, 128); // Cyan = Follow mode
-            }
-            else {
+            } else {
                 SDL_SetRenderDrawColor(renderer_, 255, 0, 255, 128); // Magenta = Free mode
             }
-        }
-        else {
+        } else {
             SDL_SetRenderDrawColor(renderer_, 128, 128, 128, 128); // Grey = No camera
         }
         SDL_RenderFillRect(renderer_, &cameraRect);
@@ -828,18 +833,16 @@ public:
         // Memory usage indicator if debug enabled
         if (showDebugInfo_) {
             float memoryPercent = static_cast<float>(memoryManager_->getTotalMemoryUsage()) /
-                (256.0f * 1024.0f * 1024.0f);
+                    (256.0f * 1024.0f * 1024.0f);
             int memBarWidth = static_cast<int>(memoryPercent * 200);
             memBarWidth = std::clamp(memBarWidth, 0, 200);
 
             SDL_Rect memRect = {10, 110, memBarWidth, 10};
             if (memoryPercent < 0.5f) {
                 SDL_SetRenderDrawColor(renderer_, 0, 255, 0, 128);
-            }
-            else if (memoryPercent < 0.8f) {
+            } else if (memoryPercent < 0.8f) {
                 SDL_SetRenderDrawColor(renderer_, 255, 255, 0, 128);
-            }
-            else {
+            } else {
                 SDL_SetRenderDrawColor(renderer_, 255, 0, 0, 128);
             }
             SDL_RenderFillRect(renderer_, &memRect);
@@ -896,9 +899,9 @@ public:
         std::cout << "FPS: " << fps << std::endl;
 
         std::cout << "Resource Memory: " << (resourceManager_->getMemoryUsage() / 1024.0 / 1024.0) << " MB" <<
-            std::endl;
+                std::endl;
         std::cout << "Total Memory Usage: " << (memoryManager_->getTotalMemoryUsage() / 1024.0 / 1024.0) << " MB" <<
-            std::endl;
+                std::endl;
 
         std::cout << "Cameras: " << cameraManager_->getCameraCount() << std::endl;
 
@@ -934,7 +937,8 @@ public:
     }
 
     ResourcePtr<TextureResource> getTextureResource(const ResourceHandle<TextureResource>& handle) {
-        if (!handle.isValid()) return nullptr;
+        if (!handle.isValid())
+            return nullptr;
 
         if (auto cached = handle.tryGet()) {
             return cached;
@@ -980,8 +984,7 @@ public:
             size_t leaks = engine::memory::MemoryManager::checkForLeaks();
             if (leaks > 0) {
                 std::cout << "WARNING: " << leaks << " memory leaks detected!" << std::endl;
-            }
-            else {
+            } else {
                 std::cout << "✓ No memory leaks detected" << std::endl;
             }
 
@@ -1053,12 +1056,12 @@ private:
 int main() {
     std::cout << "=== Game Demo with New Resource & Memory System ===" << std::endl;
     std::cout << "This demo shows integrated MemoryManager, ResourceManager, InputManager, and CameraManager" <<
-        std::endl;
+            std::endl;
     std::cout << "Features:" << std::endl;
     std::cout << "  - Advanced memory management with allocation tracking" << std::endl;
     std::cout << "  - New resource management system with caching" << std::endl;
     std::cout << "  - Large explorable world (" << GameDemo::WORLD_WIDTH << "x" << GameDemo::WORLD_HEIGHT << " pixels)"
-        << std::endl;
+            << std::endl;
     std::cout << "  - Player movement with WASD keys and gamepad" << std::endl;
     std::cout << "  - Advanced camera system with follow and free modes" << std::endl;
     std::cout << "  - Camera zoom, smooth transitions, and shake effects" << std::endl;
@@ -1086,8 +1089,7 @@ int main() {
     // Run main loop
     try {
         game.run();
-    }
-    catch (const std::exception& e) {
+    } catch (const std::exception& e) {
         std::cerr << "\nException during game loop: " << e.what() << std::endl;
         return -1;
     }
