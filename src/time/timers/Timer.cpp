@@ -5,7 +5,8 @@
 #include "Timer.h"
 
 namespace engine::time {
-    Timer::Timer(const Config& config): Timer() {
+    Timer::Timer(const Config& config) :
+        Timer() {
         initialize(config);
     }
 
@@ -47,19 +48,19 @@ namespace engine::time {
 
         // Set max executions based on type
         switch (type_) {
-        case TimerType::ONE_SHOT:
-        case TimerType::DELAYED:
-            maxExecutions_ = 1;
-            break;
+            case TimerType::ONE_SHOT:
+            case TimerType::DELAYED:
+                maxExecutions_ = 1;
+                break;
 
-        case TimerType::RECURRING:
-        case TimerType::INTERVAL:
-        case TimerType::CONDITIONAL:
-            maxExecutions_ = 0; // Unlimited
-            break;
+            case TimerType::RECURRING:
+            case TimerType::INTERVAL:
+            case TimerType::CONDITIONAL:
+                maxExecutions_ = 0; // Unlimited
+                break;
 
-        default:
-            break;
+            default:
+                break;
         }
 
         // Set initial state
@@ -115,34 +116,33 @@ namespace engine::time {
 
         // Handle post-execution state
         switch (type_) {
-        case TimerType::ONE_SHOT:
-        case TimerType::DELAYED:
-            state_ = TimerState::COMPLETED;
-            break;
+            case TimerType::ONE_SHOT:
+            case TimerType::DELAYED:
+                state_ = TimerState::COMPLETED;
+                break;
 
-        case TimerType::RECURRING:
-            remaining_ = duration_;
-            state_ = TimerState::PENDING;
-            break;
-
-        case TimerType::INTERVAL:
-            // After first execution, use regular duration xd
-            // TODO: Revisar esto
-            if (executionCount_ == 1 && initialDelay_ > Duration::zero()) {
+            case TimerType::RECURRING:
                 remaining_ = duration_;
-            }
-            else {
-                remaining_ = duration_;
-            }
-            state_ = TimerState::PENDING;
-            break;
+                state_ = TimerState::PENDING;
+                break;
 
-        case TimerType::CONDITIONAL:
-            state_ = TimerState::PENDING;
-            break;
+            case TimerType::INTERVAL:
+                // After first execution, use regular duration xd
+                // TODO: Revisar esto
+                if (executionCount_ == 1 && initialDelay_ > Duration::zero()) {
+                    remaining_ = duration_;
+                } else {
+                    remaining_ = duration_;
+                }
+                state_ = TimerState::PENDING;
+                break;
 
-        default:
-            break;
+            case TimerType::CONDITIONAL:
+                state_ = TimerState::PENDING;
+                break;
+
+            default:
+                break;
         }
 
         // Check max executions

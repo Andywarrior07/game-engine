@@ -51,10 +51,10 @@ namespace engine::time {
      */
     enum class TimerPriority : std::uint8_t {
         CRITICAL = 0, ///< Execute first
-        HIGH = 64, ///< High priority
-        NORMAL = 128, ///< Default priority
-        LOW = 192, ///< Low priority
-        IDLE = 255 ///< Execute last
+        HIGH     = 64, ///< High priority
+        NORMAL   = 128, ///< Default priority
+        LOW      = 192, ///< Low priority
+        IDLE     = 255 ///< Execute last
     };
 
     /**
@@ -90,21 +90,20 @@ namespace engine::time {
         /**
          * @brief Default constructor
          */
-        Timer() noexcept
-            : id_(constants::INVALID_TIMER_ID)
-              , generation_(0)
-              , type_(TimerType::ONE_SHOT)
-              , state_(TimerState::INACTIVE)
-              , priority_(TimerPriority::NORMAL)
-              , duration_(Duration::zero())
-              , remaining_(Duration::zero())
-              , elapsed_(Duration::zero())
-              , initialDelay_(Duration::zero())
-              , executionCount_(0)
-              , maxExecutions_(0)
-              , timelineId_(constants::INVALID_TIMELINE_ID)
-              , ignoreTimeScale_(false) {
-        }
+        Timer() noexcept :
+            id_(constants::INVALID_TIMER_ID)
+            , generation_(0)
+            , type_(TimerType::ONE_SHOT)
+            , state_(TimerState::INACTIVE)
+            , priority_(TimerPriority::NORMAL)
+            , duration_(Duration::zero())
+            , remaining_(Duration::zero())
+            , elapsed_(Duration::zero())
+            , initialDelay_(Duration::zero())
+            , executionCount_(0)
+            , maxExecutions_(0)
+            , timelineId_(constants::INVALID_TIMELINE_ID)
+            , ignoreTimeScale_(false) {}
 
         /**
          * @brief Construct timer with configuration
@@ -145,8 +144,7 @@ namespace engine::time {
 
             if (restart) {
                 state_ = TimerState::PENDING;
-            }
-            else {
+            } else {
                 state_ = TimerState::PAUSED;
             }
         }
@@ -280,7 +278,7 @@ namespace engine::time {
         [[nodiscard]] bool isActive() const noexcept {
             const auto currentState = state_.load(std::memory_order_acquire);
             return currentState == TimerState::PENDING ||
-                currentState == TimerState::EXECUTING;
+                    currentState == TimerState::EXECUTING;
         }
 
         /**
@@ -443,7 +441,7 @@ namespace engine::time {
 
             // Then by priority
             return static_cast<std::uint8_t>(a->getPriority()) >
-                static_cast<std::uint8_t>(b->getPriority());
+                    static_cast<std::uint8_t>(b->getPriority());
         }
     };
 } // namespace engine::time
