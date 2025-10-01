@@ -330,6 +330,8 @@ add_executable(game_engine src/main.cpp
         src/time/manager/TimelineManager.h
         src/time/timers/TimerPool.cpp
         src/time/timers/TimerPool.h
+        src/time/timers/TimerSystem.cpp
+        src/time/timers/TimerSystem.h
 )
 
 target_link_libraries(${PROJECT_NAME}

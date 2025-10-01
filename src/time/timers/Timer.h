@@ -20,7 +20,7 @@
 namespace engine::time {
     // Forward declarations
     class Timeline;
-    class TimerRegistry;
+    class TimerSystem;
 
     /**
      * @brief Timer execution type
@@ -393,7 +393,7 @@ namespace engine::time {
         }
 
     private:
-        friend class TimerRegistry;
+        friend class TimerSystem;
 
         // Core identification
         TimerID id_; ///< Timer identifier

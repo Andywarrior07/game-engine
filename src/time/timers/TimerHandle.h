@@ -158,26 +158,26 @@ namespace engine::time {
          * @brief Cancel the timer
          * @return True if timer was successfully cancelled
          */
-        bool cancel() noexcept;
+        bool cancel() const noexcept;
 
         /**
          * @brief Pause the timer
          * @return True if timer was paused
          */
-        bool pause() noexcept;
+        bool pause() const noexcept;
 
         /**
          * @brief Resume the timer
          * @return True if timer was resumed
          */
-        bool resume() noexcept;
+        bool resume() const noexcept;
 
         /**
          * @brief Reset timer to initial duration
          * @param restart If true, start immediately
          * @return True if timer was reset
          */
-        bool reset(bool restart = true) noexcept;
+        bool reset(bool restart = true) const noexcept;
 
         /**
          * @brief Get remaining time
