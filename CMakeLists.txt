@@ -333,6 +333,8 @@ add_executable(game_engine src/main.cpp
         src/time/timers/TimerSystem.cpp
         src/time/timers/TimerSystem.h
         src/time/utils/TimeConverter.h
+        src/time/utils/TimeMath.cpp
+        src/time/utils/TimeMath.h
 )
 
 target_link_libraries(${PROJECT_NAME}
