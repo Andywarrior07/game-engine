@@ -199,13 +199,35 @@ namespace engine::time {
      *          Critical for reproducible physics and networking.
      */
     struct FixedTimestepConfig {
-        Duration timestep{constants::DEFAULT_FIXED_TIMESTEP}; ///< Fixed step duration
-        std::uint8_t maxIterationsPerFrame{constants::MAX_FIXED_ITERATIONS}; ///< Spiral prevention
-        Duration maxAccumulator{Duration(200000)}; ///< Max accumulated time (200ms)
+        // Timestep settings
+        Duration timestep{constants::DEFAULT_FIXED_TIMESTEP}; ///< Fixed update interval
+        std::uint8_t maxIterationsPerFrame{constants::MAX_FIXED_ITERATIONS}; ///< Max updates per frame
+
+        // Accumulator settings
+        bool useAccumulator{true}; ///< Use accumulator pattern
+        Duration maxAccumulator{constants::MAX_DELTA_TIME}; ///< Max accumulated time
+        bool allowPartialUpdates{false}; ///< Allow partial timestep updates
         bool catchUpAfterSpike{true}; ///< Catch up after lag spike
-        bool allowPartialUpdates{false}; ///< Process partial timesteps
+
+        // Substeps (e.g. physics)
         std::uint8_t substeps{1}; ///< Physics substeps per update
+
+        // Interpolation settings
+        bool enableInterpolation{true}; ///< Enable render interpolation
+        double interpolationAlpha{0.0}; ///< Current interpolation factor
+
+        // Time scaling
+        TimeScale timeScale{1.0}; ///< Time scale factor
         float updateSpeedMultiplier{1.0f}; ///< Speed up/slow down updates
+        bool allowNegativeTime{false}; ///< Allow time reversal
+
+        // Spiral of death prevention
+        bool preventSpiral{true}; ///< Prevent death spiral
+        Duration spiralThreshold{Duration(100000)}; ///< Spiral detection threshold
+
+        // Synchronization
+        bool syncToFrameRate{false}; ///< Sync to display refresh
+        double targetFrameRate{60.0}; ///< Target frame rate for sync
     };
 
     // =============================================================================
@@ -300,9 +322,9 @@ namespace engine::time {
                                 TimestepFlag::COMPENSATE_FRAME_DROPS |
                                 TimestepFlag::VSYNC_ALIGNED,
                                 .modeConfig = VariableTimestepConfig{
-                                        .maxDeltaTime = Duration(8333),
                                         // Cap at 120fps equivalent
                                         .minDeltaTime = Duration(100),
+                                        .maxDeltaTime = Duration(8333),
                                         .smoothing = SmoothingMethod::NONE,
                                         // Raw input response
                                         .smoothingWindowSize = 0,
@@ -322,8 +344,8 @@ namespace engine::time {
                                 TimestepFlag::SMOOTH_DELTA |
                                 TimestepFlag::COMPENSATE_FRAME_DROPS,
                                 .modeConfig = VariableTimestepConfig{
-                                        .maxDeltaTime = constants::MAX_DELTA_TIME,
                                         .minDeltaTime = constants::MIN_DELTA_TIME,
+                                        .maxDeltaTime = constants::MAX_DELTA_TIME,
                                         .smoothing = SmoothingMethod::EXPONENTIAL,
                                         .smoothingWindowSize = 8,
                                         .smoothingFactor = 0.2f,
@@ -347,14 +369,14 @@ namespace engine::time {
                                                 // 60Hz physics
                                                 .maxIterationsPerFrame = 3,
                                                 .maxAccumulator = Duration(50000),
-                                                .catchUpAfterSpike = false,
                                                 .allowPartialUpdates = false,
+                                                .catchUpAfterSpike = false,
                                                 .substeps = 2,
                                                 .updateSpeedMultiplier = 1.0f
                                         },
                                         .renderConfig = {
-                                                .maxDeltaTime = constants::MAX_DELTA_TIME,
                                                 .minDeltaTime = constants::MIN_DELTA_TIME,
+                                                .maxDeltaTime = constants::MAX_DELTA_TIME,
                                                 .smoothing = SmoothingMethod::NONE
                                         },
                                         .interpolation = InterpolationMethod::HERMITE,
@@ -375,10 +397,10 @@ namespace engine::time {
                                 TimestepFlag::ADAPTIVE_TIMESTEP |
                                 TimestepFlag::COMPENSATE_FRAME_DROPS,
                                 .modeConfig = VariableTimestepConfig{
-                                        .maxDeltaTime = Duration(33333),
-                                        // 30fps cap for battery
-                                        .minDeltaTime = Duration(16667),
                                         // 60fps max
+                                        .minDeltaTime = Duration(16667),
+                                        // 30fps cap for battery
+                                        .maxDeltaTime = Duration(33333),
                                         .smoothing = SmoothingMethod::MOVING_AVERAGE,
                                         .smoothingWindowSize = 4,
                                         .smoothingFactor = 0.25f,
@@ -399,8 +421,8 @@ namespace engine::time {
                                         // 90Hz for VR
                                         .maxIterationsPerFrame = 2,
                                         .maxAccumulator = Duration(22222),
-                                        .catchUpAfterSpike = false,
                                         .allowPartialUpdates = false,
+                                        .catchUpAfterSpike = false,
                                         .substeps = 1,
                                         .updateSpeedMultiplier = 1.0f
                                 }
@@ -420,8 +442,8 @@ namespace engine::time {
                                         // 60Hz tick rate
                                         .maxIterationsPerFrame = 4,
                                         .maxAccumulator = Duration(66668),
-                                        .catchUpAfterSpike = true,
                                         .allowPartialUpdates = false,
+                                        .catchUpAfterSpike = true,
                                         .substeps = 1,
                                         .updateSpeedMultiplier = 1.0f
                                 }
