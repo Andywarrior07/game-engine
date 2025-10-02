@@ -338,6 +338,8 @@ add_executable(game_engine src/main.cpp
         src/time/utils/TimeFormatter.h
         src/time/utils/ScopedTimer.cpp
         src/time/utils/ScopedTimer.h
+        src/time/timestep/VariableTimestep.cpp
+        src/time/timestep/VariableTimestep.h
 )
 
 target_link_libraries(${PROJECT_NAME}
