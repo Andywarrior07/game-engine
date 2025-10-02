@@ -342,6 +342,8 @@ add_executable(game_engine src/main.cpp
         src/time/timestep/VariableTimestep.h
         src/time/timestep/FixedTimestep.cpp
         src/time/timestep/FixedTimestep.h
+        src/time/timestep/HybridTimestep.cpp
+        src/time/timestep/HybridTimestep.h
 )
 
 target_link_libraries(${PROJECT_NAME}

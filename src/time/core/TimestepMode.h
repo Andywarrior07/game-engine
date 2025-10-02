@@ -240,15 +240,35 @@ namespace engine::time {
      *          Provides both determinism and smooth visuals.
      */
     struct HybridTimestepConfig {
-        FixedTimestepConfig fixedConfig; ///< Fixed timestep settings
-        VariableTimestepConfig renderConfig; ///< Render timestep settings
+        // Component configurations
+        FixedTimestepConfig fixedConfig{}; ///< Fixed timestep config
+        VariableTimestepConfig variableConfig{}; ///< Variable timestep config (render/update)
+
+        // Hybrid-specific settings
+        bool autoSwitchMode{false}; ///< Auto-switch between fixed/variable modes
+        double switchThresholdFPS{45.0}; ///< FPS threshold for mode switch
+        Duration switchHysteresis{Duration(16667)}; ///< Hysteresis for switching
+
+        // Interpolation settings
+        bool enableInterpolation{true}; ///< Enable state interpolation
+        bool smoothInterpolation{true}; ///< Smooth interpolation changes
+        double interpolationDamping{0.1}; ///< Interpolation smoothing factor
         InterpolationMethod interpolation{InterpolationMethod::LINEAR}; ///< Interpolation method
         float extrapolationLimit{0.25f}; ///< Max extrapolation factor
         bool interpolateTransforms{true}; ///< Interpolate positions
         bool interpolateAnimations{true}; ///< Interpolate animations
         bool interpolateParticles{false}; ///< Interpolate particles
-        std::uint8_t interpolationBufferSize{2}; ///< States to keep for interp
+        std::uint8_t interpolationBufferSize{2}; ///< States to keep for interpolation
+
+        // Synchronization
+        bool syncPhysicsToRender{false}; ///< Sync physics to render rate
+        bool allowAsyncPhysics{true}; ///< Allow physics on separate thread
+
+        // Performance
+        bool adaptiveQuality{false}; ///< Adjust quality based on performance
+        double targetUtilization{0.9}; ///< Target CPU utilization
     };
+
 
     // =============================================================================
     // Unified Timestep Configuration
