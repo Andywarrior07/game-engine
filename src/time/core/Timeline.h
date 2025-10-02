@@ -48,8 +48,8 @@ namespace engine::time {
      * @details Information returned after timeline update.
      */
     struct TimelineUpdateResult {
-        Duration actualDeltaTime; ///< Actual time progressed
-        Duration scaledDeltaTime; ///< After time scaling
+        Duration actualDeltaTime{}; ///< Actual time progressed
+        Duration scaledDeltaTime{}; ///< After time scaling
         std::uint32_t fixedStepsExecuted{0}; ///< Fixed timesteps performed
         std::uint32_t timersProcessed{0}; ///< Timers that fired
         bool wasThrottled{false}; ///< Update was throttled
