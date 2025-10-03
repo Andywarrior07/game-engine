@@ -16,8 +16,9 @@
 #include "Timer.h"
 #include "TimerPool.h"
 #include "TimerQueue.h"
-#include "../core/Timeline.h"
+
 #include "../timers/TimerHandle.h"
+
 #include <unordered_map>
 #include <shared_mutex>
 #include <unordered_set>
