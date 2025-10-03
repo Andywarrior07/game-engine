@@ -279,6 +279,13 @@ namespace engine::time {
         Timer* getTimer(TimerHandle handle) const;
 
         void updatePeakActive();
+
+        /**
+         * @brief Calculate absolute expiration time for timer
+         * @param timer Timer to calculate expiration for
+         * @param currentTime Current system time
+         */
+        static void calculateExpiration(Timer* timer, TimeStamp currentTime);
     };
 
     // Implement SafeTimerHandle methods that require TimerSystem

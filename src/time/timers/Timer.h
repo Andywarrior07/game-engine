@@ -119,8 +119,8 @@ namespace engine::time {
         // Delete copy, allow move
         Timer(const Timer&) = delete;
         Timer& operator=(const Timer&) = delete;
-        Timer(Timer&& other) noexcept = default;
-        Timer& operator=(Timer&& other) noexcept = default;
+        Timer(Timer&& other) noexcept;
+        Timer& operator=(Timer&& other) noexcept;
 
         // =============================================================================
         // Initialization and Configuration
@@ -317,6 +317,13 @@ namespace engine::time {
         }
 
         /**
+         * @brief Get absolute expiration time
+         */
+        [[nodiscard]] TimeStamp getExpiration() const noexcept {
+            return expirationTime_;
+        }
+
+        /**
          * @brief Get execution count
          */
         [[nodiscard]] std::uint32_t getExecutionCount() const noexcept {
@@ -392,6 +399,14 @@ namespace engine::time {
             priority_ = priority;
         }
 
+        /**
+         * @brief Set expiration time (for TimerSystem)
+         * @param expiration New expiration timestamp
+         */
+        void setExpiration(const TimeStamp expiration) {
+            expirationTime_ = expiration;
+        }
+
     private:
         friend class TimerSystem;
 
@@ -409,6 +424,7 @@ namespace engine::time {
         std::atomic<Duration> remaining_; ///< Time remaining
         std::atomic<Duration> elapsed_; ///< Time elapsed
         Duration initialDelay_; ///< Initial delay
+        TimeStamp expirationTime_; ///< Absolute expiration timestamp
 
         // Execution tracking
         std::atomic<std::uint32_t> executionCount_; ///< Times executed

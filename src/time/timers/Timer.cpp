@@ -14,6 +14,65 @@ namespace engine::time {
         cancel();
     }
 
+    Timer::Timer(Timer&& other) noexcept :
+        id_(other.id_)
+        , generation_(other.generation_)
+        , type_(other.type_)
+        , state_(other.state_.load(std::memory_order_relaxed))
+        , priority_(other.priority_)
+        , duration_(other.duration_)
+        , remaining_(other.remaining_.load(std::memory_order_relaxed))
+        , elapsed_(other.elapsed_.load(std::memory_order_relaxed))
+        , initialDelay_(other.initialDelay_)
+        , expirationTime_(other.expirationTime_)
+        , executionCount_(other.executionCount_.load(std::memory_order_relaxed))
+        , maxExecutions_(other.maxExecutions_)
+        , callback_(std::move(other.callback_))
+        , condition_(std::move(other.condition_))
+        , timelineId_(other.timelineId_)
+        , ignoreTimeScale_(other.ignoreTimeScale_)
+        , name_(std::move(other.name_))
+        , pauseTime_(other.pauseTime_) {
+        // Reset source to safe state
+        other.state_.store(TimerState::INACTIVE, std::memory_order_relaxed);
+        other.remaining_.store(Duration::zero(), std::memory_order_relaxed);
+        other.elapsed_.store(Duration::zero(), std::memory_order_relaxed);
+        other.executionCount_.store(0, std::memory_order_relaxed);
+    }
+
+    Timer& Timer::operator=(Timer&& other) noexcept {
+        if (this != &other) {
+            // Transfer all non-atomic members
+            id_ = other.id_;
+            generation_ = other.generation_;
+            type_ = other.type_;
+            priority_ = other.priority_;
+            duration_ = other.duration_;
+            initialDelay_ = other.initialDelay_;
+            expirationTime_ = other.expirationTime_;
+            maxExecutions_ = other.maxExecutions_;
+            timelineId_ = other.timelineId_;
+            ignoreTimeScale_ = other.ignoreTimeScale_;
+            name_ = std::move(other.name_);
+            callback_ = std::move(other.callback_);
+            condition_ = std::move(other.condition_);
+            pauseTime_ = other.pauseTime_;
+
+            // Transfer atomic members
+            state_.store(other.state_.load(std::memory_order_relaxed), std::memory_order_relaxed);
+            remaining_.store(other.remaining_.load(std::memory_order_relaxed), std::memory_order_relaxed);
+            elapsed_.store(other.elapsed_.load(std::memory_order_relaxed), std::memory_order_relaxed);
+            executionCount_.store(other.executionCount_.load(std::memory_order_relaxed), std::memory_order_relaxed);
+
+            // Reset source
+            other.state_.store(TimerState::INACTIVE, std::memory_order_relaxed);
+            other.remaining_.store(Duration::zero(), std::memory_order_relaxed);
+            other.elapsed_.store(Duration::zero(), std::memory_order_relaxed);
+            other.executionCount_.store(0, std::memory_order_relaxed);
+        }
+        return *this;
+    }
+
     bool Timer::initialize(const Config& config) {
         if (state_ != TimerState::INACTIVE) {
             return false; // Already initialized
@@ -65,6 +124,8 @@ namespace engine::time {
 
         // Set initial state
         state_ = config.startImmediately ? TimerState::PENDING : TimerState::PAUSED;
+
+        expirationTime_ = TimeStamp{};
 
         return true;
     }

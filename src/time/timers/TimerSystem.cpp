@@ -87,6 +87,9 @@ namespace engine::time {
             return SafeTimerHandle{};
         }
 
+        const TimeStamp currentTime = Clock::now();
+        calculateExpiration(timer, currentTime);
+
         // Set timer ID and generation
         timer->id_ = handle.id;
         timer->generation_ = handle.generation;
@@ -207,6 +210,12 @@ namespace engine::time {
         }
 
         timer->reset(restart);
+
+        // Recalculate expiration time after reset
+        if (restart) {
+            const TimeStamp currentTime = Clock::now();
+            calculateExpiration(timer, currentTime);
+        }
 
         return true;
     }
@@ -349,5 +358,16 @@ namespace engine::time {
                     std::memory_order_release,
                     std::memory_order_relaxed
                     )) {}
+    }
+
+    void TimerSystem::calculateExpiration(Timer* timer, const TimeStamp currentTime) {
+        if (!timer)
+            return;
+
+        // Calculate absolute expiration time
+        const Duration remaining = timer->getRemainingTime();
+        const TimeStamp expirationTime = currentTime + remaining;
+
+        timer->setExpiration(expirationTime);
     }
 } // namespace engine::time
