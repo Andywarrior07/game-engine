@@ -348,6 +348,8 @@ add_executable(game_engine src/main.cpp
         src/time/timestep/TimestepManager.h
         src/time/timers/TimerQueue.cpp
         src/time/timers/TimerQueue.h
+        src/time/profiling/PerformanceTracker.cpp
+        src/time/profiling/PerformanceTracker.h
 )
 
 target_link_libraries(${PROJECT_NAME}

@@ -42,9 +42,16 @@ namespace engine::time {
         std::atomic<TimeStamp> firstSampleTime{TimeStamp{}}; ///< First sample timestamp
         std::atomic<TimeStamp> lastSampleTime{TimeStamp{}}; ///< Last sample timestamp
 
+        // =========================================================================
+        // Constructors and Assignment Operators
+        // =========================================================================
+
         BasicTimeStats() = default;
 
-        // Copy
+        /**
+         * @brief Copy constructor - manually transfer atomic values
+         * @details Required because std::atomic deletes copy constructor
+         */
         BasicTimeStats(const BasicTimeStats& o) noexcept {
             min.store(o.min.load(std::memory_order_relaxed), std::memory_order_relaxed);
             max.store(o.max.load(std::memory_order_relaxed), std::memory_order_relaxed);
@@ -55,8 +62,13 @@ namespace engine::time {
             lastSampleTime.store(o.lastSampleTime.load(std::memory_order_relaxed), std::memory_order_relaxed);
         }
 
+        /**
+         * @brief Copy assignment operator
+         */
         BasicTimeStats& operator=(const BasicTimeStats& o) noexcept {
-            if (this == &o) return *this;
+            if (this == &o)
+                return *this;
+
             min.store(o.min.load(std::memory_order_relaxed), std::memory_order_relaxed);
             max.store(o.max.load(std::memory_order_relaxed), std::memory_order_relaxed);
             sum.store(o.sum.load(std::memory_order_relaxed), std::memory_order_relaxed);
@@ -64,33 +76,54 @@ namespace engine::time {
             sampleCount.store(o.sampleCount.load(std::memory_order_relaxed), std::memory_order_relaxed);
             firstSampleTime.store(o.firstSampleTime.load(std::memory_order_relaxed), std::memory_order_relaxed);
             lastSampleTime.store(o.lastSampleTime.load(std::memory_order_relaxed), std::memory_order_relaxed);
+
             return *this;
         }
 
-        // Move — implementamos como copia de snapshot (seguro y sencillo)
-        BasicTimeStats(BasicTimeStats&& o) noexcept { *this = o; }
-        // BasicTimeStats& operator=(BasicTimeStats&& o) noexcept { return operator=(o); }
+        /**
+         * @brief Move constructor - creates snapshot (atomics cannot be moved)
+         * @details Atomics require load/store operations, so this effectively
+         *          performs a copy. Source object remains valid and unchanged.
+         */
+        BasicTimeStats(BasicTimeStats&& o) noexcept :
+            BasicTimeStats(o) {}
+
+        /**
+         * @brief Move assignment - delegate to copy
+         */
+        BasicTimeStats& operator=(BasicTimeStats&& o) noexcept {
+            operator=(o);
+            return *this;
+        }
+
+        // =========================================================================
+        // Methods
+        // =========================================================================
 
         /**
          * @brief Update statistics with new sample
          * @param value New duration value
          * @param timestamp Sample timestamp
          */
-        void update(Duration value, const TimeStamp timestamp = Clock::now()) noexcept {
+        void update(const Duration value, const TimeStamp timestamp = Clock::now()) noexcept {
             // Update min/max using compare-exchange
             Duration currentMin = min.load(std::memory_order_relaxed);
             while (value < currentMin &&
-                !min.compare_exchange_weak(currentMin, value,
-                                           std::memory_order_release,
-                                           std::memory_order_relaxed)) {
-            }
+                !min.compare_exchange_weak(
+                        currentMin,
+                        value,
+                        std::memory_order_release,
+                        std::memory_order_relaxed
+                        )) {}
 
             Duration currentMax = max.load(std::memory_order_relaxed);
             while (value > currentMax &&
-                !max.compare_exchange_weak(currentMax, value,
-                                           std::memory_order_release,
-                                           std::memory_order_relaxed)) {
-            }
+                !max.compare_exchange_weak(
+                        currentMax,
+                        value,
+                        std::memory_order_release,
+                        std::memory_order_relaxed
+                        )) {}
 
             // Accumulate sum and count
             // sum.fetch_add(value, std::memory_order_relaxed);
@@ -100,11 +133,13 @@ namespace engine::time {
             Duration newSum;
             do {
                 newSum = currentSum + value;
-            }
-            while (!sum.compare_exchange_weak(currentSum, newSum,
-                                              //< Intenta actualizar el valor de sum (temas de thread safe)
-                                              std::memory_order_release,
-                                              std::memory_order_relaxed));
+            } while (!sum.compare_exchange_weak(
+                    currentSum,
+                    newSum,
+                    //< Intenta actualizar el valor de sum (temas de thread safe)
+                    std::memory_order_release,
+                    std::memory_order_relaxed
+                    ));
 
             // Update timestamps
             if (const auto count = sampleCount.fetch_add(1, std::memory_order_relaxed); count == 0) {
@@ -121,7 +156,8 @@ namespace engine::time {
          */
         [[nodiscard]] Duration getAverage() const noexcept {
             const auto count = sampleCount.load(std::memory_order_acquire);
-            if (count == 0) return Duration::zero();
+            if (count == 0)
+                return Duration::zero();
 
             const auto total = sum.load(std::memory_order_acquire);
             return Duration(total.count() / count);
@@ -179,14 +215,139 @@ namespace engine::time {
         std::atomic<std::uint32_t> tearingEvents{0}; ///< Screen tears detected
         std::atomic<bool> vsyncEnabled{false}; ///< VSync state
 
+        // =========================================================================
+        // Constructors and Assignment Operators
+        // =========================================================================
+
+        FrameStats() = default;
+        /**
+             * @brief Copy constructor - manual transfer of all atomic values
+             * @details Required because nested BasicTimeStats contains atomics.
+             *          Creates snapshot of all metrics using relaxed memory ordering.
+             */
+        FrameStats(const FrameStats& other) noexcept
+        // Copy BasicTimeStats (these have copy constructors)
+            :
+            frameDuration(other.frameDuration)
+            , cpuTime(other.cpuTime)
+            , gpuTime(other.gpuTime)
+            , presentTime(other.presentTime)
+            // Copy atomics directly
+            , instantFPS(other.instantFPS.load(std::memory_order_relaxed))
+            , averageFPS(other.averageFPS.load(std::memory_order_relaxed))
+            , percentile95FPS(other.percentile95FPS.load(std::memory_order_relaxed))
+            , percentile99FPS(other.percentile99FPS.load(std::memory_order_relaxed))
+            , frameTimeVariance(other.frameTimeVariance.load(std::memory_order_relaxed))
+            , frameTimeStdDev(other.frameTimeStdDev.load(std::memory_order_relaxed))
+            , frameTimeCV(other.frameTimeCV.load(std::memory_order_relaxed))
+            , droppedFrames(other.droppedFrames.load(std::memory_order_relaxed))
+            , consecutiveDrops(other.consecutiveDrops.load(std::memory_order_relaxed))
+            , maxConsecutiveDrops(other.maxConsecutiveDrops.load(std::memory_order_relaxed))
+            , dropRate(other.dropRate.load(std::memory_order_relaxed))
+            , vsyncMisses(other.vsyncMisses.load(std::memory_order_relaxed))
+            , tearingEvents(other.tearingEvents.load(std::memory_order_relaxed))
+            , vsyncEnabled(other.vsyncEnabled.load(std::memory_order_relaxed)) {}
+
+        /**
+         * @brief Copy assignment operator
+         */
+        FrameStats& operator=(const FrameStats& other) noexcept {
+            if (this != &other) {
+                // Copy BasicTimeStats (have operator= defined)
+                frameDuration = other.frameDuration;
+                cpuTime = other.cpuTime;
+                gpuTime = other.gpuTime;
+                presentTime = other.presentTime;
+
+                // Copy atomics
+                instantFPS.store(
+                        other.instantFPS.load(std::memory_order_relaxed),
+                        std::memory_order_relaxed
+                        );
+                averageFPS.store(
+                        other.averageFPS.load(std::memory_order_relaxed),
+                        std::memory_order_relaxed
+                        );
+                percentile95FPS.store(
+                        other.percentile95FPS.load(std::memory_order_relaxed),
+                        std::memory_order_relaxed
+                        );
+                percentile99FPS.store(
+                        other.percentile99FPS.load(std::memory_order_relaxed),
+                        std::memory_order_relaxed
+                        );
+                frameTimeVariance.store(
+                        other.frameTimeVariance.load(std::memory_order_relaxed),
+                        std::memory_order_relaxed
+                        );
+                frameTimeStdDev.store(
+                        other.frameTimeStdDev.load(std::memory_order_relaxed),
+                        std::memory_order_relaxed
+                        );
+                frameTimeCV.store(
+                        other.frameTimeCV.load(std::memory_order_relaxed),
+                        std::memory_order_relaxed
+                        );
+                droppedFrames.store(
+                        other.droppedFrames.load(std::memory_order_relaxed),
+                        std::memory_order_relaxed
+                        );
+                consecutiveDrops.store(
+                        other.consecutiveDrops.load(std::memory_order_relaxed),
+                        std::memory_order_relaxed
+                        );
+                maxConsecutiveDrops.store(
+                        other.maxConsecutiveDrops.load(std::memory_order_relaxed),
+                        std::memory_order_relaxed
+                        );
+                dropRate.store(
+                        other.dropRate.load(std::memory_order_relaxed),
+                        std::memory_order_relaxed
+                        );
+                vsyncMisses.store(
+                        other.vsyncMisses.load(std::memory_order_relaxed),
+                        std::memory_order_relaxed
+                        );
+                tearingEvents.store(
+                        other.tearingEvents.load(std::memory_order_relaxed),
+                        std::memory_order_relaxed
+                        );
+                vsyncEnabled.store(
+                        other.vsyncEnabled.load(std::memory_order_relaxed),
+                        std::memory_order_relaxed
+                        );
+            }
+            return *this;
+        }
+
+        /**
+         * @brief Move constructor - delegate to copy (atomics can't truly move)
+         */
+        FrameStats(FrameStats&& other) noexcept :
+            FrameStats(other) {}
+
+        /**
+         * @brief Move assignment - delegate to copy
+         */
+        FrameStats& operator=(FrameStats&& other) noexcept {
+            return *this = other;
+        }
+
+        // =========================================================================
+        // Methods (TUS MÉTODOS EXISTENTES)
+        // =========================================================================
+
         /**
          * @brief Update frame statistics
          * @param frameDur Total frame duration
          * @param cpuDur CPU processing duration
          * @param gpuDur GPU rendering duration
          */
-        void updateFrame(const Duration frameDur, const Duration cpuDur = Duration::zero(),
-                         const Duration gpuDur = Duration::zero()) noexcept {
+        void updateFrame(
+                const Duration frameDur,
+                const Duration cpuDur = Duration::zero(),
+                const Duration gpuDur = Duration::zero()
+                ) noexcept {
             const auto now = Clock::now();
 
             // Update basic stats
@@ -223,10 +384,12 @@ namespace engine::time {
             // Update max consecutive drops
             auto maxDrops = maxConsecutiveDrops.load(std::memory_order_relaxed);
             while (drops > maxDrops &&
-                !maxConsecutiveDrops.compare_exchange_weak(maxDrops, drops,
-                                                           std::memory_order_release,
-                                                           std::memory_order_relaxed)) {
-            }
+                !maxConsecutiveDrops.compare_exchange_weak(
+                        maxDrops,
+                        drops,
+                        std::memory_order_release,
+                        std::memory_order_relaxed
+                        )) {}
         }
 
         /**
@@ -237,10 +400,10 @@ namespace engine::time {
         }
 
         /**
- * @brief Reset all frame statistics to initial state
- * @details Resets all atomic counters and nested BasicTimeStats.
- *          Thread-safe operation that can be called from any thread.
- */
+         * @brief Reset all frame statistics to initial state
+         * @details Resets all atomic counters and nested BasicTimeStats.
+         *          Thread-safe operation that can be called from any thread.
+         */
         void reset() noexcept {
             // Reset basic frame metrics
             frameDuration.reset();
@@ -306,26 +469,80 @@ namespace engine::time {
         std::atomic<std::size_t> memoryUsed{0}; ///< Current memory usage
         std::atomic<std::size_t> peakMemoryUsed{0}; ///< Peak memory usage
 
+        // =========================================================================
+        // Constructors and Assignment Operators
+        // =========================================================================
+
         TimelineStats() = default;
 
-        // Constructor de copia
-        TimelineStats(const TimelineStats& other) noexcept
-            : id(other.id)
+        /**
+         * @brief Copy constructor
+         */
+        TimelineStats(const TimelineStats& other) noexcept :
+            id(other.id)
             , type(other.type)
             , updateDuration(other.updateDuration)
-            , updateCount(other.updateCount.load())
-            , skippedUpdates(other.skippedUpdates.load())
-            , activeTimers(other.activeTimers.load())
-            , totalTimersCreated(other.totalTimersCreated.load())
-            , timersFired(other.timersFired.load())
+            , updateCount(other.updateCount.load(std::memory_order_relaxed))
+            , skippedUpdates(other.skippedUpdates.load(std::memory_order_relaxed))
+            , activeTimers(other.activeTimers.load(std::memory_order_relaxed))
+            , totalTimersCreated(other.totalTimersCreated.load(std::memory_order_relaxed))
+            , timersFired(other.timersFired.load(std::memory_order_relaxed))
             , timerProcessingTime(other.timerProcessingTime)
-            , isPaused(other.isPaused.load())
-            , currentScale(other.currentScale.load())
-            , totalPausedTime(other.totalPausedTime.load())
-            , totalScaledTime(other.totalScaledTime.load())
-            , memoryUsed(other.memoryUsed.load())
-            , peakMemoryUsed(other.peakMemoryUsed.load())
-        {}
+            , isPaused(other.isPaused.load(std::memory_order_relaxed))
+            , currentScale(other.currentScale.load(std::memory_order_relaxed))
+            , totalPausedTime(other.totalPausedTime.load(std::memory_order_relaxed))
+            , totalScaledTime(other.totalScaledTime.load(std::memory_order_relaxed))
+            , memoryUsed(other.memoryUsed.load(std::memory_order_relaxed))
+            , peakMemoryUsed(other.peakMemoryUsed.load(std::memory_order_relaxed)) {}
+
+        /**
+         * @brief Copy assignment operator
+         */
+        TimelineStats& operator=(const TimelineStats& other) noexcept {
+            if (this == &other)
+                return *this;
+
+            // Copy non-atomics
+            id = other.id;
+            type = other.type;
+            updateDuration = other.updateDuration;
+            timerProcessingTime = other.timerProcessingTime;
+
+            // Copy atomics one by one
+            updateCount.store(other.updateCount.load(std::memory_order_relaxed), std::memory_order_relaxed);
+            skippedUpdates.store(other.skippedUpdates.load(std::memory_order_relaxed), std::memory_order_relaxed);
+            activeTimers.store(other.activeTimers.load(std::memory_order_relaxed), std::memory_order_relaxed);
+            totalTimersCreated.store(
+                    other.totalTimersCreated.load(std::memory_order_relaxed),
+                    std::memory_order_relaxed
+                    );
+            timersFired.store(other.timersFired.load(std::memory_order_relaxed), std::memory_order_relaxed);
+            isPaused.store(other.isPaused.load(std::memory_order_relaxed), std::memory_order_relaxed);
+            currentScale.store(other.currentScale.load(std::memory_order_relaxed), std::memory_order_relaxed);
+            totalPausedTime.store(other.totalPausedTime.load(std::memory_order_relaxed), std::memory_order_relaxed);
+            totalScaledTime.store(other.totalScaledTime.load(std::memory_order_relaxed), std::memory_order_relaxed);
+            memoryUsed.store(other.memoryUsed.load(std::memory_order_relaxed), std::memory_order_relaxed);
+            peakMemoryUsed.store(other.peakMemoryUsed.load(std::memory_order_relaxed), std::memory_order_relaxed);
+
+            return *this;
+        }
+
+        /**
+         * @brief Move constructor - delegate to copy
+         */
+        TimelineStats(TimelineStats&& other) noexcept :
+            TimelineStats(other) {}
+
+        /**
+         * @brief Move assignment - delegate to copy
+         */
+        TimelineStats& operator=(TimelineStats&& other) noexcept {
+            return *this = other;
+        }
+
+        // =========================================================================
+        // Methods
+        // =========================================================================
 
         /**
          * @brief Update timeline statistics
@@ -339,31 +556,6 @@ namespace engine::time {
             if (timersProcessed > 0) {
                 timersFired.fetch_add(timersProcessed, std::memory_order_relaxed);
             }
-        }
-
-        TimelineStats& operator=(const TimelineStats& other) noexcept {
-            if (this == &other) return *this;
-
-            // Copiar valores no atómicos
-            id = other.id;
-            type = other.type;
-            updateDuration = other.updateDuration;
-            timerProcessingTime = other.timerProcessingTime;
-
-            // Copiar valores atómicos uno por uno
-            updateCount.store(other.updateCount.load());
-            skippedUpdates.store(other.skippedUpdates.load());
-            activeTimers.store(other.activeTimers.load());
-            totalTimersCreated.store(other.totalTimersCreated.load());
-            timersFired.store(other.timersFired.load());
-            isPaused.store(other.isPaused.load());
-            currentScale.store(other.currentScale.load());
-            totalPausedTime.store(other.totalPausedTime.load());
-            totalScaledTime.store(other.totalScaledTime.load());
-            memoryUsed.store(other.memoryUsed.load());
-            peakMemoryUsed.store(other.peakMemoryUsed.load());
-
-            return *this;
         }
     };
 
@@ -405,8 +597,7 @@ namespace engine::time {
 
             if (size_ < Capacity) {
                 ++size_;
-            }
-            else {
+            } else {
                 readIndex_ = (readIndex_ + 1) % Capacity;
             }
         }
@@ -454,7 +645,8 @@ namespace engine::time {
         [[nodiscard]] Duration getPercentile(const float percentile) const noexcept {
             std::lock_guard lock(mutex_);
 
-            if (size_ == 0) return Duration::zero();
+            if (size_ == 0)
+                return Duration::zero();
 
             // Copy durations for sorting
             std::vector<Duration> durations;
@@ -468,7 +660,7 @@ namespace engine::time {
             std::ranges::sort(durations);
 
             const auto percentileIndex =
-                static_cast<std::size_t>(percentile * static_cast<float>(durations.size()) / 100.0f);
+                    static_cast<std::size_t>(percentile * static_cast<float>(durations.size()) / 100.0f);
 
             return durations[std::min(percentileIndex, durations.size() - 1)];
         }
@@ -568,10 +760,12 @@ namespace engine::time {
         void updatePeakMemory(const std::size_t current) noexcept {
             std::size_t peak = peakMemoryUsage.load(std::memory_order_relaxed);
             while (current > peak &&
-                !peakMemoryUsage.compare_exchange_weak(peak, current,
-                                                       std::memory_order_release,
-                                                       std::memory_order_relaxed)) {
-            }
+                !peakMemoryUsage.compare_exchange_weak(
+                        peak,
+                        current,
+                        std::memory_order_release,
+                        std::memory_order_relaxed
+                        )) {}
         }
     };
 
@@ -633,10 +827,11 @@ namespace engine::time {
             avgCurrent = Duration(avgCurrent.count() / runs.size());
             avgBaseline = Duration(avgBaseline.count() / baseline.runs.size());
 
-            if (avgBaseline.count() == 0) return 0.0f;
+            if (avgBaseline.count() == 0)
+                return 0.0f;
 
             const float delta = static_cast<float>(avgCurrent.count() - avgBaseline.count()) /
-                static_cast<float>(avgBaseline.count());
+                    static_cast<float>(avgBaseline.count());
 
             return delta * 100.0f; // Percentage change
         }
