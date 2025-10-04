@@ -317,6 +317,7 @@ namespace engine::time {
                         std::memory_order_relaxed
                         );
             }
+
             return *this;
         }
 
@@ -334,7 +335,7 @@ namespace engine::time {
         }
 
         // =========================================================================
-        // Methods (TUS MÉTODOS EXISTENTES)
+        // Methods
         // =========================================================================
 
         /**

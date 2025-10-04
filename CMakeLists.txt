@@ -351,6 +351,8 @@ add_executable(game_engine src/main.cpp
         src/time/profiling/PerformanceTracker.cpp
         src/time/profiling/PerformanceTracker.h
         src/time/utils/TimeConverter.cpp
+        src/time/profiling/SystemProfiler.cpp
+        src/time/profiling/SystemProfiler.h
 )
 
 target_link_libraries(${PROJECT_NAME}
