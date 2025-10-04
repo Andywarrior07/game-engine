@@ -353,6 +353,8 @@ add_executable(game_engine src/main.cpp
         src/time/utils/TimeConverter.cpp
         src/time/profiling/SystemProfiler.cpp
         src/time/profiling/SystemProfiler.h
+        src/time/profiling/FrameProfiler.cpp
+        src/time/profiling/FrameProfiler.h
 )
 
 target_link_libraries(${PROJECT_NAME}
