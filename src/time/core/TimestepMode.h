@@ -394,7 +394,7 @@ namespace engine::time {
                                                 .substeps = 2,
                                                 .updateSpeedMultiplier = 1.0f
                                         },
-                                        .renderConfig = {
+                                        .variableConfig = {
                                                 .minDeltaTime = constants::MIN_DELTA_TIME,
                                                 .maxDeltaTime = constants::MAX_DELTA_TIME,
                                                 .smoothing = SmoothingMethod::NONE
