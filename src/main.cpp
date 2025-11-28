@@ -2,11 +2,11 @@
 
 #include <SDL.h>
 #include <SDL_image.h>
+#include <chrono>
+#include <cmath>
 #include <iostream>
 #include <memory>
-#include <chrono>
 #include <thread>
-#include <cmath>
 
 // CHANGE: New input system includes
 #include "./input/InputSystem.h"
@@ -34,1016 +34,1052 @@ using namespace engine::camera;
  */
 class GameDemo {
 public:
-    GameDemo() = default;
-    ~GameDemo() = default;
+  GameDemo() = default;
+  ~GameDemo() = default;
 
-    static constexpr int WORLD_WIDTH = 4096;
-    static constexpr int WORLD_HEIGHT = 3072;
-    static constexpr int WINDOW_WIDTH = 1024;
-    static constexpr int WINDOW_HEIGHT = 768;
-    static constexpr float PLAYER_SPEED = 300.0f;
-    static constexpr float CAMERA_SPEED = 400.0f;
+  static constexpr int WORLD_WIDTH = 4096;
+  static constexpr int WORLD_HEIGHT = 3072;
+  static constexpr int WINDOW_WIDTH = 1024;
+  static constexpr int WINDOW_HEIGHT = 768;
+  static constexpr float PLAYER_SPEED = 300.0f;
+  static constexpr float CAMERA_SPEED = 400.0f;
 
-    // CHANGE: Define action IDs for the new input system
-    enum Actions : ActionID {
-        ACTION_MOVE_FORWARD = 1,
-        ACTION_MOVE_BACKWARD = 2,
-        ACTION_MOVE_LEFT = 3,
-        ACTION_MOVE_RIGHT = 4,
-        ACTION_EXIT = 5,
-        ACTION_SWITCH_CAMERA = 6,
-        ACTION_ZOOM_IN = 7,
-        ACTION_ZOOM_OUT = 8,
-        ACTION_CAMERA_SHAKE = 9,
-        ACTION_CAMERA_UP = 10,
-        ACTION_CAMERA_DOWN = 11,
-        ACTION_CAMERA_LEFT = 12,
-        ACTION_CAMERA_RIGHT = 13,
-        ACTION_TOGGLE_GRID = 14,
-        ACTION_TOGGLE_DEBUG = 15,
-        // CHANGE: New composite actions for 2D movement
-        ACTION_PLAYER_MOVE = 20, // Composite 2D for player movement
-        ACTION_CAMERA_MOVE = 21, // Composite 2D for camera movement
-    };
+  // CHANGE: Define action IDs for the new input system
+  enum Actions : ActionID {
+    ACTION_MOVE_FORWARD = 1,
+    ACTION_MOVE_BACKWARD = 2,
+    ACTION_MOVE_LEFT = 3,
+    ACTION_MOVE_RIGHT = 4,
+    ACTION_EXIT = 5,
+    ACTION_SWITCH_CAMERA = 6,
+    ACTION_ZOOM_IN = 7,
+    ACTION_ZOOM_OUT = 8,
+    ACTION_CAMERA_SHAKE = 9,
+    ACTION_CAMERA_UP = 10,
+    ACTION_CAMERA_DOWN = 11,
+    ACTION_CAMERA_LEFT = 12,
+    ACTION_CAMERA_RIGHT = 13,
+    ACTION_TOGGLE_GRID = 14,
+    ACTION_TOGGLE_DEBUG = 15,
+    // CHANGE: New composite actions for 2D movement
+    ACTION_PLAYER_MOVE = 20, // Composite 2D for player movement
+    ACTION_CAMERA_MOVE = 21, // Composite 2D for camera movement
+  };
 
-    /**
-     * @brief Initialize SDL, managers and resources
-     * CHANGE: Integrated new InputSystem initialization
-     */
-    bool initialize() {
-        // Step 0 - Initialize MemoryManager FIRST
-        std::cout << "=== Initializing Memory Manager ===" << std::endl;
+  /**
+   * @brief Initialize SDL, managers and resources
+   * CHANGE: Integrated new InputSystem initialization
+   */
+  bool initialize() {
+    // Step 0 - Initialize MemoryManager FIRST
+    std::cout << "=== Initializing Memory Manager ===" << std::endl;
 
-        MemoryManagerAutoConfig memConfig;
-        memConfig.autoDetectLimits = true;
-        memConfig.memoryUsagePercent = 0.10f;
-        memConfig.heapSizePercent = 0.25f;
+    MemoryManagerAutoConfig memConfig;
+    memConfig.autoDetectLimits = true;
+    memConfig.memoryUsagePercent = 0.10f;
+    memConfig.heapSizePercent = 0.25f;
 
 #ifdef _DEBUG
-        const char* quickShutdown = std::getenv("GAME_QUICK_SHUTDOWN");
-        if (quickShutdown && std::string(quickShutdown) == "1") {
-            std::cout << "Quick shutdown mode enabled - disabling memory checks" << std::endl;
-            memConfig.enableLeakDetection = false;
-            memConfig.enableBoundsChecking = false;
-        }
-        else {
-            memConfig.enableLeakDetection = true;
-            memConfig.enableBoundsChecking = true;
-            std::cout << "Debug mode: Memory checks enabled" << std::endl;
-        }
+    const char *quickShutdown = std::getenv("GAME_QUICK_SHUTDOWN");
+    if (quickShutdown && std::string(quickShutdown) == "1") {
+      std::cout << "Quick shutdown mode enabled - disabling memory checks"
+                << std::endl;
+      memConfig.enableLeakDetection = false;
+      memConfig.enableBoundsChecking = false;
+    } else {
+      memConfig.enableLeakDetection = true;
+      memConfig.enableBoundsChecking = true;
+      std::cout << "Debug mode: Memory checks enabled" << std::endl;
+    }
 #else
-        memConfig.enableLeakDetection = false;
-        memConfig.enableBoundsChecking = false;
-        std::cout << "Release mode: Memory checks disabled" << std::endl;
+    memConfig.enableLeakDetection = false;
+    memConfig.enableBoundsChecking = false;
+    std::cout << "Release mode: Memory checks disabled" << std::endl;
 #endif
 
-        memoryManager_ = std::make_unique<MemoryManager>();
-        if (!memoryManager_->initialize(memConfig)) {
-            std::cerr << "Failed to initialize MemoryManager" << std::endl;
-            return false;
-        }
-        std::cout << "✓ MemoryManager initialized successfully" << std::endl;
+    memoryManager_ = std::make_unique<MemoryManager>();
+    if (!memoryManager_->initialize(memConfig)) {
+      std::cerr << "Failed to initialize MemoryManager" << std::endl;
+      return false;
+    }
+    std::cout << "✓ MemoryManager initialized successfully" << std::endl;
 
-        // 1. INITIALIZE SDL
-        if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER) < 0) {
-            std::cerr << "Failed to initialize SDL: " << SDL_GetError() << std::endl;
-            return false;
-        }
-
-        // 2. INITIALIZE SDL_IMAGE
-        int imgFlags = IMG_INIT_PNG | IMG_INIT_JPG;
-        if (!(IMG_Init(imgFlags) & imgFlags)) {
-            std::cerr << "Failed to initialize SDL_image: " << IMG_GetError() << std::endl;
-            SDL_Quit();
-            return false;
-        }
-
-        // 3. CREATE WINDOW
-        window_ = SDL_CreateWindow("Game Demo - New Input System",
-                                   SDL_WINDOWPOS_CENTERED,
-                                   SDL_WINDOWPOS_CENTERED,
-                                   WINDOW_WIDTH, WINDOW_HEIGHT,
-                                   SDL_WINDOW_SHOWN);
-        if (!window_) {
-            std::cerr << "Failed to create window: " << SDL_GetError() << std::endl;
-            cleanup();
-            return false;
-        }
-
-        // 4. CREATE RENDERER
-        renderer_ = SDL_CreateRenderer(window_, -1,
-                                       SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-        if (!renderer_) {
-            std::cerr << "Failed to create renderer: " << SDL_GetError() << std::endl;
-            cleanup();
-            return false;
-        }
-
-        // CHANGE: Step 5 - Initialize NEW InputSystem
-        std::cout << "\n=== Initializing New Input System ===" << std::endl;
-
-        inputSystem_ = std::make_unique<InputSystem>(memoryManager_.get());
-
-        InputSystemConfig inputConfig;
-        inputConfig.enableKeyboard = true;
-        inputConfig.enableMouse = true;
-        inputConfig.enableGamepad = true;
-        inputConfig.enableDebugLogging = false;
-        inputConfig.mouseSensitivity = 1.0f;
-
-        if (!inputSystem_->initialize(inputConfig)) {
-            std::cerr << "Failed to initialize InputSystem" << std::endl;
-            cleanup();
-            return false;
-        }
-
-        // CHANGE: Setup input actions and bindings
-        setupInputActions();
-
-        std::cout << "✓ InputSystem initialized successfully" << std::endl;
-
-        // 6. Initialize ResourceManager
-        std::cout << "\n=== Initializing Resource Manager ===" << std::endl;
-        resourceManager_ = std::make_unique<ResourceManager>(*memoryManager_);
-
-        ResourceManagerConfig resourceConfig;
-        resourceConfig.maxMemory = 256 * 1024 * 1024;
-        resourceConfig.enableHotReload = false;
-        resourceConfig.loaderThreadCount = 2;
-
-        if (!resourceManager_->initialize(resourceConfig)) {
-            std::cerr << "Failed to initialize ResourceManager" << std::endl;
-            cleanup();
-            return false;
-        }
-        resourceManager_->registerResourceType<TextureResource>();
-        std::cout << "✓ ResourceManager initialized successfully" << std::endl;
-
-        // 7. Initialize CameraManager
-        CameraManagerConfig cameraConfig;
-        cameraConfig.enableCameraLogging = true;
-        cameraConfig.enableTransitions = true;
-        cameraConfig.enableShake = true;
-        cameraConfig.maxCameras = 4;
-        cameraConfig.defaultSmoothingSpeed = 8.0f;
-
-        cameraManager_ = std::make_unique<CameraManager>(cameraConfig);
-        if (!cameraManager_->initialize()) {
-            std::cerr << "Failed to initialize CameraManager" << std::endl;
-            cleanup();
-            return false;
-        }
-
-        // 8. Configure viewport for camera
-        Viewport viewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
-        cameraManager_->setViewport(viewport);
-
-        // 9. Setup world and camera
-        if (!setupWorldAndCamera()) {
-            std::cerr << "Failed to setup world and camera" << std::endl;
-            cleanup();
-            return false;
-        }
-
-        // 10. Load resources
-        if (!loadGameResources()) {
-            std::cerr << "Failed to load game resources" << std::endl;
-            cleanup();
-            return false;
-        }
-
-        // Initialize player position
-        playerPosition_ = Vec2(WORLD_WIDTH / 2.0f, WORLD_HEIGHT / 2.0f);
-
-        // Set camera to follow player
-        Camera2D* mainCamera = cameraManager_->getCamera2D(mainCameraId_);
-        if (mainCamera) {
-            mainCamera->setTarget(playerPosition_);
-            std::cout << "✓ Camera set to follow player" << std::endl;
-        }
-
-        std::cout << "\nGame initialized successfully!" << std::endl;
-        printControls();
-        return true;
+    // 1. INITIALIZE SDL
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER) < 0) {
+      std::cerr << "Failed to initialize SDL: " << SDL_GetError() << std::endl;
+      return false;
     }
 
-    /**
-     * CHANGE: New method to setup input actions using new InputSystem
-     */
-    void setupInputActions() {
-        // Register movement actions
-        inputSystem_->registerAction(ACTION_MOVE_FORWARD, "MoveForward", ActionType::BUTTON);
-        inputSystem_->registerAction(ACTION_MOVE_BACKWARD, "MoveBackward", ActionType::BUTTON);
-        inputSystem_->registerAction(ACTION_MOVE_LEFT, "MoveLeft", ActionType::BUTTON);
-        inputSystem_->registerAction(ACTION_MOVE_RIGHT, "MoveRight", ActionType::BUTTON);
-        inputSystem_->registerAction(ACTION_EXIT, "Exit", ActionType::BUTTON);
-
-        // Camera actions
-        inputSystem_->registerAction(ACTION_SWITCH_CAMERA, "SwitchCamera", ActionType::BUTTON);
-        inputSystem_->registerAction(ACTION_ZOOM_IN, "ZoomIn", ActionType::BUTTON);
-        inputSystem_->registerAction(ACTION_ZOOM_OUT, "ZoomOut", ActionType::BUTTON);
-        inputSystem_->registerAction(ACTION_CAMERA_SHAKE, "CameraShake", ActionType::BUTTON);
-
-        // Camera movement actions
-        inputSystem_->registerAction(ACTION_CAMERA_UP, "CameraUp", ActionType::BUTTON);
-        inputSystem_->registerAction(ACTION_CAMERA_DOWN, "CameraDown", ActionType::BUTTON);
-        inputSystem_->registerAction(ACTION_CAMERA_LEFT, "CameraLeft", ActionType::BUTTON);
-        inputSystem_->registerAction(ACTION_CAMERA_RIGHT, "CameraRight", ActionType::BUTTON);
-
-        // Debug actions
-        inputSystem_->registerAction(ACTION_TOGGLE_GRID, "ToggleGrid", ActionType::BUTTON);
-        inputSystem_->registerAction(ACTION_TOGGLE_DEBUG, "ToggleDebug", ActionType::BUTTON);
-
-        // CHANGE: Composite 2D actions for analog-like movement
-        inputSystem_->registerAction(ACTION_PLAYER_MOVE, "PlayerMove", ActionType::AXIS_2D);
-        inputSystem_->registerAction(ACTION_CAMERA_MOVE, "CameraMove", ActionType::AXIS_2D);
-
-        // Bind keys to actions - using default context
-        inputSystem_->bindKey(ACTION_MOVE_FORWARD, KeyCode::W, "Default");
-        inputSystem_->bindKey(ACTION_MOVE_BACKWARD, KeyCode::S, "Default");
-        inputSystem_->bindKey(ACTION_MOVE_LEFT, KeyCode::A, "Default");
-        inputSystem_->bindKey(ACTION_MOVE_RIGHT, KeyCode::D, "Default");
-        inputSystem_->bindKey(ACTION_EXIT, KeyCode::ESCAPE, "Default");
-
-        // Camera control bindings
-        inputSystem_->bindKey(ACTION_SWITCH_CAMERA, KeyCode::C, "Default");
-        inputSystem_->bindKey(ACTION_ZOOM_IN, KeyCode::EQUAL, "Default");
-        inputSystem_->bindKey(ACTION_ZOOM_OUT, KeyCode::MINUS, "Default");
-        inputSystem_->bindKey(ACTION_CAMERA_SHAKE, KeyCode::SPACE, "Default");
-
-        // Manual camera movement with arrow keys
-        inputSystem_->bindKey(ACTION_CAMERA_UP, KeyCode::UP, "Default");
-        inputSystem_->bindKey(ACTION_CAMERA_DOWN, KeyCode::DOWN, "Default");
-        inputSystem_->bindKey(ACTION_CAMERA_LEFT, KeyCode::LEFT, "Default");
-        inputSystem_->bindKey(ACTION_CAMERA_RIGHT, KeyCode::RIGHT, "Default");
-
-        // Debug bindings
-        inputSystem_->bindKey(ACTION_TOGGLE_GRID, KeyCode::G, "Default");
-        inputSystem_->bindKey(ACTION_TOGGLE_DEBUG, KeyCode::X, "Default");
-
-        // Gamepad bindings if available
-        inputSystem_->bindGamepadButton(ACTION_MOVE_FORWARD, GamepadButton::DPAD_UP, "Default");
-        inputSystem_->bindGamepadButton(ACTION_MOVE_BACKWARD, GamepadButton::DPAD_DOWN, "Default");
-        inputSystem_->bindGamepadButton(ACTION_MOVE_LEFT, GamepadButton::DPAD_LEFT, "Default");
-        inputSystem_->bindGamepadButton(ACTION_MOVE_RIGHT, GamepadButton::DPAD_RIGHT, "Default");
-        inputSystem_->bindGamepadButton(ACTION_SWITCH_CAMERA, GamepadButton::Y, "Default");
-        inputSystem_->bindGamepadButton(ACTION_CAMERA_SHAKE, GamepadButton::X, "Default");
-
-        // CHANGE: Register gamepad axes for analog movement
-        inputSystem_->bindGamepadAxis(ACTION_PLAYER_MOVE, GamepadAxis::LEFT_STICK_X, "Default");
-        inputSystem_->bindGamepadAxis(ACTION_CAMERA_MOVE, GamepadAxis::RIGHT_STICK_X, "Default");
-
-        std::cout << "Input actions and bindings configured successfully!" << std::endl;
+    // 2. INITIALIZE SDL_IMAGE
+    int imgFlags = IMG_INIT_PNG | IMG_INIT_JPG;
+    if (!(IMG_Init(imgFlags) & imgFlags)) {
+      std::cerr << "Failed to initialize SDL_image: " << IMG_GetError()
+                << std::endl;
+      SDL_Quit();
+      return false;
     }
 
-    /**
-     * @brief Setup world and camera system
-     */
-    bool setupWorldAndCamera() {
-        mainCameraId_ = cameraManager_->createCamera2D("MainCamera");
-        if (mainCameraId_ == INVALID_CAMERA_ID) {
-            std::cerr << "Failed to create main camera" << std::endl;
-            return false;
-        }
-
-        Camera2D* mainCamera = cameraManager_->getCamera2D(mainCameraId_);
-        if (!mainCamera) {
-            std::cerr << "Failed to get main camera" << std::endl;
-            return false;
-        }
-
-        mainCamera->setMode(CameraMode::TOP_DOWN);
-        mainCamera->setPosition(Vec2(WORLD_WIDTH / 2, WORLD_HEIGHT / 2));
-        mainCamera->setZoom(1.0f);
-        mainCamera->setFollowSpeed(6.0f);
-        mainCamera->setZoomLimits(0.5f, 2.0f);
-        mainCamera->setSmoothingSpeed(8.0f);
-
-        CameraBounds worldBounds(
-            Vec3(0.0f, 0.0f, -1.0f),
-            Vec3(WORLD_WIDTH, WORLD_HEIGHT, 1.0f)
-        );
-        worldBounds.setEnabled(true);
-
-        mainCamera->setBounds(worldBounds);
-        mainCamera->setMode(CameraMode::FOLLOW_TARGET);
-
-        std::cout << "✓ Main camera configured with world bounds" << std::endl;
-
-        if (!cameraManager_->setActiveCamera(mainCameraId_)) {
-            std::cerr << "Failed to set active camera" << std::endl;
-            return false;
-        }
-
-        freeCameraId_ = cameraManager_->createCamera2D("FreeCamera");
-        if (freeCameraId_ != INVALID_CAMERA_ID) {
-            Camera2D* freeCamera = cameraManager_->getCamera2D(freeCameraId_);
-            if (freeCamera) {
-                freeCamera->setPosition(Vec2(WORLD_WIDTH / 2, WORLD_HEIGHT / 2));
-                freeCamera->setBounds(worldBounds);
-                freeCamera->setMode(CameraMode::STATIC);
-                std::cout << "✓ Free camera created for manual control" << std::endl;
-            }
-        }
-
-        return true;
+    // 3. CREATE WINDOW
+    window_ = SDL_CreateWindow("Game Demo - New Input System",
+                               SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+                               WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_SHOWN);
+    if (!window_) {
+      std::cerr << "Failed to create window: " << SDL_GetError() << std::endl;
+      cleanup();
+      return false;
     }
 
-    /**
-     * @brief Load game resources
-     */
-    bool loadGameResources() {
-        std::cout << "\n=== Loading Game Resources ===" << std::endl;
-
-        const ResourceID playerTextureId = std::hash<std::string>{}("player_texture");
-
-        playerTextureHandle_ = resourceManager_->loadById<TextureResource>(
-            playerTextureId,
-            std::string("../assets/player.png"),
-            ResourcePriority::HIGH,
-            LoadMode::SYNC
-        );
-
-        auto playerTexture = getTextureResource(playerTextureHandle_);
-        if (!playerTexture) {
-            std::cerr << "Failed to load player sprite sheet" << std::endl;
-            return false;
-        }
-
-        playerTextureHandle_.updateCache(playerTexture);
-
-        std::cout << "✓ Player sprite sheet loaded: " << playerTexture->getWidth()
-            << "x" << playerTexture->getHeight() << " pixels" << std::endl;
-
-        SDL_Surface* surface = playerTexture->getSDLSurface();
-        if (surface) {
-            playerSDLTexture_ = SDL_CreateTextureFromSurface(renderer_, surface);
-            if (!playerSDLTexture_) {
-                std::cerr << "Failed to create SDL texture from surface: " << SDL_GetError() << std::endl;
-                return false;
-            }
-            std::cout << "✓ SDL texture created for rendering" << std::endl;
-        }
-        else {
-            std::cerr << "Failed to get SDL surface from texture resource" << std::endl;
-            return false;
-        }
-
-        currentSpriteFrame_.x = 0;
-        currentSpriteFrame_.y = 0;
-        currentSpriteFrame_.w = 160;
-        currentSpriteFrame_.h = 140;
-
-        return true;
+    // 4. CREATE RENDERER
+    renderer_ = SDL_CreateRenderer(
+        window_, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+    if (!renderer_) {
+      std::cerr << "Failed to create renderer: " << SDL_GetError() << std::endl;
+      cleanup();
+      return false;
     }
 
-    /**
-     * @brief Main game loop
-     * CHANGE: Updated to use new InputSystem
-     */
-    void run() {
-        bool running = true;
+    // CHANGE: Step 5 - Initialize NEW InputSystem
+    std::cout << "\n=== Initializing New Input System ===" << std::endl;
 
-        auto lastStatsTime = std::chrono::steady_clock::now();
-        auto lastFrameTime = std::chrono::steady_clock::now();
-        int frameCount = 0;
+    inputSystem_ = std::make_unique<InputSystem>(memoryManager_.get());
 
-        std::cout << "\n=== Starting Game Loop ===" << std::endl;
+    InputSystemConfig inputConfig;
+    inputConfig.enableKeyboard = true;
+    inputConfig.enableMouse = true;
+    inputConfig.enableGamepad = true;
+    inputConfig.enableDebugLogging = false;
+    inputConfig.mouseSensitivity = 1.0f;
 
-        while (running) {
-            auto currentTime = std::chrono::steady_clock::now();
-            auto deltaTimeMs = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - lastFrameTime);
-            float deltaTime = deltaTimeMs.count() / 1000.0f;
-            lastFrameTime = currentTime;
-
-            deltaTime = std::min(deltaTime, 0.016f);
-
-            // CHANGE: Update input system first
-            inputSystem_->update(deltaTime);
-
-            // CHANGE: Check exit using new input system
-            if (inputSystem_->isActionTriggered(ACTION_EXIT)) {
-                running = false;
-                break;
-            }
-
-            // Process input and update game
-            processCameraInput(deltaTime);
-            updateGameLogic(deltaTime);
-            cameraManager_->update(deltaTime);
-            render();
-
-            frameCount++;
-            if (currentTime - lastStatsTime > std::chrono::seconds(3)) {
-                showStats(frameCount, currentTime - lastStatsTime);
-                frameCount = 0;
-                lastStatsTime = currentTime;
-            }
-
-            auto frameTime = std::chrono::steady_clock::now() - currentTime;
-            auto targetFrameTime = std::chrono::milliseconds(16);
-            if (frameTime < targetFrameTime) {
-                std::this_thread::sleep_for(targetFrameTime - frameTime);
-            }
-        }
-
-        std::cout << "\nGame loop ended" << std::endl;
+    if (!inputSystem_->initialize(inputConfig)) {
+      std::cerr << "Failed to initialize InputSystem" << std::endl;
+      cleanup();
+      return false;
     }
 
-    /**
-     * CHANGE: Updated to use new InputSystem for camera input
-     */
-    void processCameraInput(float deltaTime) {
-        // Switch camera modes
-        if (inputSystem_->isActionTriggered(ACTION_SWITCH_CAMERA)) {
-            toggleCameraMode();
-        }
+    // CHANGE: Setup input actions and bindings
+    setupInputActions();
 
-        // Zoom using new input system
-        if (inputSystem_->isActionTriggered(ACTION_ZOOM_IN)) {
-            cameraManager_->processZoom(1.0f);
-        }
-        if (inputSystem_->isActionTriggered(ACTION_ZOOM_OUT)) {
-            cameraManager_->processZoom(-1.0f);
-        }
+    std::cout << "✓ InputSystem initialized successfully" << std::endl;
 
-        // Camera shake
-        if (inputSystem_->isActionTriggered(ACTION_CAMERA_SHAKE)) {
-            ShakeConfig shakeConfig = ShakeConfig::explosion(3.0f);
-            shakeConfig.duration = 0.5f;
-            const CameraID cameraId = cameraManager_->getActiveCameraId();
-            cameraManager_->startCameraShake(cameraId, shakeConfig);
-        }
+    // 6. Initialize ResourceManager
+    std::cout << "\n=== Initializing Resource Manager ===" << std::endl;
+    resourceManager_ = std::make_unique<ResourceManager>(*memoryManager_);
 
-        // CHANGE: Manual camera control using new input system
-        Camera2D* activeCamera = cameraManager_->getCamera2D(cameraManager_->getActiveCameraId());
-        if (activeCamera && activeCamera->getMode() == CameraMode::STATIC) {
-            // Calculate camera movement from individual button states
-            float cameraHorizontal = 0.0f;
-            float cameraVertical = 0.0f;
+    ResourceManagerConfig resourceConfig;
+    resourceConfig.maxMemory = 256 * 1024 * 1024;
+    resourceConfig.enableHotReload = false;
+    resourceConfig.loaderThreadCount = 2;
 
-            if (inputSystem_->isActionTriggered(ACTION_CAMERA_LEFT)) {
-                cameraHorizontal -= 1.0f;
-            }
-            if (inputSystem_->isActionTriggered(ACTION_CAMERA_RIGHT)) {
-                cameraHorizontal += 1.0f;
-            }
-            if (inputSystem_->isActionTriggered(ACTION_CAMERA_UP)) {
-                cameraVertical -= 1.0f;
-            }
-            if (inputSystem_->isActionTriggered(ACTION_CAMERA_DOWN)) {
-                cameraVertical += 1.0f;
-            }
+    if (!resourceManager_->initialize(resourceConfig)) {
+      std::cerr << "Failed to initialize ResourceManager" << std::endl;
+      cleanup();
+      return false;
+    }
+    resourceManager_->registerResourceType<TextureResource>();
+    std::cout << "✓ ResourceManager initialized successfully" << std::endl;
 
-            // CHANGE: Also check for gamepad analog stick if available
-            Vec2 gamepadCamera = inputSystem_->getActionValue2D(ACTION_CAMERA_MOVE);
-            cameraHorizontal += gamepadCamera.x;
-            cameraVertical += gamepadCamera.y;
+    // 7. Initialize CameraManager
+    CameraManagerConfig cameraConfig;
+    cameraConfig.enableCameraLogging = true;
+    cameraConfig.enableTransitions = true;
+    cameraConfig.enableShake = true;
+    cameraConfig.maxCameras = 4;
+    cameraConfig.defaultSmoothingSpeed = 8.0f;
 
-            if (std::abs(cameraHorizontal) > 0.1f || std::abs(cameraVertical) > 0.1f) {
-                Vec2 currentPos = activeCamera->getPosition2D();
-                Vec2 movement(cameraHorizontal * CAMERA_SPEED * deltaTime,
-                              cameraVertical * CAMERA_SPEED * deltaTime);
-                activeCamera->setPosition(currentPos + movement);
-            }
-        }
-
-        // CHANGE: Toggle debug displays
-        if (inputSystem_->isActionTriggered(ACTION_TOGGLE_GRID)) {
-            showGrid_ = !showGrid_;
-            std::cout << "Grid display: " << (showGrid_ ? "ON" : "OFF") << std::endl;
-        }
-        if (inputSystem_->isActionTriggered(ACTION_TOGGLE_DEBUG)) {
-            showDebugInfo_ = !showDebugInfo_;
-            std::cout << "Debug info: " << (showDebugInfo_ ? "ON" : "OFF") << std::endl;
-        }
+    cameraManager_ = std::make_unique<CameraManager>(cameraConfig);
+    if (!cameraManager_->initialize()) {
+      std::cerr << "Failed to initialize CameraManager" << std::endl;
+      cleanup();
+      return false;
     }
 
-    /**
-     * CHANGE: Updated game logic to use new InputSystem
-     */
-    void updateGameLogic(float deltaTime) {
-        Vec2 movement{0.0f, 0.0f};
-        bool isMoving = false;
-        PlayerAnimation currentAnimation = PlayerAnimation::IDLE;
+    // 8. Configure viewport for camera
+    Viewport viewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+    cameraManager_->setViewport(viewport);
 
-        // CHANGE: Use new input system for movement
-        if (inputSystem_->isActionTriggered(ACTION_MOVE_FORWARD)) {
-            movement.y -= PLAYER_SPEED * deltaTime;
-            isMoving = true;
-            currentAnimation = PlayerAnimation::UP;
-        }
-        if (inputSystem_->isActionTriggered(ACTION_MOVE_BACKWARD)) {
-            movement.y += PLAYER_SPEED * deltaTime;
-            isMoving = true;
-            currentAnimation = PlayerAnimation::DOWN;
-        }
-        if (inputSystem_->isActionTriggered(ACTION_MOVE_LEFT)) {
-            movement.x -= PLAYER_SPEED * deltaTime;
-            isMoving = true;
-            currentAnimation = PlayerAnimation::LEFT;
-        }
-        if (inputSystem_->isActionTriggered(ACTION_MOVE_RIGHT)) {
-            movement.x += PLAYER_SPEED * deltaTime;
-            isMoving = true;
-            currentAnimation = PlayerAnimation::RIGHT;
-        }
-
-        // CHANGE: Also check for gamepad analog stick movement
-        Vec2 gamepadMove = inputSystem_->getActionValue2D(ACTION_PLAYER_MOVE);
-        if (std::abs(gamepadMove.x) > 0.1f || std::abs(gamepadMove.y) > 0.1f) {
-            movement.x += gamepadMove.x * PLAYER_SPEED * deltaTime;
-            movement.y += gamepadMove.y * PLAYER_SPEED * deltaTime;
-            isMoving = true;
-
-            // Determine animation based on largest movement axis
-            if (std::abs(gamepadMove.x) > std::abs(gamepadMove.y)) {
-                currentAnimation = gamepadMove.x > 0 ? PlayerAnimation::RIGHT : PlayerAnimation::LEFT;
-            }
-            else {
-                currentAnimation = gamepadMove.y > 0 ? PlayerAnimation::DOWN : PlayerAnimation::UP;
-            }
-        }
-
-        // Update sprite frame based on animation
-        switch (currentAnimation) {
-        case PlayerAnimation::UP:
-            currentSpriteFrame_.x = 0;
-            currentSpriteFrame_.y = 930;
-            break;
-        case PlayerAnimation::DOWN:
-            currentSpriteFrame_.x = 0;
-            currentSpriteFrame_.y = 600;
-            break;
-        case PlayerAnimation::LEFT:
-            currentSpriteFrame_.x = 0;
-            currentSpriteFrame_.y = 772;
-            break;
-        case PlayerAnimation::RIGHT:
-            currentSpriteFrame_.x = 0;
-            currentSpriteFrame_.y = 1068;
-            break;
-        default: // IDLE
-            currentSpriteFrame_.x = 0;
-            currentSpriteFrame_.y = 0;
-            break;
-        }
-
-        // Apply movement
-        if (isMoving) {
-            // Normalize diagonal movement
-            if (movement.x != 0.0f && movement.y != 0.0f) {
-                float length = std::sqrt(movement.x * movement.x + movement.y * movement.y);
-                if (length > 0.0f) {
-                    movement.x /= length;
-                    movement.y /= length;
-                    movement.x *= PLAYER_SPEED * deltaTime;
-                    movement.y *= PLAYER_SPEED * deltaTime;
-                }
-            }
-
-            playerPosition_.x += movement.x;
-            playerPosition_.y += movement.y;
-
-            // Clamp to world bounds
-            const float SPRITE_HALF_WIDTH = 80.0f;
-            const float SPRITE_HALF_HEIGHT = 70.0f;
-
-            playerPosition_.x = std::clamp(playerPosition_.x,
-                                           SPRITE_HALF_WIDTH,
-                                           static_cast<float>(WORLD_WIDTH) - SPRITE_HALF_WIDTH);
-            playerPosition_.y = std::clamp(playerPosition_.y,
-                                           SPRITE_HALF_HEIGHT,
-                                           static_cast<float>(WORLD_HEIGHT) - SPRITE_HALF_HEIGHT);
-
-            // Update camera target
-            Camera2D* followCamera = cameraManager_->getCamera2D(mainCameraId_);
-            if (followCamera && followCamera->getMode() == CameraMode::FOLLOW_TARGET) {
-                followCamera->setTarget(playerPosition_);
-            }
-        }
+    // 9. Setup world and camera
+    if (!setupWorldAndCamera()) {
+      std::cerr << "Failed to setup world and camera" << std::endl;
+      cleanup();
+      return false;
     }
 
-    void toggleCameraMode() {
-        static bool isFollowMode = true;
-
-        if (isFollowMode) {
-            cameraManager_->setActiveCamera(freeCameraId_);
-            std::cout << "Camera Mode: FREE CONTROL (use arrow keys)" << std::endl;
-        }
-        else {
-            cameraManager_->setActiveCamera(mainCameraId_);
-            std::cout << "Camera Mode: FOLLOW PLAYER" << std::endl;
-        }
-
-        isFollowMode = !isFollowMode;
+    // 10. Load resources
+    if (!loadGameResources()) {
+      std::cerr << "Failed to load game resources" << std::endl;
+      cleanup();
+      return false;
     }
 
-    void render() {
-        SDL_SetRenderDrawColor(renderer_, 30, 60, 30, 255);
-        SDL_RenderClear(renderer_);
+    // Initialize player position
+    playerPosition_ = Vec2(WORLD_WIDTH / 2.0f, WORLD_HEIGHT / 2.0f);
 
-        Vec2 cameraOffset = getCameraPosition();
-        renderWorldBackground(cameraOffset);
-        renderPlayer(cameraOffset);
-        renderUI();
-
-        SDL_RenderPresent(renderer_);
+    // Set camera to follow player
+    Camera2D *mainCamera = cameraManager_->getCamera2D(mainCameraId_);
+    if (mainCamera) {
+      mainCamera->setTarget(playerPosition_);
+      std::cout << "✓ Camera set to follow player" << std::endl;
     }
 
-    void renderPlayer(const Vec2& cameraOffset) {
-        if (!playerSDLTexture_) return;
+    std::cout << "\nGame initialized successfully!" << std::endl;
+    printControls();
+    return true;
+  }
 
-        int screenX = static_cast<int>(playerPosition_.x - cameraOffset.x - currentSpriteFrame_.w / 2);
-        int screenY = static_cast<int>(playerPosition_.y - cameraOffset.y - currentSpriteFrame_.h / 2);
+  /**
+   * CHANGE: New method to setup input actions using new InputSystem
+   */
+  void setupInputActions() {
+    // Register movement actions
+    inputSystem_->registerAction(ACTION_MOVE_FORWARD, "MoveForward",
+                                 ActionType::BUTTON);
+    inputSystem_->registerAction(ACTION_MOVE_BACKWARD, "MoveBackward",
+                                 ActionType::BUTTON);
+    inputSystem_->registerAction(ACTION_MOVE_LEFT, "MoveLeft",
+                                 ActionType::BUTTON);
+    inputSystem_->registerAction(ACTION_MOVE_RIGHT, "MoveRight",
+                                 ActionType::BUTTON);
+    inputSystem_->registerAction(ACTION_EXIT, "Exit", ActionType::BUTTON);
 
-        SDL_Rect destRect = {
-            screenX,
-            screenY,
-            currentSpriteFrame_.w,
-            currentSpriteFrame_.h
-        };
+    // Camera actions
+    inputSystem_->registerAction(ACTION_SWITCH_CAMERA, "SwitchCamera",
+                                 ActionType::BUTTON);
+    inputSystem_->registerAction(ACTION_ZOOM_IN, "ZoomIn", ActionType::BUTTON);
+    inputSystem_->registerAction(ACTION_ZOOM_OUT, "ZoomOut",
+                                 ActionType::BUTTON);
+    inputSystem_->registerAction(ACTION_CAMERA_SHAKE, "CameraShake",
+                                 ActionType::BUTTON);
 
-        SDL_RenderCopy(renderer_, playerSDLTexture_, &currentSpriteFrame_, &destRect);
+    // Camera movement actions
+    inputSystem_->registerAction(ACTION_CAMERA_UP, "CameraUp",
+                                 ActionType::BUTTON);
+    inputSystem_->registerAction(ACTION_CAMERA_DOWN, "CameraDown",
+                                 ActionType::BUTTON);
+    inputSystem_->registerAction(ACTION_CAMERA_LEFT, "CameraLeft",
+                                 ActionType::BUTTON);
+    inputSystem_->registerAction(ACTION_CAMERA_RIGHT, "CameraRight",
+                                 ActionType::BUTTON);
+
+    // Debug actions
+    inputSystem_->registerAction(ACTION_TOGGLE_GRID, "ToggleGrid",
+                                 ActionType::BUTTON);
+    inputSystem_->registerAction(ACTION_TOGGLE_DEBUG, "ToggleDebug",
+                                 ActionType::BUTTON);
+
+    // CHANGE: Composite 2D actions for analog-like movement
+    inputSystem_->registerAction(ACTION_PLAYER_MOVE, "PlayerMove",
+                                 ActionType::AXIS_2D);
+    inputSystem_->registerAction(ACTION_CAMERA_MOVE, "CameraMove",
+                                 ActionType::AXIS_2D);
+
+    // Bind keys to actions - using default context
+    inputSystem_->bindKey(ACTION_MOVE_FORWARD, KeyCode::W, "Default");
+    inputSystem_->bindKey(ACTION_MOVE_BACKWARD, KeyCode::S, "Default");
+    inputSystem_->bindKey(ACTION_MOVE_LEFT, KeyCode::A, "Default");
+    inputSystem_->bindKey(ACTION_MOVE_RIGHT, KeyCode::D, "Default");
+    inputSystem_->bindKey(ACTION_EXIT, KeyCode::ESCAPE, "Default");
+
+    // Camera control bindings
+    inputSystem_->bindKey(ACTION_SWITCH_CAMERA, KeyCode::C, "Default");
+    inputSystem_->bindKey(ACTION_ZOOM_IN, KeyCode::EQUAL, "Default");
+    inputSystem_->bindKey(ACTION_ZOOM_OUT, KeyCode::MINUS, "Default");
+    inputSystem_->bindKey(ACTION_CAMERA_SHAKE, KeyCode::SPACE, "Default");
+
+    // Manual camera movement with arrow keys
+    inputSystem_->bindKey(ACTION_CAMERA_UP, KeyCode::UP, "Default");
+    inputSystem_->bindKey(ACTION_CAMERA_DOWN, KeyCode::DOWN, "Default");
+    inputSystem_->bindKey(ACTION_CAMERA_LEFT, KeyCode::LEFT, "Default");
+    inputSystem_->bindKey(ACTION_CAMERA_RIGHT, KeyCode::RIGHT, "Default");
+
+    // Debug bindings
+    inputSystem_->bindKey(ACTION_TOGGLE_GRID, KeyCode::G, "Default");
+    inputSystem_->bindKey(ACTION_TOGGLE_DEBUG, KeyCode::X, "Default");
+
+    // Gamepad bindings if available
+    inputSystem_->bindGamepadButton(ACTION_MOVE_FORWARD, GamepadButton::DPAD_UP,
+                                    "Default");
+    inputSystem_->bindGamepadButton(ACTION_MOVE_BACKWARD,
+                                    GamepadButton::DPAD_DOWN, "Default");
+    inputSystem_->bindGamepadButton(ACTION_MOVE_LEFT, GamepadButton::DPAD_LEFT,
+                                    "Default");
+    inputSystem_->bindGamepadButton(ACTION_MOVE_RIGHT,
+                                    GamepadButton::DPAD_RIGHT, "Default");
+    inputSystem_->bindGamepadButton(ACTION_SWITCH_CAMERA, GamepadButton::Y,
+                                    "Default");
+    inputSystem_->bindGamepadButton(ACTION_CAMERA_SHAKE, GamepadButton::X,
+                                    "Default");
+
+    // CHANGE: Register gamepad axes for analog movement
+    inputSystem_->bindGamepadAxis(ACTION_PLAYER_MOVE, GamepadAxis::LEFT_STICK_X,
+                                  "Default");
+    inputSystem_->bindGamepadAxis(ACTION_CAMERA_MOVE,
+                                  GamepadAxis::RIGHT_STICK_X, "Default");
+
+    std::cout << "Input actions and bindings configured successfully!"
+              << std::endl;
+  }
+
+  /**
+   * @brief Setup world and camera system
+   */
+  bool setupWorldAndCamera() {
+    mainCameraId_ = cameraManager_->createCamera2D("MainCamera");
+    if (mainCameraId_ == INVALID_CAMERA_ID) {
+      std::cerr << "Failed to create main camera" << std::endl;
+      return false;
     }
 
-    Vec2 getCameraPosition() {
-        const BaseCamera* activeCamera = cameraManager_->getActiveCamera();
-        if (activeCamera) {
-            Vec3 pos3D = activeCamera->getPosition();
-            Vec2 cameraWorldPos(pos3D.x, pos3D.y);
-            Vec2 renderOffset(
-                cameraWorldPos.x - WINDOW_WIDTH / 2.0f,
-                cameraWorldPos.y - WINDOW_HEIGHT / 2.0f
-            );
-            return renderOffset;
-        }
-        return Vec2{0.0f, 0.0f};
+    Camera2D *mainCamera = cameraManager_->getCamera2D(mainCameraId_);
+    if (!mainCamera) {
+      std::cerr << "Failed to get main camera" << std::endl;
+      return false;
     }
 
-    void renderWorldBackground(const Vec2& cameraOffset) {
-        const int TILE_SIZE = 64;
-        const int GRASS_VARIANT_COUNT = 3;
+    mainCamera->setMode(CameraMode::TOP_DOWN);
+    mainCamera->setPosition(Vec2(WORLD_WIDTH / 2, WORLD_HEIGHT / 2));
+    mainCamera->setZoom(1.0f);
+    mainCamera->setFollowSpeed(6.0f);
+    mainCamera->setZoomLimits(0.5f, 2.0f);
+    mainCamera->setSmoothingSpeed(8.0f);
 
-        int startX = static_cast<int>(cameraOffset.x / TILE_SIZE);
-        int startY = static_cast<int>(cameraOffset.y / TILE_SIZE);
-        int endX = static_cast<int>((cameraOffset.x + WINDOW_WIDTH) / TILE_SIZE) + 1;
-        int endY = static_cast<int>((cameraOffset.y + WINDOW_HEIGHT) / TILE_SIZE) + 1;
+    CameraBounds worldBounds(Vec3(0.0f, 0.0f, -1.0f),
+                             Vec3(WORLD_WIDTH, WORLD_HEIGHT, 1.0f));
+    worldBounds.setEnabled(true);
 
-        startX = std::max(0, startX);
-        startY = std::max(0, startY);
-        endX = std::min(static_cast<int>(WORLD_WIDTH / TILE_SIZE), endX);
-        endY = std::min(static_cast<int>(WORLD_HEIGHT / TILE_SIZE), endY);
+    mainCamera->setBounds(worldBounds);
+    mainCamera->setMode(CameraMode::FOLLOW_TARGET);
 
-        for (int y = startY; y < endY; ++y) {
-            for (int x = startX; x < endX; ++x) {
-                int worldX = x * TILE_SIZE;
-                int worldY = y * TILE_SIZE;
+    std::cout << "✓ Main camera configured with world bounds" << std::endl;
 
-                int screenX = worldX - static_cast<int>(cameraOffset.x);
-                int screenY = worldY - static_cast<int>(cameraOffset.y);
-
-                SDL_Rect tileRect = {screenX, screenY, TILE_SIZE, TILE_SIZE};
-
-                int variant = (x + y * 7) % GRASS_VARIANT_COUNT;
-
-                switch (variant) {
-                case 0:
-                    SDL_SetRenderDrawColor(renderer_, 50, 120, 50, 255);
-                    break;
-                case 1:
-                    SDL_SetRenderDrawColor(renderer_, 45, 115, 45, 255);
-                    break;
-                case 2:
-                    SDL_SetRenderDrawColor(renderer_, 55, 125, 55, 255);
-                    break;
-                }
-
-                SDL_RenderFillRect(renderer_, &tileRect);
-
-                if (showGrid_) {
-                    SDL_SetRenderDrawColor(renderer_, 40, 100, 40, 128);
-                    SDL_RenderDrawRect(renderer_, &tileRect);
-                }
-            }
-        }
-
-        renderWorldBoundaries(cameraOffset);
+    if (!cameraManager_->setActiveCamera(mainCameraId_)) {
+      std::cerr << "Failed to set active camera" << std::endl;
+      return false;
     }
 
-    void renderWorldBoundaries(const Vec2& cameraOffset) {
-        SDL_SetRenderDrawColor(renderer_, 100, 50, 50, 255);
-
-        int leftBorder = -static_cast<int>(cameraOffset.x);
-        int topBorder = -static_cast<int>(cameraOffset.y);
-        int rightBorder = WORLD_WIDTH - static_cast<int>(cameraOffset.x);
-        int bottomBorder = WORLD_HEIGHT - static_cast<int>(cameraOffset.y);
-
-        const int BORDER_WIDTH = 5;
-
-        if (leftBorder >= -BORDER_WIDTH && leftBorder <= WINDOW_WIDTH) {
-            SDL_Rect leftRect = {leftBorder, 0, BORDER_WIDTH, WINDOW_HEIGHT};
-            SDL_RenderFillRect(renderer_, &leftRect);
-        }
-        if (rightBorder >= 0 && rightBorder <= WINDOW_WIDTH + BORDER_WIDTH) {
-            SDL_Rect rightRect = {rightBorder, 0, BORDER_WIDTH, WINDOW_HEIGHT};
-            SDL_RenderFillRect(renderer_, &rightRect);
-        }
-        if (topBorder >= -BORDER_WIDTH && topBorder <= WINDOW_HEIGHT) {
-            SDL_Rect topRect = {0, topBorder, WINDOW_WIDTH, BORDER_WIDTH};
-            SDL_RenderFillRect(renderer_, &topRect);
-        }
-        if (bottomBorder >= 0 && bottomBorder <= WINDOW_HEIGHT + BORDER_WIDTH) {
-            SDL_Rect bottomRect = {0, bottomBorder, WINDOW_WIDTH, BORDER_WIDTH};
-            SDL_RenderFillRect(renderer_, &bottomRect);
-        }
+    freeCameraId_ = cameraManager_->createCamera2D("FreeCamera");
+    if (freeCameraId_ != INVALID_CAMERA_ID) {
+      Camera2D *freeCamera = cameraManager_->getCamera2D(freeCameraId_);
+      if (freeCamera) {
+        freeCamera->setPosition(Vec2(WORLD_WIDTH / 2, WORLD_HEIGHT / 2));
+        freeCamera->setBounds(worldBounds);
+        freeCamera->setMode(CameraMode::STATIC);
+        std::cout << "✓ Free camera created for manual control" << std::endl;
+      }
     }
 
-    void renderUI() {
-        // Player status indicator
-        SDL_Rect statusRect = {10, 10, 200, 30};
+    return true;
+  }
 
-        if (currentSpriteFrame_.y == 0) {
-            SDL_SetRenderDrawColor(renderer_, 255, 255, 255, 128); // White - IDLE
-        }
-        else if (currentSpriteFrame_.y == 930) {
-            SDL_SetRenderDrawColor(renderer_, 0, 255, 0, 128); // Green - UP
-        }
-        else if (currentSpriteFrame_.y == 600) {
-            SDL_SetRenderDrawColor(renderer_, 255, 0, 0, 128); // Red - DOWN
-        }
-        else if (currentSpriteFrame_.y == 772) {
-            SDL_SetRenderDrawColor(renderer_, 0, 0, 255, 128); // Blue - LEFT
-        }
-        else if (currentSpriteFrame_.y == 1068) {
-            SDL_SetRenderDrawColor(renderer_, 255, 255, 0, 128); // Yellow - RIGHT
-        }
-        SDL_RenderFillRect(renderer_, &statusRect);
+  /**
+   * @brief Load game resources
+   */
+  bool loadGameResources() {
+    std::cout << "\n=== Loading Game Resources ===" << std::endl;
 
-        // Camera indicator
-        SDL_Rect cameraRect = {10, 50, 200, 20};
-        const BaseCamera* activeCamera = cameraManager_->getActiveCamera();
+    const ResourceID playerTextureId =
+        std::hash<std::string>{}("player_texture");
 
-        if (activeCamera) {
-            if (activeCamera->getId() == mainCameraId_) {
-                SDL_SetRenderDrawColor(renderer_, 0, 255, 255, 128); // Cyan = Follow mode
-            }
-            else {
-                SDL_SetRenderDrawColor(renderer_, 255, 0, 255, 128); // Magenta = Free mode
-            }
-        }
-        else {
-            SDL_SetRenderDrawColor(renderer_, 128, 128, 128, 128); // Grey = No camera
-        }
-        SDL_RenderFillRect(renderer_, &cameraRect);
+    playerTextureHandle_ = resourceManager_->loadById<TextureResource>(
+        playerTextureId, std::string("../assets/player.png"),
+        ResourcePriority::HIGH, LoadMode::SYNC);
 
-        // Zoom indicator
-        const Camera2D* camera2D = cameraManager_->getCamera2D(cameraManager_->getActiveCameraId());
-        if (camera2D) {
-            float zoom = camera2D->getZoom();
-            int zoomBarWidth = static_cast<int>(zoom * 100);
-            zoomBarWidth = std::clamp(zoomBarWidth, 10, 300);
-
-            SDL_Rect zoomRect = {10, 80, zoomBarWidth, 15};
-            SDL_SetRenderDrawColor(renderer_, 255, 255, 0, 128);
-            SDL_RenderFillRect(renderer_, &zoomRect);
-        }
-
-        renderMiniMap();
-
-        // CHANGE: Gamepad indicator using new input system
-        if (inputSystem_->isGamepadButtonPressed(0, GamepadButton::NONE)) {
-            SDL_Rect gamepadRect = {WINDOW_WIDTH - 50, 10, 40, 20};
-            SDL_SetRenderDrawColor(renderer_, 0, 255, 0, 128);
-            SDL_RenderFillRect(renderer_, &gamepadRect);
-        }
-
-        // Shake indicator
-        if (cameraManager_->isCameraShaking(cameraManager_->getActiveCameraId())) {
-            SDL_Rect shakeRect = {WINDOW_WIDTH - 100, 10, 40, 20};
-            SDL_SetRenderDrawColor(renderer_, 255, 0, 0, 200);
-            SDL_RenderFillRect(renderer_, &shakeRect);
-        }
-
-        // Memory usage indicator if debug enabled
-        if (showDebugInfo_) {
-            float memoryPercent = static_cast<float>(memoryManager_->getTotalMemoryUsage()) /
-                (256.0f * 1024.0f * 1024.0f);
-            int memBarWidth = static_cast<int>(memoryPercent * 200);
-            memBarWidth = std::clamp(memBarWidth, 0, 200);
-
-            SDL_Rect memRect = {10, 110, memBarWidth, 10};
-            if (memoryPercent < 0.5f) {
-                SDL_SetRenderDrawColor(renderer_, 0, 255, 0, 128);
-            }
-            else if (memoryPercent < 0.8f) {
-                SDL_SetRenderDrawColor(renderer_, 255, 255, 0, 128);
-            }
-            else {
-                SDL_SetRenderDrawColor(renderer_, 255, 0, 0, 128);
-            }
-            SDL_RenderFillRect(renderer_, &memRect);
-        }
+    auto playerTexture = getTextureResource(playerTextureHandle_);
+    if (!playerTexture) {
+      std::cerr << "Failed to load player sprite sheet" << std::endl;
+      return false;
     }
 
-    void renderMiniMap() {
-        const int MINIMAP_SIZE = 150;
-        const int MINIMAP_X = WINDOW_WIDTH - MINIMAP_SIZE - 10;
-        const int MINIMAP_Y = WINDOW_HEIGHT - MINIMAP_SIZE - 10;
+    playerTextureHandle_.updateCache(playerTexture);
 
-        SDL_Rect minimapBg = {MINIMAP_X - 5, MINIMAP_Y - 5, MINIMAP_SIZE + 10, MINIMAP_SIZE + 10};
-        SDL_SetRenderDrawColor(renderer_, 0, 0, 0, 180);
-        SDL_RenderFillRect(renderer_, &minimapBg);
+    std::cout << "✓ Player sprite sheet loaded: " << playerTexture->getWidth()
+              << "x" << playerTexture->getHeight() << " pixels" << std::endl;
 
-        SDL_Rect worldRect = {MINIMAP_X, MINIMAP_Y, MINIMAP_SIZE, MINIMAP_SIZE};
-        SDL_SetRenderDrawColor(renderer_, 50, 100, 50, 255);
-        SDL_RenderFillRect(renderer_, &worldRect);
-
-        int playerMapX = MINIMAP_X + static_cast<int>((playerPosition_.x / WORLD_WIDTH) * MINIMAP_SIZE);
-        int playerMapY = MINIMAP_Y + static_cast<int>((playerPosition_.y / WORLD_HEIGHT) * MINIMAP_SIZE);
-
-        SDL_Rect playerDot = {playerMapX - 3, playerMapY - 3, 6, 6};
-        SDL_SetRenderDrawColor(renderer_, 255, 255, 255, 255);
-        SDL_RenderFillRect(renderer_, &playerDot);
-
-        const BaseCamera* activeCamera = cameraManager_->getActiveCamera();
-        if (activeCamera) {
-            Vec3 cameraPos3D = activeCamera->getPosition();
-            Vec2 cameraPos(cameraPos3D.x, cameraPos3D.y);
-
-            const Camera2D* camera2D = cameraManager_->getCamera2D(cameraManager_->getActiveCameraId());
-            float zoom = camera2D ? camera2D->getZoom() : 1.0f;
-
-            float visibleWidth = WINDOW_WIDTH / zoom;
-            float visibleHeight = WINDOW_HEIGHT / zoom;
-
-            int viewX = MINIMAP_X + static_cast<int>(((cameraPos.x - visibleWidth / 2) / WORLD_WIDTH) * MINIMAP_SIZE);
-            int viewY = MINIMAP_Y + static_cast<int>(((cameraPos.y - visibleHeight / 2) / WORLD_HEIGHT) * MINIMAP_SIZE);
-            int viewW = static_cast<int>((visibleWidth / WORLD_WIDTH) * MINIMAP_SIZE);
-            int viewH = static_cast<int>((visibleHeight / WORLD_HEIGHT) * MINIMAP_SIZE);
-
-            SDL_Rect viewRect = {viewX, viewY, viewW, viewH};
-            SDL_SetRenderDrawColor(renderer_, 255, 255, 0, 100);
-            SDL_RenderFillRect(renderer_, &viewRect);
-        }
+    SDL_Surface *surface = playerTexture->getSDLSurface();
+    if (surface) {
+      playerSDLTexture_ = SDL_CreateTextureFromSurface(renderer_, surface);
+      if (!playerSDLTexture_) {
+        std::cerr << "Failed to create SDL texture from surface: "
+                  << SDL_GetError() << std::endl;
+        return false;
+      }
+      std::cout << "✓ SDL texture created for rendering" << std::endl;
+    } else {
+      std::cerr << "Failed to get SDL surface from texture resource"
+                << std::endl;
+      return false;
     }
 
-    void showStats(int frameCount, std::chrono::steady_clock::duration elapsed) {
-        auto elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count();
-        double fps = frameCount * 1000.0 / elapsedMs;
+    currentSpriteFrame_.x = 0;
+    currentSpriteFrame_.y = 0;
+    currentSpriteFrame_.w = 160;
+    currentSpriteFrame_.h = 140;
 
-        std::cout << "\n--- Game Performance Stats ---" << std::endl;
-        std::cout << "FPS: " << fps << std::endl;
+    return true;
+  }
 
-        std::cout << "Resource Memory: " << (resourceManager_->getMemoryUsage() / 1024.0 / 1024.0) << " MB" <<
-            std::endl;
-        std::cout << "Total Memory Usage: " << (memoryManager_->getTotalMemoryUsage() / 1024.0 / 1024.0) << " MB" <<
-            std::endl;
+  /**
+   * @brief Main game loop
+   * CHANGE: Updated to use new InputSystem
+   */
+  void run() {
+    bool running = true;
 
-        std::cout << "Cameras: " << cameraManager_->getCameraCount() << std::endl;
+    auto lastStatsTime = std::chrono::steady_clock::now();
+    auto lastFrameTime = std::chrono::steady_clock::now();
+    int frameCount = 0;
 
-        const BaseCamera* activeCamera = cameraManager_->getActiveCamera();
-        if (activeCamera) {
-            Vec3 cameraPos = activeCamera->getPosition();
-            std::cout << "Camera Position: (" << cameraPos.x << ", " << cameraPos.y << ")" << std::endl;
-        }
+    std::cout << "\n=== Starting Game Loop ===" << std::endl;
 
-        // CHANGE: Show input system stats
-        auto inputStats = inputSystem_->getStatistics();
-        std::cout << "Input Frames: " << inputStats.totalFrames << std::endl;
+    while (running) {
+      auto currentTime = std::chrono::steady_clock::now();
+      auto deltaTimeMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+          currentTime - lastFrameTime);
+      float deltaTime = deltaTimeMs.count() / 1000.0f;
+      lastFrameTime = currentTime;
 
-        std::cout << "Player Position: (" << playerPosition_.x << ", " << playerPosition_.y << ")" << std::endl;
+      deltaTime = std::min(deltaTime, 0.016f);
+
+      // CHANGE: Update input system first
+      inputSystem_->update(deltaTime);
+
+      // CHANGE: Check exit using new input system
+      if (inputSystem_->isActionTriggered(ACTION_EXIT)) {
+        running = false;
+        break;
+      }
+
+      // Process input and update game
+      processCameraInput(deltaTime);
+      updateGameLogic(deltaTime);
+      cameraManager_->update(deltaTime);
+      render();
+
+      frameCount++;
+      if (currentTime - lastStatsTime > std::chrono::seconds(3)) {
+        showStats(frameCount, currentTime - lastStatsTime);
+        frameCount = 0;
+        lastStatsTime = currentTime;
+      }
+
+      auto frameTime = std::chrono::steady_clock::now() - currentTime;
+      auto targetFrameTime = std::chrono::milliseconds(16);
+      if (frameTime < targetFrameTime) {
+        std::this_thread::sleep_for(targetFrameTime - frameTime);
+      }
     }
 
-    void printControls() {
-        std::cout << "=== GAME CONTROLS (NEW INPUT SYSTEM) ===" << std::endl;
-        std::cout << "Player Movement:" << std::endl;
-        std::cout << "  WASD: Move player" << std::endl;
-        std::cout << "  Gamepad Left Stick: Move player (analog)" << std::endl;
-        std::cout << "\nCamera Controls:" << std::endl;
-        std::cout << "  C: Switch camera mode (Follow/Free)" << std::endl;
-        std::cout << "  Arrow Keys: Manual camera (Free mode only)" << std::endl;
-        std::cout << "  +/-: Zoom in/out" << std::endl;
-        std::cout << "  Space: Camera shake" << std::endl;
-        std::cout << "  Gamepad Right Stick: Manual camera" << std::endl;
-        std::cout << "\nOther:" << std::endl;
-        std::cout << "  G: Toggle grid display" << std::endl;
-        std::cout << "  D: Toggle debug info" << std::endl;
-        std::cout << "  ESC: Quit game" << std::endl;
-        std::cout << "========================================" << std::endl;
+    std::cout << "\nGame loop ended" << std::endl;
+  }
+
+  /**
+   * CHANGE: Updated to use new InputSystem for camera input
+   */
+  void processCameraInput(float deltaTime) {
+    // Switch camera modes
+    if (inputSystem_->isActionTriggered(ACTION_SWITCH_CAMERA)) {
+      toggleCameraMode();
     }
 
-    ResourcePtr<TextureResource> getTextureResource(const ResourceHandle<TextureResource>& handle) {
-        if (!handle.isValid()) return nullptr;
-
-        if (auto cached = handle.tryGet()) {
-            return cached;
-        }
-
-        return resourceManager_->getResource<TextureResource>(handle.getId());
+    // Zoom using new input system
+    if (inputSystem_->isActionTriggered(ACTION_ZOOM_IN)) {
+      cameraManager_->processZoom(1.0f);
+    }
+    if (inputSystem_->isActionTriggered(ACTION_ZOOM_OUT)) {
+      cameraManager_->processZoom(-1.0f);
     }
 
-    void cleanup() {
-        std::cout << "\nCleaning up game resources..." << std::endl;
-
-        if (playerSDLTexture_) {
-            SDL_DestroyTexture(playerSDLTexture_);
-            playerSDLTexture_ = nullptr;
-        }
-        if (backgroundSDLTexture_) {
-            SDL_DestroyTexture(backgroundSDLTexture_);
-            backgroundSDLTexture_ = nullptr;
-        }
-
-        playerTextureHandle_.reset();
-        backgroundTextureHandle_.reset();
-
-        if (cameraManager_) {
-            cameraManager_->shutdown();
-            cameraManager_.reset();
-        }
-
-        // CHANGE: Clean up new input system
-        if (inputSystem_) {
-            inputSystem_->shutdown();
-            inputSystem_.reset();
-        }
-
-        if (resourceManager_) {
-            resourceManager_.reset();
-        }
-
-        if (memoryManager_) {
-            std::cout << "\n=== Memory Manager Final Report ===" << std::endl;
-            std::cout << memoryManager_->generateMemoryReport() << std::endl;
-
-            size_t leaks = engine::memory::MemoryManager::checkForLeaks();
-            if (leaks > 0) {
-                std::cout << "WARNING: " << leaks << " memory leaks detected!" << std::endl;
-            }
-            else {
-                std::cout << "✓ No memory leaks detected" << std::endl;
-            }
-
-            memoryManager_->shutdown();
-            memoryManager_.reset();
-        }
-
-        if (renderer_) {
-            SDL_DestroyRenderer(renderer_);
-            renderer_ = nullptr;
-        }
-
-        if (window_) {
-            SDL_DestroyWindow(window_);
-            window_ = nullptr;
-        }
-
-        IMG_Quit();
-        SDL_Quit();
-
-        std::cout << "Cleanup completed!" << std::endl;
+    // Camera shake
+    if (inputSystem_->isActionTriggered(ACTION_CAMERA_SHAKE)) {
+      ShakeConfig shakeConfig = ShakeConfig::explosion(3.0f);
+      shakeConfig.duration = 0.5f;
+      const CameraID cameraId = cameraManager_->getActiveCameraId();
+      cameraManager_->startCameraShake(cameraId, shakeConfig);
     }
+
+    // CHANGE: Manual camera control using new input system
+    Camera2D *activeCamera =
+        cameraManager_->getCamera2D(cameraManager_->getActiveCameraId());
+    if (activeCamera && activeCamera->getMode() == CameraMode::STATIC) {
+      // Calculate camera movement from individual button states
+      float cameraHorizontal = 0.0f;
+      float cameraVertical = 0.0f;
+
+      if (inputSystem_->isActionTriggered(ACTION_CAMERA_LEFT)) {
+        cameraHorizontal -= 1.0f;
+      }
+      if (inputSystem_->isActionTriggered(ACTION_CAMERA_RIGHT)) {
+        cameraHorizontal += 1.0f;
+      }
+      if (inputSystem_->isActionTriggered(ACTION_CAMERA_UP)) {
+        cameraVertical -= 1.0f;
+      }
+      if (inputSystem_->isActionTriggered(ACTION_CAMERA_DOWN)) {
+        cameraVertical += 1.0f;
+      }
+
+      // CHANGE: Also check for gamepad analog stick if available
+      Vec2 gamepadCamera = inputSystem_->getActionValue2D(ACTION_CAMERA_MOVE);
+      cameraHorizontal += gamepadCamera.x;
+      cameraVertical += gamepadCamera.y;
+
+      if (std::abs(cameraHorizontal) > 0.1f ||
+          std::abs(cameraVertical) > 0.1f) {
+        Vec2 currentPos = activeCamera->getPosition2D();
+        Vec2 movement(cameraHorizontal * CAMERA_SPEED * deltaTime,
+                      cameraVertical * CAMERA_SPEED * deltaTime);
+        activeCamera->setPosition(currentPos + movement);
+      }
+    }
+
+    // CHANGE: Toggle debug displays
+    if (inputSystem_->isActionTriggered(ACTION_TOGGLE_GRID)) {
+      showGrid_ = !showGrid_;
+      std::cout << "Grid display: " << (showGrid_ ? "ON" : "OFF") << std::endl;
+    }
+    if (inputSystem_->isActionTriggered(ACTION_TOGGLE_DEBUG)) {
+      showDebugInfo_ = !showDebugInfo_;
+      std::cout << "Debug info: " << (showDebugInfo_ ? "ON" : "OFF")
+                << std::endl;
+    }
+  }
+
+  /**
+   * CHANGE: Updated game logic to use new InputSystem
+   */
+  void updateGameLogic(float deltaTime) {
+    Vec2 movement{0.0f, 0.0f};
+    bool isMoving = false;
+    PlayerAnimation currentAnimation = PlayerAnimation::IDLE;
+
+    // CHANGE: Use new input system for movement
+    if (inputSystem_->isActionTriggered(ACTION_MOVE_FORWARD)) {
+      movement.y -= PLAYER_SPEED * deltaTime;
+      isMoving = true;
+      currentAnimation = PlayerAnimation::UP;
+    }
+    if (inputSystem_->isActionTriggered(ACTION_MOVE_BACKWARD)) {
+      movement.y += PLAYER_SPEED * deltaTime;
+      isMoving = true;
+      currentAnimation = PlayerAnimation::DOWN;
+    }
+    if (inputSystem_->isActionTriggered(ACTION_MOVE_LEFT)) {
+      movement.x -= PLAYER_SPEED * deltaTime;
+      isMoving = true;
+      currentAnimation = PlayerAnimation::LEFT;
+    }
+    if (inputSystem_->isActionTriggered(ACTION_MOVE_RIGHT)) {
+      movement.x += PLAYER_SPEED * deltaTime;
+      isMoving = true;
+      currentAnimation = PlayerAnimation::RIGHT;
+    }
+
+    // CHANGE: Also check for gamepad analog stick movement
+    Vec2 gamepadMove = inputSystem_->getActionValue2D(ACTION_PLAYER_MOVE);
+    if (std::abs(gamepadMove.x) > 0.1f || std::abs(gamepadMove.y) > 0.1f) {
+      movement.x += gamepadMove.x * PLAYER_SPEED * deltaTime;
+      movement.y += gamepadMove.y * PLAYER_SPEED * deltaTime;
+      isMoving = true;
+
+      // Determine animation based on largest movement axis
+      if (std::abs(gamepadMove.x) > std::abs(gamepadMove.y)) {
+        currentAnimation =
+            gamepadMove.x > 0 ? PlayerAnimation::RIGHT : PlayerAnimation::LEFT;
+      } else {
+        currentAnimation =
+            gamepadMove.y > 0 ? PlayerAnimation::DOWN : PlayerAnimation::UP;
+      }
+    }
+
+    // Update sprite frame based on animation
+    switch (currentAnimation) {
+    case PlayerAnimation::UP:
+      currentSpriteFrame_.x = 0;
+      currentSpriteFrame_.y = 930;
+      break;
+    case PlayerAnimation::DOWN:
+      currentSpriteFrame_.x = 0;
+      currentSpriteFrame_.y = 600;
+      break;
+    case PlayerAnimation::LEFT:
+      currentSpriteFrame_.x = 0;
+      currentSpriteFrame_.y = 772;
+      break;
+    case PlayerAnimation::RIGHT:
+      currentSpriteFrame_.x = 0;
+      currentSpriteFrame_.y = 1068;
+      break;
+    default: // IDLE
+      currentSpriteFrame_.x = 0;
+      currentSpriteFrame_.y = 0;
+      break;
+    }
+
+    // Apply movement
+    if (isMoving) {
+      // Normalize diagonal movement
+      if (movement.x != 0.0f && movement.y != 0.0f) {
+        float length =
+            std::sqrt(movement.x * movement.x + movement.y * movement.y);
+        if (length > 0.0f) {
+          movement.x /= length;
+          movement.y /= length;
+          movement.x *= PLAYER_SPEED * deltaTime;
+          movement.y *= PLAYER_SPEED * deltaTime;
+        }
+      }
+
+      playerPosition_.x += movement.x;
+      playerPosition_.y += movement.y;
+
+      // Clamp to world bounds
+      const float SPRITE_HALF_WIDTH = 80.0f;
+      const float SPRITE_HALF_HEIGHT = 70.0f;
+
+      playerPosition_.x =
+          std::clamp(playerPosition_.x, SPRITE_HALF_WIDTH,
+                     static_cast<float>(WORLD_WIDTH) - SPRITE_HALF_WIDTH);
+      playerPosition_.y =
+          std::clamp(playerPosition_.y, SPRITE_HALF_HEIGHT,
+                     static_cast<float>(WORLD_HEIGHT) - SPRITE_HALF_HEIGHT);
+
+      // Update camera target
+      Camera2D *followCamera = cameraManager_->getCamera2D(mainCameraId_);
+      if (followCamera &&
+          followCamera->getMode() == CameraMode::FOLLOW_TARGET) {
+        followCamera->setTarget(playerPosition_);
+      }
+    }
+  }
+
+  void toggleCameraMode() {
+    static bool isFollowMode = true;
+
+    if (isFollowMode) {
+      cameraManager_->setActiveCamera(freeCameraId_);
+      std::cout << "Camera Mode: FREE CONTROL (use arrow keys)" << std::endl;
+    } else {
+      cameraManager_->setActiveCamera(mainCameraId_);
+      std::cout << "Camera Mode: FOLLOW PLAYER" << std::endl;
+    }
+
+    isFollowMode = !isFollowMode;
+  }
+
+  void render() {
+    SDL_SetRenderDrawColor(renderer_, 30, 60, 30, 255);
+    SDL_RenderClear(renderer_);
+
+    Vec2 cameraOffset = getCameraPosition();
+    renderWorldBackground(cameraOffset);
+    renderPlayer(cameraOffset);
+    renderUI();
+
+    SDL_RenderPresent(renderer_);
+  }
+
+  void renderPlayer(const Vec2 &cameraOffset) {
+    if (!playerSDLTexture_)
+      return;
+
+    int screenX = static_cast<int>(playerPosition_.x - cameraOffset.x -
+                                   currentSpriteFrame_.w / 2);
+    int screenY = static_cast<int>(playerPosition_.y - cameraOffset.y -
+                                   currentSpriteFrame_.h / 2);
+
+    SDL_Rect destRect = {screenX, screenY, currentSpriteFrame_.w,
+                         currentSpriteFrame_.h};
+
+    SDL_RenderCopy(renderer_, playerSDLTexture_, &currentSpriteFrame_,
+                   &destRect);
+  }
+
+  Vec2 getCameraPosition() {
+    const BaseCamera *activeCamera = cameraManager_->getActiveCamera();
+    if (activeCamera) {
+      Vec3 pos3D = activeCamera->getPosition();
+      Vec2 cameraWorldPos(pos3D.x, pos3D.y);
+      Vec2 renderOffset(cameraWorldPos.x - WINDOW_WIDTH / 2.0f,
+                        cameraWorldPos.y - WINDOW_HEIGHT / 2.0f);
+      return renderOffset;
+    }
+    return Vec2{0.0f, 0.0f};
+  }
+
+  void renderWorldBackground(const Vec2 &cameraOffset) {
+    const int TILE_SIZE = 64;
+    const int GRASS_VARIANT_COUNT = 3;
+
+    int startX = static_cast<int>(cameraOffset.x / TILE_SIZE);
+    int startY = static_cast<int>(cameraOffset.y / TILE_SIZE);
+    int endX =
+        static_cast<int>((cameraOffset.x + WINDOW_WIDTH) / TILE_SIZE) + 1;
+    int endY =
+        static_cast<int>((cameraOffset.y + WINDOW_HEIGHT) / TILE_SIZE) + 1;
+
+    startX = std::max(0, startX);
+    startY = std::max(0, startY);
+    endX = std::min(static_cast<int>(WORLD_WIDTH / TILE_SIZE), endX);
+    endY = std::min(static_cast<int>(WORLD_HEIGHT / TILE_SIZE), endY);
+
+    for (int y = startY; y < endY; ++y) {
+      for (int x = startX; x < endX; ++x) {
+        int worldX = x * TILE_SIZE;
+        int worldY = y * TILE_SIZE;
+
+        int screenX = worldX - static_cast<int>(cameraOffset.x);
+        int screenY = worldY - static_cast<int>(cameraOffset.y);
+
+        SDL_Rect tileRect = {screenX, screenY, TILE_SIZE, TILE_SIZE};
+
+        int variant = (x + y * 7) % GRASS_VARIANT_COUNT;
+
+        switch (variant) {
+        case 0:
+          SDL_SetRenderDrawColor(renderer_, 50, 120, 50, 255);
+          break;
+        case 1:
+          SDL_SetRenderDrawColor(renderer_, 45, 115, 45, 255);
+          break;
+        case 2:
+          SDL_SetRenderDrawColor(renderer_, 55, 125, 55, 255);
+          break;
+        }
+
+        SDL_RenderFillRect(renderer_, &tileRect);
+
+        if (showGrid_) {
+          SDL_SetRenderDrawColor(renderer_, 40, 100, 40, 128);
+          SDL_RenderDrawRect(renderer_, &tileRect);
+        }
+      }
+    }
+
+    renderWorldBoundaries(cameraOffset);
+  }
+
+  void renderWorldBoundaries(const Vec2 &cameraOffset) {
+    SDL_SetRenderDrawColor(renderer_, 100, 50, 50, 255);
+
+    int leftBorder = -static_cast<int>(cameraOffset.x);
+    int topBorder = -static_cast<int>(cameraOffset.y);
+    int rightBorder = WORLD_WIDTH - static_cast<int>(cameraOffset.x);
+    int bottomBorder = WORLD_HEIGHT - static_cast<int>(cameraOffset.y);
+
+    const int BORDER_WIDTH = 5;
+
+    if (leftBorder >= -BORDER_WIDTH && leftBorder <= WINDOW_WIDTH) {
+      SDL_Rect leftRect = {leftBorder, 0, BORDER_WIDTH, WINDOW_HEIGHT};
+      SDL_RenderFillRect(renderer_, &leftRect);
+    }
+    if (rightBorder >= 0 && rightBorder <= WINDOW_WIDTH + BORDER_WIDTH) {
+      SDL_Rect rightRect = {rightBorder, 0, BORDER_WIDTH, WINDOW_HEIGHT};
+      SDL_RenderFillRect(renderer_, &rightRect);
+    }
+    if (topBorder >= -BORDER_WIDTH && topBorder <= WINDOW_HEIGHT) {
+      SDL_Rect topRect = {0, topBorder, WINDOW_WIDTH, BORDER_WIDTH};
+      SDL_RenderFillRect(renderer_, &topRect);
+    }
+    if (bottomBorder >= 0 && bottomBorder <= WINDOW_HEIGHT + BORDER_WIDTH) {
+      SDL_Rect bottomRect = {0, bottomBorder, WINDOW_WIDTH, BORDER_WIDTH};
+      SDL_RenderFillRect(renderer_, &bottomRect);
+    }
+  }
+
+  void renderUI() {
+    // Player status indicator
+    SDL_Rect statusRect = {10, 10, 200, 30};
+
+    if (currentSpriteFrame_.y == 0) {
+      SDL_SetRenderDrawColor(renderer_, 255, 255, 255, 128); // White - IDLE
+    } else if (currentSpriteFrame_.y == 930) {
+      SDL_SetRenderDrawColor(renderer_, 0, 255, 0, 128); // Green - UP
+    } else if (currentSpriteFrame_.y == 600) {
+      SDL_SetRenderDrawColor(renderer_, 255, 0, 0, 128); // Red - DOWN
+    } else if (currentSpriteFrame_.y == 772) {
+      SDL_SetRenderDrawColor(renderer_, 0, 0, 255, 128); // Blue - LEFT
+    } else if (currentSpriteFrame_.y == 1068) {
+      SDL_SetRenderDrawColor(renderer_, 255, 255, 0, 128); // Yellow - RIGHT
+    }
+    SDL_RenderFillRect(renderer_, &statusRect);
+
+    // Camera indicator
+    SDL_Rect cameraRect = {10, 50, 200, 20};
+    const BaseCamera *activeCamera = cameraManager_->getActiveCamera();
+
+    if (activeCamera) {
+      if (activeCamera->getId() == mainCameraId_) {
+        SDL_SetRenderDrawColor(renderer_, 0, 255, 255,
+                               128); // Cyan = Follow mode
+      } else {
+        SDL_SetRenderDrawColor(renderer_, 255, 0, 255,
+                               128); // Magenta = Free mode
+      }
+    } else {
+      SDL_SetRenderDrawColor(renderer_, 128, 128, 128, 128); // Grey = No camera
+    }
+    SDL_RenderFillRect(renderer_, &cameraRect);
+
+    // Zoom indicator
+    const Camera2D *camera2D =
+        cameraManager_->getCamera2D(cameraManager_->getActiveCameraId());
+    if (camera2D) {
+      float zoom = camera2D->getZoom();
+      int zoomBarWidth = static_cast<int>(zoom * 100);
+      zoomBarWidth = std::clamp(zoomBarWidth, 10, 300);
+
+      SDL_Rect zoomRect = {10, 80, zoomBarWidth, 15};
+      SDL_SetRenderDrawColor(renderer_, 255, 255, 0, 128);
+      SDL_RenderFillRect(renderer_, &zoomRect);
+    }
+
+    renderMiniMap();
+
+    // CHANGE: Gamepad indicator using new input system
+    if (inputSystem_->isGamepadButtonPressed(0, GamepadButton::NONE)) {
+      SDL_Rect gamepadRect = {WINDOW_WIDTH - 50, 10, 40, 20};
+      SDL_SetRenderDrawColor(renderer_, 0, 255, 0, 128);
+      SDL_RenderFillRect(renderer_, &gamepadRect);
+    }
+
+    // Shake indicator
+    if (cameraManager_->isCameraShaking(cameraManager_->getActiveCameraId())) {
+      SDL_Rect shakeRect = {WINDOW_WIDTH - 100, 10, 40, 20};
+      SDL_SetRenderDrawColor(renderer_, 255, 0, 0, 200);
+      SDL_RenderFillRect(renderer_, &shakeRect);
+    }
+
+    // Memory usage indicator if debug enabled
+    if (showDebugInfo_) {
+      float memoryPercent =
+          static_cast<float>(memoryManager_->getTotalMemoryUsage()) /
+          (256.0f * 1024.0f * 1024.0f);
+      int memBarWidth = static_cast<int>(memoryPercent * 200);
+      memBarWidth = std::clamp(memBarWidth, 0, 200);
+
+      SDL_Rect memRect = {10, 110, memBarWidth, 10};
+      if (memoryPercent < 0.5f) {
+        SDL_SetRenderDrawColor(renderer_, 0, 255, 0, 128);
+      } else if (memoryPercent < 0.8f) {
+        SDL_SetRenderDrawColor(renderer_, 255, 255, 0, 128);
+      } else {
+        SDL_SetRenderDrawColor(renderer_, 255, 0, 0, 128);
+      }
+      SDL_RenderFillRect(renderer_, &memRect);
+    }
+  }
+
+  void renderMiniMap() {
+    const int MINIMAP_SIZE = 150;
+    const int MINIMAP_X = WINDOW_WIDTH - MINIMAP_SIZE - 10;
+    const int MINIMAP_Y = WINDOW_HEIGHT - MINIMAP_SIZE - 10;
+
+    SDL_Rect minimapBg = {MINIMAP_X - 5, MINIMAP_Y - 5, MINIMAP_SIZE + 10,
+                          MINIMAP_SIZE + 10};
+    SDL_SetRenderDrawColor(renderer_, 0, 0, 0, 180);
+    SDL_RenderFillRect(renderer_, &minimapBg);
+
+    SDL_Rect worldRect = {MINIMAP_X, MINIMAP_Y, MINIMAP_SIZE, MINIMAP_SIZE};
+    SDL_SetRenderDrawColor(renderer_, 50, 100, 50, 255);
+    SDL_RenderFillRect(renderer_, &worldRect);
+
+    int playerMapX =
+        MINIMAP_X +
+        static_cast<int>((playerPosition_.x / WORLD_WIDTH) * MINIMAP_SIZE);
+    int playerMapY =
+        MINIMAP_Y +
+        static_cast<int>((playerPosition_.y / WORLD_HEIGHT) * MINIMAP_SIZE);
+
+    SDL_Rect playerDot = {playerMapX - 3, playerMapY - 3, 6, 6};
+    SDL_SetRenderDrawColor(renderer_, 255, 255, 255, 255);
+    SDL_RenderFillRect(renderer_, &playerDot);
+
+    const BaseCamera *activeCamera = cameraManager_->getActiveCamera();
+    if (activeCamera) {
+      Vec3 cameraPos3D = activeCamera->getPosition();
+      Vec2 cameraPos(cameraPos3D.x, cameraPos3D.y);
+
+      const Camera2D *camera2D =
+          cameraManager_->getCamera2D(cameraManager_->getActiveCameraId());
+      float zoom = camera2D ? camera2D->getZoom() : 1.0f;
+
+      float visibleWidth = WINDOW_WIDTH / zoom;
+      float visibleHeight = WINDOW_HEIGHT / zoom;
+
+      int viewX =
+          MINIMAP_X +
+          static_cast<int>(((cameraPos.x - visibleWidth / 2) / WORLD_WIDTH) *
+                           MINIMAP_SIZE);
+      int viewY =
+          MINIMAP_Y +
+          static_cast<int>(((cameraPos.y - visibleHeight / 2) / WORLD_HEIGHT) *
+                           MINIMAP_SIZE);
+      int viewW = static_cast<int>((visibleWidth / WORLD_WIDTH) * MINIMAP_SIZE);
+      int viewH =
+          static_cast<int>((visibleHeight / WORLD_HEIGHT) * MINIMAP_SIZE);
+
+      SDL_Rect viewRect = {viewX, viewY, viewW, viewH};
+      SDL_SetRenderDrawColor(renderer_, 255, 255, 0, 100);
+      SDL_RenderFillRect(renderer_, &viewRect);
+    }
+  }
+
+  void showStats(int frameCount, std::chrono::steady_clock::duration elapsed) {
+    auto elapsedMs =
+        std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count();
+    double fps = frameCount * 1000.0 / elapsedMs;
+
+    std::cout << "\n--- Game Performance Stats ---" << std::endl;
+    std::cout << "FPS: " << fps << std::endl;
+
+    std::cout << "Resource Memory: "
+              << (resourceManager_->getMemoryUsage() / 1024.0 / 1024.0) << " MB"
+              << std::endl;
+    std::cout << "Total Memory Usage: "
+              << (memoryManager_->getTotalMemoryUsage() / 1024.0 / 1024.0)
+              << " MB" << std::endl;
+
+    std::cout << "Cameras: " << cameraManager_->getCameraCount() << std::endl;
+
+    const BaseCamera *activeCamera = cameraManager_->getActiveCamera();
+    if (activeCamera) {
+      Vec3 cameraPos = activeCamera->getPosition();
+      std::cout << "Camera Position: (" << cameraPos.x << ", " << cameraPos.y
+                << ")" << std::endl;
+    }
+
+    // CHANGE: Show input system stats
+    auto inputStats = inputSystem_->getStatistics();
+    std::cout << "Input Frames: " << inputStats.totalFrames << std::endl;
+
+    std::cout << "Player Position: (" << playerPosition_.x << ", "
+              << playerPosition_.y << ")" << std::endl;
+  }
+
+  void printControls() {
+    std::cout << "=== GAME CONTROLS (NEW INPUT SYSTEM) ===" << std::endl;
+    std::cout << "Player Movement:" << std::endl;
+    std::cout << "  WASD: Move player" << std::endl;
+    std::cout << "  Gamepad Left Stick: Move player (analog)" << std::endl;
+    std::cout << "\nCamera Controls:" << std::endl;
+    std::cout << "  C: Switch camera mode (Follow/Free)" << std::endl;
+    std::cout << "  Arrow Keys: Manual camera (Free mode only)" << std::endl;
+    std::cout << "  +/-: Zoom in/out" << std::endl;
+    std::cout << "  Space: Camera shake" << std::endl;
+    std::cout << "  Gamepad Right Stick: Manual camera" << std::endl;
+    std::cout << "\nOther:" << std::endl;
+    std::cout << "  G: Toggle grid display" << std::endl;
+    std::cout << "  D: Toggle debug info" << std::endl;
+    std::cout << "  ESC: Quit game" << std::endl;
+    std::cout << "========================================" << std::endl;
+  }
+
+  ResourcePtr<TextureResource>
+  getTextureResource(const ResourceHandle<TextureResource> &handle) {
+    if (!handle.isValid())
+      return nullptr;
+
+    if (auto cached = handle.tryGet()) {
+      return cached;
+    }
+
+    return resourceManager_->getResource<TextureResource>(handle.getId());
+  }
+
+  void cleanup() {
+    std::cout << "\nCleaning up game resources..." << std::endl;
+
+    if (playerSDLTexture_) {
+      SDL_DestroyTexture(playerSDLTexture_);
+      playerSDLTexture_ = nullptr;
+    }
+    if (backgroundSDLTexture_) {
+      SDL_DestroyTexture(backgroundSDLTexture_);
+      backgroundSDLTexture_ = nullptr;
+    }
+
+    playerTextureHandle_.reset();
+    backgroundTextureHandle_.reset();
+
+    if (cameraManager_) {
+      cameraManager_->shutdown();
+      cameraManager_.reset();
+    }
+
+    // CHANGE: Clean up new input system
+    if (inputSystem_) {
+      inputSystem_->shutdown();
+      inputSystem_.reset();
+    }
+
+    if (resourceManager_) {
+      resourceManager_.reset();
+    }
+
+    if (memoryManager_) {
+      std::cout << "\n=== Memory Manager Final Report ===" << std::endl;
+      std::cout << memoryManager_->generateMemoryReport() << std::endl;
+
+      size_t leaks = engine::memory::MemoryManager::checkForLeaks();
+      if (leaks > 0) {
+        std::cout << "WARNING: " << leaks << " memory leaks detected!"
+                  << std::endl;
+      } else {
+        std::cout << "✓ No memory leaks detected" << std::endl;
+      }
+
+      memoryManager_->shutdown();
+      memoryManager_.reset();
+    }
+
+    if (renderer_) {
+      SDL_DestroyRenderer(renderer_);
+      renderer_ = nullptr;
+    }
+
+    if (window_) {
+      SDL_DestroyWindow(window_);
+      window_ = nullptr;
+    }
+
+    IMG_Quit();
+    SDL_Quit();
+
+    std::cout << "Cleanup completed!" << std::endl;
+  }
 
 private:
-    // Player animation states
-    enum class PlayerAnimation {
-        IDLE,
-        UP,
-        DOWN,
-        LEFT,
-        RIGHT
-    };
+  // Player animation states
+  enum class PlayerAnimation { IDLE, UP, DOWN, LEFT, RIGHT };
 
-    // SDL objects
-    SDL_Window* window_ = nullptr;
-    SDL_Renderer* renderer_ = nullptr;
-    SDL_Texture* playerSDLTexture_ = nullptr;
-    SDL_Texture* backgroundSDLTexture_ = nullptr;
+  // SDL objects
+  SDL_Window *window_ = nullptr;
+  SDL_Renderer *renderer_ = nullptr;
+  SDL_Texture *playerSDLTexture_ = nullptr;
+  SDL_Texture *backgroundSDLTexture_ = nullptr;
 
-    // Managers
-    std::unique_ptr<MemoryManager> memoryManager_;
-    std::unique_ptr<ResourceManager> resourceManager_;
-    std::unique_ptr<CameraManager> cameraManager_;
+  // Managers
+  std::unique_ptr<MemoryManager> memoryManager_;
+  std::unique_ptr<ResourceManager> resourceManager_;
+  std::unique_ptr<CameraManager> cameraManager_;
 
-    // CHANGE: New InputSystem instead of old InputManager
-    std::unique_ptr<InputSystem> inputSystem_;
+  // CHANGE: New InputSystem instead of old InputManager
+  std::unique_ptr<InputSystem> inputSystem_;
 
-    // Resource handles
-    ResourceHandle<TextureResource> playerTextureHandle_;
-    ResourceHandle<TextureResource> backgroundTextureHandle_;
+  // Resource handles
+  ResourceHandle<TextureResource> playerTextureHandle_;
+  ResourceHandle<TextureResource> backgroundTextureHandle_;
 
-    // Game state
-    Vec2 playerPosition_;
-    SDL_Rect currentSpriteFrame_;
+  // Game state
+  Vec2 playerPosition_;
+  SDL_Rect currentSpriteFrame_;
 
-    // Camera IDs
-    CameraID mainCameraId_ = INVALID_CAMERA_ID;
-    CameraID freeCameraId_ = INVALID_CAMERA_ID;
+  // Camera IDs
+  CameraID mainCameraId_ = INVALID_CAMERA_ID;
+  CameraID freeCameraId_ = INVALID_CAMERA_ID;
 
-    // Debug flags
-    bool showGrid_ = false;
-    bool showDebugInfo_ = true;
+  // Debug flags
+  bool showGrid_ = false;
+  bool showDebugInfo_ = true;
 };
 
 /**
@@ -1051,53 +1087,64 @@ private:
  * CHANGE: Updated description for new resource system
  */
 int main() {
-    std::cout << "=== Game Demo with New Resource & Memory System ===" << std::endl;
-    std::cout << "This demo shows integrated MemoryManager, ResourceManager, InputManager, and CameraManager" <<
-        std::endl;
-    std::cout << "Features:" << std::endl;
-    std::cout << "  - Advanced memory management with allocation tracking" << std::endl;
-    std::cout << "  - New resource management system with caching" << std::endl;
-    std::cout << "  - Large explorable world (" << GameDemo::WORLD_WIDTH << "x" << GameDemo::WORLD_HEIGHT << " pixels)"
-        << std::endl;
-    std::cout << "  - Player movement with WASD keys and gamepad" << std::endl;
-    std::cout << "  - Advanced camera system with follow and free modes" << std::endl;
-    std::cout << "  - Camera zoom, smooth transitions, and shake effects" << std::endl;
-    std::cout << "  - Simple sprite rendering (no animation system yet)" << std::endl;
-    std::cout << "  - Viewport culling for performance" << std::endl;
-    std::cout << "  - Mini-map showing world position" << std::endl;
-    std::cout << "  - Performance monitoring and stats" << std::endl;
-    std::cout << "\nMake sure you have the following asset:" << std::endl;
-    std::cout << "  ../assets/player.png (sprite sheet with specified frame layout)" << std::endl;
-    std::cout << "\nStarting game..." << std::endl;
+  std::cout << "=== Game Demo with New Resource & Memory System ==="
+            << std::endl;
+  std::cout << "This demo shows integrated MemoryManager, ResourceManager, "
+               "InputManager, and CameraManager"
+            << std::endl;
+  std::cout << "Features:" << std::endl;
+  std::cout << "  - Advanced memory management with allocation tracking"
+            << std::endl;
+  std::cout << "  - New resource management system with caching" << std::endl;
+  std::cout << "  - Large explorable world (" << GameDemo::WORLD_WIDTH << "x"
+            << GameDemo::WORLD_HEIGHT << " pixels)" << std::endl;
+  std::cout << "  - Player movement with WASD keys and gamepad" << std::endl;
+  std::cout << "  - Advanced camera system with follow and free modes"
+            << std::endl;
+  std::cout << "  - Camera zoom, smooth transitions, and shake effects"
+            << std::endl;
+  std::cout << "  - Simple sprite rendering (no animation system yet)"
+            << std::endl;
+  std::cout << "  - Viewport culling for performance" << std::endl;
+  std::cout << "  - Mini-map showing world position" << std::endl;
+  std::cout << "  - Performance monitoring and stats" << std::endl;
+  std::cout << "\nMake sure you have the following asset:" << std::endl;
+  std::cout
+      << "  ../assets/player.png (sprite sheet with specified frame layout)"
+      << std::endl;
+  std::cout << "\nStarting game..." << std::endl;
 
-    // Create game instance
-    GameDemo game;
+  // Create game instance
+  GameDemo game;
 
-    // Initialize
-    if (!game.initialize()) {
-        std::cerr << "\nFailed to initialize game!" << std::endl;
-        std::cerr << "Please ensure:" << std::endl;
-        std::cerr << "  1. SDL2 and SDL2_image are properly installed" << std::endl;
-        std::cerr << "  2. ../assets/player.png exists and is accessible" << std::endl;
-        std::cerr << "  3. The sprite sheet follows the frame layout specifications" << std::endl;
-        return -1;
-    }
+  // Initialize
+  if (!game.initialize()) {
+    std::cerr << "\nFailed to initialize game!" << std::endl;
+    std::cerr << "Please ensure:" << std::endl;
+    std::cerr << "  1. SDL2 and SDL2_image are properly installed" << std::endl;
+    std::cerr << "  2. ../assets/player.png exists and is accessible"
+              << std::endl;
+    std::cerr << "  3. The sprite sheet follows the frame layout specifications"
+              << std::endl;
+    return -1;
+  }
 
-    // Run main loop
-    try {
-        game.run();
-    }
-    catch (const std::exception& e) {
-        std::cerr << "\nException during game loop: " << e.what() << std::endl;
-        return -1;
-    }
+  // Run main loop
+  try {
+    game.run();
+  } catch (const std::exception &e) {
+    std::cerr << "\nException during game loop: " << e.what() << std::endl;
+    return -1;
+  }
 
-    // Clean up resources
-    game.cleanup();
+  // Clean up resources
+  game.cleanup();
 
-    std::cout << "\nGame demo completed successfully!" << std::endl;
-    std::cout << "Thanks for testing the new resource and memory management system!" << std::endl;
-    return 0;
+  std::cout << "\nGame demo completed successfully!" << std::endl;
+  std::cout
+      << "Thanks for testing the new resource and memory management system!"
+      << std::endl;
+  return 0;
 }
 
 // ====================================================================
@@ -1192,17 +1239,25 @@ int main() {
 //  MANUAL CONFIGURATION
     // Configurar el sistema de memoria
 //    MemoryManagerConfig config;
-//    config.mainHeapSize = 256 * 1024 * 1024;        // 256 MB para el heap principal
-//    config.frameStackSize = 4 * 1024 * 1024;        // 4 MB para stack por frame
-//    config.frameLinearSize = 8 * 1024 * 1024;       // 8 MB para linear por frame
-//    config.frameBufferCount = 2;                     // Double buffering (2 frames)
-//    config.renderingPoolSize = 16 * 1024 * 1024;    // 16 MB para pool de rendering
-//    config.physicsPoolSize = 8 * 1024 * 1024;       // 8 MB para pool de física
+//    config.mainHeapSize = 256 * 1024 * 1024;        // 256 MB para el heap
+principal
+//    config.frameStackSize = 4 * 1024 * 1024;        // 4 MB para stack por
+frame
+//    config.frameLinearSize = 8 * 1024 * 1024;       // 8 MB para linear por
+frame
+//    config.frameBufferCount = 2;                     // Double buffering (2
+frames)
+//    config.renderingPoolSize = 16 * 1024 * 1024;    // 16 MB para pool de
+rendering
+//    config.physicsPoolSize = 8 * 1024 * 1024;       // 8 MB para pool de
+física
 //
 //    // Agregar un pool personalizado para partículas
 //    config.customPools.push_back({
-//        sizeof(Particle),                            // Tamaño de cada partícula
-//        100000,                                        // Máximo 100000 partículas
+//        sizeof(Particle),                            // Tamaño de cada
+partícula
+//        100000,                                        // Máximo 100000
+partículas
 //        MemoryCategory::PARTICLES                   // Categoría PARTICLES
 //    });
 
@@ -1234,15 +1289,17 @@ int main() {
     std::cout << "Creating 5 particles from pool:" << std::endl;
     for (int i = 0; i < 5; ++i) {
         // allocateObject usa internamente el pool configurado para PARTICLES
-        // El MemoryManager ve que pedimos categoría PARTICLES y usa el pool correspondiente
-        Particle* particle = memoryManager.allocateObject<Particle>(MemoryCategory::PARTICLES);
+        // El MemoryManager ve que pedimos categoría PARTICLES y usa el pool
+correspondiente Particle* particle =
+memoryManager.allocateObject<Particle>(MemoryCategory::PARTICLES);
 
         if (particle) {
             // Inicializar la partícula
             particle->position[0] = i * 10.0f;
             particle->lifetime = 1.0f;
             particles.push_back(particle);
-            std::cout << "  ✓ Particle " << i << " allocated at: " << particle << std::endl;
+            std::cout << "  ✓ Particle " << i << " allocated at: " << particle
+<< std::endl;
         }
     }
 
@@ -1283,7 +1340,8 @@ int main() {
 
     // Guardar un marcador para poder liberar todo de una vez después
     auto stackMarker = frameStack.getMarker();
-    std::cout << "  Stack marker saved at position: " << stackMarker << std::endl;
+    std::cout << "  Stack marker saved at position: " << stackMarker <<
+std::endl;
 
     // Allocar datos temporales para el frame (matrices de transformación)
     std::cout << "\nAllocating temporary frame data:" << std::endl;
@@ -1292,27 +1350,31 @@ int main() {
     float* matrices = static_cast<float*>(
         frameStack.allocate(sizeof(float) * 16 * 10)  // 10 matrices de 4x4
     );
-    std::cout << "  ✓ Allocated 10 transform matrices at: " << matrices << std::endl;
+    std::cout << "  ✓ Allocated 10 transform matrices at: " << matrices <<
+std::endl;
 
     // Allocar comandos de render temporales
     RenderCommand* commands = static_cast<RenderCommand*>(
         frameStack.allocate(sizeof(RenderCommand) * 20)  // 20 comandos
     );
-    std::cout << "  ✓ Allocated 20 render commands at: " << commands << std::endl;
+    std::cout << "  ✓ Allocated 20 render commands at: " << commands <<
+std::endl;
 
     // Ver uso actual del stack
     std::cout << "\n  Stack usage: " << frameStack.getUsedMemory()
               << " / " << frameStack.getCapacity() << " bytes" << std::endl;
 
     // Usar ScopedAllocator para una subsección (se libera automáticamente)
-    std::cout << "\nUsing ScopedAllocator for temporary calculations:" << std::endl;
+    std::cout << "\nUsing ScopedAllocator for temporary calculations:" <<
+std::endl;
     {
         // Todo lo allocado en este scope se libera automáticamente al salir
         ScopedAllocator scoped(frameStack);
 
         // Allocar memoria temporal para cálculos
         void* tempBuffer = scoped.allocate(1024);  // 1KB temporal
-        std::cout << "  ✓ Allocated 1KB temp buffer in scope at: " << tempBuffer << std::endl;
+        std::cout << "  ✓ Allocated 1KB temp buffer in scope at: " << tempBuffer
+<< std::endl;
 
         // Simular algunos cálculos...
 
@@ -1323,8 +1385,8 @@ int main() {
     std::cout << "\nFreeing all stack memory to marker:" << std::endl;
     frameStack.freeToMarker(stackMarker);
     std::cout << "  ✓ Stack reset to marker position" << std::endl;
-    std::cout << "  Stack usage now: " << frameStack.getUsedMemory() << " bytes" << std::endl;
-    std::cout << std::endl;
+    std::cout << "  Stack usage now: " << frameStack.getUsedMemory() << " bytes"
+<< std::endl; std::cout << std::endl;
 
     // ====================================================================
     // PASO 4: USO DEL LINEAR ALLOCATOR (para carga de nivel)
@@ -1336,33 +1398,39 @@ int main() {
     // Obtener el linear allocator del frame
     LinearAllocator& frameLinear = memoryManager.getFrameLinearAllocator();
 
-    std::cout << "Simulating level load - allocating sequential data:" << std::endl;
+    std::cout << "Simulating level load - allocating sequential data:" <<
+std::endl;
 
-    // Simular carga de datos de nivel (se cargan una vez, no se liberan individualmente)
+    // Simular carga de datos de nivel (se cargan una vez, no se liberan
+individualmente)
 
     // 1. Cargar datos de geometría
-    void* geometryData = frameLinear.allocate(1024 * 100);  // 100 KB de geometría
-    std::cout << "  ✓ Loaded 100KB geometry data at: " << geometryData << std::endl;
+    void* geometryData = frameLinear.allocate(1024 * 100);  // 100 KB de
+geometría std::cout << "  ✓ Loaded 100KB geometry data at: " << geometryData <<
+std::endl;
 
     // 2. Cargar datos de iluminación
     void* lightingData = frameLinear.allocate(1024 * 50);   // 50 KB de luces
-    std::cout << "  ✓ Loaded 50KB lighting data at: " << lightingData << std::endl;
+    std::cout << "  ✓ Loaded 50KB lighting data at: " << lightingData <<
+std::endl;
 
     // 3. Cargar datos de colisión
     void* collisionData = frameLinear.allocate(1024 * 75);  // 75 KB de colisión
-    std::cout << "  ✓ Loaded 75KB collision data at: " << collisionData << std::endl;
+    std::cout << "  ✓ Loaded 75KB collision data at: " << collisionData <<
+std::endl;
 
     // Linear allocator NO puede liberar allocaciones individuales
     std::cout << "\n  Linear usage: " << frameLinear.getUsedMemory()
               << " / " << frameLinear.getCapacity() << " bytes" << std::endl;
-    std::cout << "  Allocations made: " << frameLinear.getAllocationCount() << std::endl;
+    std::cout << "  Allocations made: " << frameLinear.getAllocationCount() <<
+std::endl;
 
     // La única forma de liberar es hacer reset completo
     std::cout << "\nResetting linear allocator (unloading level):" << std::endl;
     frameLinear.reset();
     std::cout << "  ✓ All linear memory freed at once" << std::endl;
-    std::cout << "  Linear usage now: " << frameLinear.getUsedMemory() << " bytes" << std::endl;
-    std::cout << std::endl;
+    std::cout << "  Linear usage now: " << frameLinear.getUsedMemory() << "
+bytes" << std::endl; std::cout << std::endl;
 
     // ====================================================================
     // PASO 5: USO DEL HEAP PRINCIPAL (fallback general)
@@ -1371,15 +1439,18 @@ int main() {
     std::cout << "5. MAIN HEAP EXAMPLE (General Purpose)" << std::endl;
     std::cout << "---------------------------------------" << std::endl;
 
-    // Cuando pedimos una categoría sin allocator específico, usa el heap principal
-    std::cout << "Allocating enemies (no specific pool configured):" << std::endl;
+    // Cuando pedimos una categoría sin allocator específico, usa el heap
+principal std::cout << "Allocating enemies (no specific pool configured):" <<
+std::endl;
 
     // Crear enemigos - usa el heap principal porque no hay pool para GAMEPLAY
-    Enemy* enemy1 = memoryManager.allocateObject<Enemy>(MemoryCategory::GAMEPLAY);
-    std::cout << "  ✓ Enemy 1 allocated at: " << enemy1 << std::endl;
+    Enemy* enemy1 =
+memoryManager.allocateObject<Enemy>(MemoryCategory::GAMEPLAY); std::cout << "  ✓
+Enemy 1 allocated at: " << enemy1 << std::endl;
 
-    Enemy* enemy2 = memoryManager.allocateObject<Enemy>(MemoryCategory::GAMEPLAY);
-    std::cout << "  ✓ Enemy 2 allocated at: " << enemy2 << std::endl;
+    Enemy* enemy2 =
+memoryManager.allocateObject<Enemy>(MemoryCategory::GAMEPLAY); std::cout << "  ✓
+Enemy 2 allocated at: " << enemy2 << std::endl;
 
     // Ver uso por categoría
     std::cout << "\nMemory usage by category:" << std::endl;
@@ -1417,16 +1488,16 @@ int main() {
     std::cout << "Destroying remaining particles:" << std::endl;
     for (size_t i = 2; i < particles.size(); ++i) {
         if (particles[i]) {
-            memoryManager.deallocateObject(particles[i], MemoryCategory::PARTICLES);
+            memoryManager.deallocateObject(particles[i],
+MemoryCategory::PARTICLES);
         }
     }
 
     // Verificar leaks antes de shutdown
     std::size_t leaks = memoryManager.checkForLeaks();
     if (leaks > 0) {
-        std::cout << "\n⚠ Warning: " << leaks << " memory leaks detected!" << std::endl;
-    } else {
-        std::cout << "\n✓ No memory leaks detected" << std::endl;
+        std::cout << "\n⚠ Warning: " << leaks << " memory leaks detected!" <<
+std::endl; } else { std::cout << "\n✓ No memory leaks detected" << std::endl;
     }
 
     // Shutdown del sistema

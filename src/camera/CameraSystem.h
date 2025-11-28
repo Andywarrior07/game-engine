@@ -11,8 +11,8 @@
 #pragma once
 
 // Core types and definitions
-#include "core/CameraTypes.h"
 #include "core/CameraBounds.h"
+#include "core/CameraTypes.h"
 
 // Base and concrete camera implementations
 #include "cameras/BaseCamera.h"
@@ -25,7 +25,7 @@
 #include "effects/ShakePattern.h"
 
 // Transitions
-#include "transitions/CameraTRansition.h"
+// #include "transitions/CameraTRansition.h"
 #include "transitions/TransitionConfig.h"
 #include "transitions/TransitionEasing.h"
 
@@ -39,14 +39,14 @@
 
 // Preset cameras
 #include "presets/FPSCamera.h"
+#include "presets/IsometricCamera.h"
+#include "presets/SideScrollerCamera.h"
 #include "presets/ThirdPersonCamera.h"
 #include "presets/TopDownCamera.h"
-#include "presets/SideScrollerCamera.h"
-#include "presets/IsometricCamera.h"
 
 // Utilities
-#include "utils/CoordinateTransform.h"
 #include "utils/CameraDebugger.h"
+#include "utils/CoordinateTransform.h"
 
 /**
  * @namespace engine::camera
@@ -61,13 +61,13 @@
  * - Coordinate transformation utilities
  */
 namespace engine::camera {
-    /**
-     * @brief Camera system version information
-     */
-    constexpr const char* CAMERA_SYSTEM_VERSION = "1.0.0";
+/**
+ * @brief Camera system version information
+ */
+constexpr const char *CAMERA_SYSTEM_VERSION = "1.0.0";
 
-    /**
-     * @brief Camera system build date
-     */
-    constexpr const char* CAMERA_SYSTEM_BUILD_DATE = __DATE__;
-}
+/**
+ * @brief Camera system build date
+ */
+constexpr const char *CAMERA_SYSTEM_BUILD_DATE = __DATE__;
+} // namespace engine::camera
