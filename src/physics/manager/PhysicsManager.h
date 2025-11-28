@@ -151,33 +151,52 @@ namespace engine::physics {
         /**
          * @brief Perform a raycast
          */
-        bool raycast(const Vec3& from, const Vec3& to, RaycastHit& hit,
-                     const QueryFilter& filter = QueryFilter()) const;
+        bool raycast(
+            const Vec3& from,
+            const Vec3& to,
+            RaycastHit& hit,
+            const QueryFilter& filter = QueryFilter()
+        ) const;
 
         /**
          * @brief Raycast all hits
          */
-        std::vector<RaycastHit> raycastAll(const Vec3& from, const Vec3& to,
-                                           const QueryFilter& filter = QueryFilter()) const;
+        std::vector<RaycastHit> raycastAll(
+            const Vec3& from,
+            const Vec3& to,
+            const QueryFilter& filter = QueryFilter()
+        ) const;
 
         /**
          * @brief Sphere overlap test
          */
-        std::vector<RigidBody*> overlapSphere(const Vec3& center, Float radius,
-                                              const QueryFilter& filter = QueryFilter()) const;
+        std::vector<RigidBody*> overlapSphere(
+            const Vec3& center,
+            Float radius,
+            const QueryFilter& filter = QueryFilter()
+        ) const;
 
         /**
          * @brief Box overlap test
          */
-        std::vector<RigidBody*> overlapBox(const Vec3& center, const Vec3& halfExtents,
-                                           const Quat& rotation = QUAT_IDENTITY,
-                                           const QueryFilter& filter = QueryFilter()) const;
+        std::vector<RigidBody*> overlapBox(
+            const Vec3& center,
+            const Vec3& halfExtents,
+            const Quat& rotation = QUAT_IDENTITY,
+            const QueryFilter& filter = QueryFilter()
+        ) const;
 
         /**
          * @brief Capsule sweep test
          */
-        bool sweepCapsule(const Vec3& from, const Vec3& to, Float radius, Float height,
-                          SweepResult& result, const QueryFilter& filter = QueryFilter()) {
+        bool sweepCapsule(
+            const Vec3& from,
+            const Vec3& to,
+            Float radius,
+            Float height,
+            SweepResult& result,
+            const QueryFilter& filter = QueryFilter()
+        ) {
             // Implementation for capsule sweep
             return false;
         }
@@ -383,7 +402,6 @@ namespace engine::physics {
          */
         CollisionShape* createCollisionShapeInternal(const ShapeCreationParams& params);
 
-
         /**
          * @brief ADDED: Internal shape destruction
          */
@@ -410,5 +428,23 @@ namespace engine::physics {
         }
 
         Float getUptime() const;
+
+        // ============================================================================
+        // Private Methods - Collision System
+        // ============================================================================
+
+        /**
+         * @brief Initialize the collision detection system
+         * @details Creates and configures the collision detection pipeline,
+         *          integrating with Bullet's native collision system while
+         *          providing custom filtering and event handling
+         * @return true if initialization successful, false otherwise
+         */
+        bool initializeCollisionDetection();
+
+        /**
+         * @brief Shutdown collision detection and clean up resources
+         */
+        void shutdownCollisionDetection();
     };
 } // namespace engine::physics

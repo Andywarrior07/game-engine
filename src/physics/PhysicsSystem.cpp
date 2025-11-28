@@ -10,7 +10,6 @@
 #include <BulletSoftBody/btSoftBody.h>
 
 namespace engine::physics {
-
     // ============================================================================
     // Constructor & Destructor
     // ============================================================================
@@ -81,7 +80,8 @@ namespace engine::physics {
     }
 
     void PhysicsSystem::shutdown() {
-        if (!m_initialized) return;
+        if (!m_initialized)
+            return;
 
         logInfo("Shutting down physics system...");
 
@@ -104,7 +104,8 @@ namespace engine::physics {
     }
 
     void PhysicsSystem::update(Float deltaTime) {
-        if (!m_initialized) return;
+        if (!m_initialized)
+            return;
 
         m_profiler.beginFrame();
 
@@ -133,7 +134,8 @@ namespace engine::physics {
     }
 
     void PhysicsSystem::fixedUpdate() {
-        if (!m_initialized || !m_physicsManager) return;
+        if (!m_initialized || !m_physicsManager)
+            return;
 
         m_physicsManager->fixedUpdate();
     }
@@ -143,12 +145,14 @@ namespace engine::physics {
     // ============================================================================
 
     RigidBody* PhysicsSystem::createRigidBody(const BodyCreationParams& params) {
-        if (!m_physicsManager) return nullptr;
+        if (!m_physicsManager)
+            return nullptr;
         return m_physicsManager->createRigidBody(params);
     }
 
     void PhysicsSystem::destroyRigidBody(RigidBody* body) {
-        if (!m_physicsManager || !body) return;
+        if (!m_physicsManager || !body)
+            return;
         m_physicsManager->destroyRigidBody(body);
     }
 
@@ -159,12 +163,15 @@ namespace engine::physics {
         }
 
         return memoryManager_.allocateObject<SoftBody>(
-            MemoryCategory::PHYSICS, m_softBodyWorldInfo.get(), config
+            MemoryCategory::PHYSICS,
+            m_softBodyWorldInfo.get(),
+            config
         );
     }
 
     void PhysicsSystem::destroySoftBody(SoftBody* body) {
-        if (!body) return;
+        if (!body)
+            return;
         memoryManager_.deallocateObject(body, MemoryCategory::PHYSICS);
     }
 
@@ -173,12 +180,14 @@ namespace engine::physics {
     // ============================================================================
 
     btTypedConstraint* PhysicsSystem::createConstraint(const ConstraintCreationParams& params) {
-        if (!m_physicsManager) return nullptr;
+        if (!m_physicsManager)
+            return nullptr;
         return m_physicsManager->createConstraint(params);
     }
 
     void PhysicsSystem::destroyConstraint(btTypedConstraint* constraint) {
-        if (!m_physicsManager || !constraint) return;
+        if (!m_physicsManager || !constraint)
+            return;
         m_physicsManager->destroyConstraint(constraint);
     }
 
@@ -187,12 +196,14 @@ namespace engine::physics {
     // ============================================================================
 
     CharacterController* PhysicsSystem::createCharacterController(const CharacterControllerParams& params) {
-        if (!m_physicsManager) return nullptr;
+        if (!m_physicsManager)
+            return nullptr;
         return m_physicsManager->createCharacterController(params);
     }
 
     void PhysicsSystem::destroyCharacterController(CharacterController* controller) {
-        if (!m_physicsManager || !controller) return;
+        if (!m_physicsManager || !controller)
+            return;
         m_physicsManager->destroyCharacterController(controller);
     }
 
@@ -201,12 +212,14 @@ namespace engine::physics {
     // ============================================================================
 
     VehiclePhysics* PhysicsSystem::createVehicle(const VehicleParams& params) {
-        if (!m_physicsManager) return nullptr;
+        if (!m_physicsManager)
+            return nullptr;
         return m_physicsManager->createVehicle(params);
     }
 
     void PhysicsSystem::destroyVehicle(VehiclePhysics* vehicle) {
-        if (!m_physicsManager || !vehicle) return;
+        if (!m_physicsManager || !vehicle)
+            return;
         m_physicsManager->destroyVehicle(vehicle);
     }
 
@@ -214,15 +227,24 @@ namespace engine::physics {
     // Queries
     // ============================================================================
 
-    bool PhysicsSystem::raycast(const Vec3& from, const Vec3& to, RaycastHit& hit,
-                               const QueryFilter& filter) {
-        if (!m_queries) return false;
+    bool PhysicsSystem::raycast(
+        const Vec3& from,
+        const Vec3& to,
+        RaycastHit& hit,
+        const QueryFilter& filter
+    ) {
+        if (!m_queries)
+            return false;
         return m_queries->raycast(from, to, hit, filter);
     }
 
-    std::vector<RigidBody*> PhysicsSystem::overlapSphere(const Vec3& center, Float radius,
-                                                        const QueryFilter& filter) {
-        if (!m_queries) return {};
+    std::vector<RigidBody*> PhysicsSystem::overlapSphere(
+        const Vec3& center,
+        Float radius,
+        const QueryFilter& filter
+    ) {
+        if (!m_queries)
+            return {};
         return m_queries->overlapSphere(center, radius, filter);
     }
 
@@ -303,7 +325,8 @@ namespace engine::physics {
     bool PhysicsSystem::initializePhysicsManager(const PhysicsConfig& config) {
         // Allocate PhysicsManager using our memory manager
         m_physicsManager = memoryManager_.allocateObject<PhysicsManager>(
-            MemoryCategory::PHYSICS, memoryManager_
+            MemoryCategory::PHYSICS,
+            memoryManager_
         );
 
         if (!m_physicsManager) {
@@ -374,8 +397,7 @@ namespace engine::physics {
 
             logInfo("All physics subsystems initialized successfully");
             return true;
-        }
-        catch (const std::exception& e) {
+        } catch (const std::exception& e) {
             logError("Exception during subsystem initialization: " + std::string(e.what()));
             return false;
         }
@@ -407,7 +429,8 @@ namespace engine::physics {
     }
 
     void PhysicsSystem::registerCallbacks() {
-        if (!m_physicsManager) return;
+        if (!m_physicsManager)
+            return;
 
         // Register collision callback
         m_physicsManager->registerPostPhysicsCallback(
@@ -447,6 +470,7 @@ namespace engine::physics {
         }
     }
 
+    // TODO: Revisar este metodo
     void PhysicsSystem::processCollisions(Float deltaTime) {
         // Process collision events for destruction system
         // This would iterate through collision manifolds and trigger appropriate events
@@ -457,6 +481,66 @@ namespace engine::physics {
             // - Destructible objects breaking apart
             // - Damage calculations
             // - Sound/particle effects triggers
+        }
+
+        if (!m_mainWorld) {
+            return;
+        }
+
+        // Get collision world from Bullet
+        btCollisionWorld* collisionWorld = m_mainWorld->getBulletWorld()->getCollisionWorld();
+        if (!collisionWorld) {
+            return;
+        }
+
+        // Get all collision manifolds (contact points)
+        btDispatcher* dispatcher = collisionWorld->getDispatcher();
+        int numManifolds = dispatcher->getNumManifolds();
+
+        // ⭐ AQUÍ - Debug de colisiones detectadas
+        if (numManifolds > 0) {
+            std::cout << "=== Frame Collisions: " << numManifolds << " ===" << std::endl;
+        }
+
+        for (int i = 0; i < numManifolds; ++i) {
+            btPersistentManifold* contactManifold = dispatcher->getManifoldByIndexInternal(i);
+
+            const btCollisionObject* obA = contactManifold->getBody0();
+            const btCollisionObject* obB = contactManifold->getBody1();
+
+            int numContacts = contactManifold->getNumContacts();
+
+            if (numContacts > 0) {
+                // ⭐ AQUÍ - Debug detallado de cada colisión
+                std::cout << "Collision between bodies:" << std::endl;
+                std::cout << "  Body A: " << obA << std::endl;
+                std::cout << "  Body B: " << obB << std::endl;
+                std::cout << "  Contacts: " << numContacts << std::endl;
+
+                // Iterar sobre puntos de contacto
+                for (int j = 0; j < numContacts; ++j) {
+                    btManifoldPoint& pt = contactManifold->getContactPoint(j);
+
+                    // Solo reportar contactos reales (penetración)
+                    if (pt.getDistance() < 0.0f) {
+                        const btVector3& ptA = pt.getPositionWorldOnA();
+                        const btVector3& ptB = pt.getPositionWorldOnB();
+                        const btVector3& normalOnB = pt.m_normalWorldOnB;
+
+                        std::cout << "    Contact " << j << ":" << std::endl;
+                        std::cout << "      Position A: (" << ptA.x() << ", " << ptA.y() << ", " << ptA.z() << ")" << std::endl;
+                        std::cout << "      Position B: (" << ptB.x() << ", " << ptB.y() << ", " << ptB.z() << ")" << std::endl;
+                        std::cout << "      Normal: (" << normalOnB.x() << ", " << normalOnB.y() << ", " << normalOnB.z() << ")" << std::endl;
+                        std::cout << "      Penetration: " << pt.getDistance() << std::endl;
+                        std::cout << "      Impulse: " << pt.getAppliedImpulse() << std::endl;
+                    }
+                }
+            }
+        }
+
+        // Process triggers
+        if (m_triggerSystem) {
+            m_triggerSystem->update(deltaTime);
         }
     }
 
@@ -502,5 +586,4 @@ namespace engine::physics {
         // TODO: Interface with actual logging system
         std::cerr << "[PhysicsSystem] ERROR: " << message << std::endl;
     }
-
 } // namespace engine::physics

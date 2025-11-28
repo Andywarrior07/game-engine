@@ -4,39 +4,63 @@ project(game_engine)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# --- FIX PARA HEADERS DE C++ EN MACOS ---
+# --- Configuración específica por plataforma ---
 if (APPLE)
+    # Configuración para macOS
     execute_process(
             COMMAND xcrun --show-sdk-path
             OUTPUT_VARIABLE CMAKE_OSX_SYSROOT
             OUTPUT_STRIP_TRAILING_WHITESPACE
     )
-
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
-endif ()
-# ----------------------------------------
 
-#find_package(PkgConfig REQUIRED)
+    # Rutas de Homebrew para macOS
+    set(SDL2_INCLUDE_DIR /opt/homebrew/include/SDL2)
+    set(SDL2_LIBRARY /opt/homebrew/lib/libSDL2.dylib)
+    set(SDL2_IMAGE_INCLUDE_DIR /opt/homebrew/include/SDL2)
+    set(SDL2_IMAGE_LIBRARY /opt/homebrew/lib/libSDL2_image.dylib)
+    set(GLM_INCLUDE_DIR /opt/homebrew/include)
+    set(BULLET_INCLUDE_DIR /opt/homebrew/include/bullet)
+
+elseif (UNIX)
+    # Configuración para Linux
+    find_package(PkgConfig REQUIRED)
+
+    # SDL2
+    pkg_check_modules(SDL2 REQUIRED sdl2)
+    pkg_check_modules(SDL2_IMAGE REQUIRED SDL2_image)
+
+    set(SDL2_INCLUDE_DIR ${SDL2_INCLUDE_DIRS})
+    set(SDL2_LIBRARY ${SDL2_LIBRARIES})
+    set(SDL2_IMAGE_INCLUDE_DIR ${SDL2_IMAGE_INCLUDE_DIRS})
+    set(SDL2_IMAGE_LIBRARY ${SDL2_IMAGE_LIBRARIES})
+
+    # GLM (usualmente en /usr/include en Linux)
+    set(GLM_INCLUDE_DIR /usr/include)
+
+    # Bullet (usualmente en /usr/include/bullet en Linux)
+    set(BULLET_INCLUDE_DIR /usr/include/bullet)
+endif()
+
+# --- Dependencias del sistema ---
 find_package(OpenGL REQUIRED)
 find_package(GLEW REQUIRED)
-find_package(glm REQUIRED)
+find_package(Bullet REQUIRED)
 
-set(SDL2_INCLUDE_DIR /opt/homebrew/include/SDL2)
-set(SDL2_LIBRARY /opt/homebrew/lib/libSDL2.dylib)
-set(SDL2_IMAGE_INCLUDE_DIR /opt/homebrew/include/SDL2)
-set(SDL2_IMAGE_LIBRARY /opt/homebrew/lib/libSDL2_image.dylib)
-
+# --- Directorios de includes ---
 include_directories(
         ${SDL2_INCLUDE_DIR}
         ${SDL2_IMAGE_INCLUDE_DIR}
-        /opt/homebrew/include
-        /opt/homebrew/include/bullet
+        ${GLM_INCLUDE_DIR}
+        ${BULLET_INCLUDE_DIR}
 )
-link_libraries(${SDL2_LIBRARY} ${SDL2_IMAGE_LIBRARY})
 
-#pkg_check_modules(SDL2 REQUIRED sdl2)
+# En Linux, agregar directorios de bibliotecas de SDL2
+if (UNIX AND NOT APPLE)
+    link_directories(${SDL2_LIBRARY_DIRS} ${SDL2_IMAGE_LIBRARY_DIRS})
+endif()
 
-find_package(Bullet REQUIRED)
+# --- Archivos fuente ---
 add_executable(game_engine src/main.cpp
         src/Animation/AnimationManager.cpp
         src/camera/CameraSystem.h
@@ -55,8 +79,8 @@ add_executable(game_engine src/main.cpp
         src/camera/effects/CameraShake.h
         src/camera/effects/ShakeConfig.h
         src/camera/effects/ShakePattern.h
-#        src/camera/input/CameraInputHandler.cpp
-#        src/camera/input/CameraInputHandler.h
+        #        src/camera/input/CameraInputHandler.cpp
+        #        src/camera/input/CameraInputHandler.h
         src/camera/manager/CameraManager.cpp
         src/camera/manager/CameraManager.h
         src/camera/manager/CameraManagerConfig.h
@@ -303,15 +327,23 @@ add_executable(game_engine src/main.cpp
         src/memory/allocators/TimelineDataAllocator.h
 )
 
+# --- Librerías a vincular ---
 target_link_libraries(${PROJECT_NAME}
-        ${SDL2_LIBRARIES}
+        ${SDL2_LIBRARY}
         ${SDL2_IMAGE_LIBRARY}
         ${OPENGL_LIBRARIES}
         GLEW::GLEW
         ${BULLET_LIBRARIES}
 )
 
-target_compile_options(${PROJECT_NAME} PRIVATE ${SDL2_CFLAGS_OTHER})
+# En Linux, agregar flags de SDL2
+if (UNIX AND NOT APPLE)
+    target_compile_options(${PROJECT_NAME} PRIVATE ${SDL2_CFLAGS_OTHER})
+endif()
 
+# --- Flags de compilación ---
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O0 -Wall -Wextra")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -DNDEBUG")
+
+message(STATUS "Compilador C++: ${CMAKE_CXX_COMPILER}")
+message(STATUS "Version C++: ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")

@@ -42,7 +42,7 @@ namespace engine::memory {
                          MemorySize alignment = DEFAULT_ALIGNMENT);
 
         template <typename T, typename... Args>
-        T* allocateObject(MemoryCategory category, Args&&... args) {
+        T* allocateObject(const MemoryCategory category, Args&&... args) {
             void* memory = allocate(sizeof(T), category, alignof(T));
             if (!memory) return nullptr;
 
