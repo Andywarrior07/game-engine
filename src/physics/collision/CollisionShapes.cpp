@@ -19,13 +19,25 @@ namespace engine::physics {
     }
 
     void CollisionShape::release() {
+        // ========================================================================
+        // WARNING: This method is NOT compatible with MemoryManager
+        // ========================================================================
+        // When using custom allocators (MemoryManager), delete this is dangerous
+        // because it uses the wrong deallocation method.
+        // Use decrementRefCount() + manual deallocation instead.
         if (--refCount_ == 0) {
-            delete this;
+            std::cerr << "[CollisionShape] ERROR: release() with delete this called - "
+                    << "this is incompatible with MemoryManager allocation!" << std::endl;
+            std::cerr << "  Shape type: " << static_cast<int>(type_) << std::endl;
+            std::cerr << "  Shape address: " << this << std::endl;
+            // DO NOT DELETE - let the caller handle deallocation
+            // delete this; // 🔴 REMOVED
         }
     }
 
     Vec3 CollisionShape::getHalfExtents() const {
-        if (!bulletShape_) return Vec3(0);
+        if (!bulletShape_)
+            return Vec3(0);
 
         btVector3 min, max;
         bulletShape_->getAabb(btTransform::getIdentity(), min, max);
@@ -51,7 +63,8 @@ namespace engine::physics {
     }
 
     Vec3 CollisionShape::getLocalScaling() const {
-        if (!bulletShape_) return Vec3(1);
+        if (!bulletShape_)
+            return Vec3(1);
 
         const btVector3& scale = bulletShape_->getLocalScaling();
         return Vec3(scale.x(), scale.y(), scale.z());
@@ -92,9 +105,12 @@ namespace engine::physics {
         height_ = 1.0f;
     }
 
-    ConvexHullShape::ConvexHullShape(const Float* vertices, const std::size_t vertexCount,
-                        const std::size_t stride)
-            : CollisionShape(nullptr, ShapeType::CONVEX_HULL) {
+    ConvexHullShape::ConvexHullShape(
+        const Float* vertices,
+        const std::size_t vertexCount,
+        const std::size_t stride
+    )
+        : CollisionShape(nullptr, ShapeType::CONVEX_HULL) {
         auto* hull = new btConvexHullShape();
 
         for (std::size_t i = 0; i < vertexCount; ++i) {
@@ -118,10 +134,14 @@ namespace engine::physics {
         vertexCount_ = 0;
     }
 
-    TriangleMeshShape::TriangleMeshShape(const Float* vertices, const std::size_t vertexCount,
-                          const std::uint32_t* indices, const std::size_t indexCount,
-                          const std::size_t vertexStride)
-            : CollisionShape(nullptr, ShapeType::TRIANGLE_MESH) {
+    TriangleMeshShape::TriangleMeshShape(
+        const Float* vertices,
+        const std::size_t vertexCount,
+        const std::uint32_t* indices,
+        const std::size_t indexCount,
+        const std::size_t vertexStride
+    )
+        : CollisionShape(nullptr, ShapeType::TRIANGLE_MESH) {
         // Create mesh data
         meshData_ = new btTriangleMesh();
 
@@ -161,20 +181,31 @@ namespace engine::physics {
         triangleCount_ = 0;
     }
 
-    HeightfieldShape::HeightfieldShape(const Float* heightData, const Int width, const Int height,
-                         const Float minHeight, const Float maxHeight, const Vec3& scale)
-            : CollisionShape(nullptr, ShapeType::HEIGHTFIELD),
-              width_(width), height_(height) {
+    HeightfieldShape::HeightfieldShape(
+        const Float* heightData,
+        const Int width,
+        const Int height,
+        const Float minHeight,
+        const Float maxHeight,
+        const Vec3& scale
+    )
+        : CollisionShape(nullptr, ShapeType::HEIGHTFIELD)
+        , width_(width)
+        , height_(height) {
         // Copy height data (Bullet doesn't own it)
         heightData_.resize(width * height);
         std::memcpy(heightData_.data(), heightData, width * height * sizeof(Float));
 
         bulletShape_ = new btHeightfieldTerrainShape(
-            width, height,
+            width,
+            height,
             heightData_.data(),
-            1.0f, // Height scale factor
-            minHeight, maxHeight,
-            1, // Y up axis
+            1.0f,
+            // Height scale factor
+            minHeight,
+            maxHeight,
+            1,
+            // Y up axis
             PHY_FLOAT,
             false // Flip quad edges
         );
@@ -197,23 +228,29 @@ namespace engine::physics {
     }
 
     void CompoundShape::addChildShape(const Transform& localTransform, CollisionShape* shape) {
-        if (!shape) return;
+        if (!shape)
+            return;
 
         btTransform transform;
-        transform.setOrigin(btVector3(
-            localTransform.getPosition().x,
-            localTransform.getPosition().y,
-            localTransform.getPosition().z
-        ));
-        transform.setRotation(btQuaternion(
-            localTransform.getRotation().x,
-            localTransform.getRotation().y,
-            localTransform.getRotation().z,
-            localTransform.getRotation().w
-        ));
+        transform.setOrigin(
+            btVector3(
+                localTransform.getPosition().x,
+                localTransform.getPosition().y,
+                localTransform.getPosition().z
+            )
+        );
+        transform.setRotation(
+            btQuaternion(
+                localTransform.getRotation().x,
+                localTransform.getRotation().y,
+                localTransform.getRotation().z,
+                localTransform.getRotation().w
+            )
+        );
 
         static_cast<btCompoundShape*>(bulletShape_)->addChildShape(
-            transform, shape->getBulletShape()
+            transform,
+            shape->getBulletShape()
         );
 
         shape->addRef();
@@ -221,7 +258,8 @@ namespace engine::physics {
     }
 
     void CompoundShape::removeChildShape(const CollisionShape* shape) {
-        if (!shape) return;
+        if (!shape)
+            return;
 
         static_cast<btCompoundShape*>(bulletShape_)->removeChildShape(
             shape->getBulletShape()
@@ -232,6 +270,7 @@ namespace engine::physics {
             childShapes_.erase(it);
         }
     }
+
     std::size_t CompoundShape::getNumChildShapes() const {
         return static_cast<btCompoundShape*>(bulletShape_)->getNumChildShapes();
     }

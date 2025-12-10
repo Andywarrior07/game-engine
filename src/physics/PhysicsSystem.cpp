@@ -86,14 +86,23 @@ namespace engine::physics {
         logInfo("Shutting down physics system...");
 
         // Cleanup subsystems in reverse order of initialization
+        std::cout << "[PhysicsSystem] Cleaning up subsystems..." << std::endl;
         cleanupSubsystems();
+        std::cout << "[PhysicsSystem] Subsystems cleaned" << std::endl;
 
         // Shutdown physics manager
         if (m_physicsManager) {
+            std::cout << "[PhysicsSystem] Calling PhysicsManager::shutdown()..." << std::endl;
             m_physicsManager->shutdown();
+            std::cout << "[PhysicsSystem] PhysicsManager::shutdown() completed" << std::endl;
+
+            std::cout << "[PhysicsSystem] Deallocating PhysicsManager at address: "
+                      << static_cast<void*>(m_physicsManager) << std::endl;
 
             // Deallocate physics manager using our memory manager
             memoryManager_.deallocateObject(m_physicsManager, MemoryCategory::PHYSICS);
+            std::cout << "[PhysicsSystem] PhysicsManager deallocated successfully" << std::endl;
+
             m_physicsManager = nullptr;
         }
 
@@ -498,9 +507,9 @@ namespace engine::physics {
         int numManifolds = dispatcher->getNumManifolds();
 
         // ⭐ AQUÍ - Debug de colisiones detectadas
-        if (numManifolds > 0) {
-            std::cout << "=== Frame Collisions: " << numManifolds << " ===" << std::endl;
-        }
+        // if (numManifolds > 0) {
+        //     std::cout << "=== Frame Collisions: " << numManifolds << " ===" << std::endl;
+        // }
 
         for (int i = 0; i < numManifolds; ++i) {
             btPersistentManifold* contactManifold = dispatcher->getManifoldByIndexInternal(i);
@@ -512,10 +521,10 @@ namespace engine::physics {
 
             if (numContacts > 0) {
                 // ⭐ AQUÍ - Debug detallado de cada colisión
-                std::cout << "Collision between bodies:" << std::endl;
-                std::cout << "  Body A: " << obA << std::endl;
-                std::cout << "  Body B: " << obB << std::endl;
-                std::cout << "  Contacts: " << numContacts << std::endl;
+                // std::cout << "Collision between bodies:" << std::endl;
+                // std::cout << "  Body A: " << obA << std::endl;
+                // std::cout << "  Body B: " << obB << std::endl;
+                // std::cout << "  Contacts: " << numContacts << std::endl;
 
                 // Iterar sobre puntos de contacto
                 for (int j = 0; j < numContacts; ++j) {
@@ -527,12 +536,12 @@ namespace engine::physics {
                         const btVector3& ptB = pt.getPositionWorldOnB();
                         const btVector3& normalOnB = pt.m_normalWorldOnB;
 
-                        std::cout << "    Contact " << j << ":" << std::endl;
-                        std::cout << "      Position A: (" << ptA.x() << ", " << ptA.y() << ", " << ptA.z() << ")" << std::endl;
-                        std::cout << "      Position B: (" << ptB.x() << ", " << ptB.y() << ", " << ptB.z() << ")" << std::endl;
-                        std::cout << "      Normal: (" << normalOnB.x() << ", " << normalOnB.y() << ", " << normalOnB.z() << ")" << std::endl;
-                        std::cout << "      Penetration: " << pt.getDistance() << std::endl;
-                        std::cout << "      Impulse: " << pt.getAppliedImpulse() << std::endl;
+                        // std::cout << "    Contact " << j << ":" << std::endl;
+                        // std::cout << "      Position A: (" << ptA.x() << ", " << ptA.y() << ", " << ptA.z() << ")" << std::endl;
+                        // std::cout << "      Position B: (" << ptB.x() << ", " << ptB.y() << ", " << ptB.z() << ")" << std::endl;
+                        // std::cout << "      Normal: (" << normalOnB.x() << ", " << normalOnB.y() << ", " << normalOnB.z() << ")" << std::endl;
+                        // std::cout << "      Penetration: " << pt.getDistance() << std::endl;
+                        // std::cout << "      Impulse: " << pt.getAppliedImpulse() << std::endl;
                     }
                 }
             }

@@ -42,7 +42,6 @@ namespace engine::physics {
             return false;
         }
 
-
         // Initialize memory pools using MemoryManager
         initializePools();
 
@@ -76,15 +75,20 @@ namespace engine::physics {
         if (!initialized_)
             return;
 
+        std::cout << "[PhysicsManager] Starting shutdown sequence..." << std::endl;
+
         // Stop worker threads
+        std::cout << "[PhysicsManager] Stopping worker threads..." << std::endl;
         stopWorkerThreads();
 
         // Clear all physics objects
+        std::cout << "[PhysicsManager] Clearing physics objects..." << std::endl;
         clearAllBodies();
         clearAllConstraints();
         clearAllShapes();
 
         // Shutdown subsystems using MemoryManager
+        std::cout << "[PhysicsManager] Shutting down subsystems..." << std::endl;
         if (lodSystem_) {
             memoryManager_.deallocateObject(lodSystem_, MemoryCategory::PHYSICS);
             lodSystem_ = nullptr;
@@ -95,19 +99,14 @@ namespace engine::physics {
             profiler_ = nullptr;
         }
 
-        // ========================================================================
-        // Shutdown collision detection BEFORE world
-        // ========================================================================
-        // CRITICAL ORDER: CollisionDetection must be shut down before PhysicsWorld
-        // because it may hold references to world's collision objects
-        shutdownCollisionDetection();
-
         // Shutdown worlds
+        std::cout << "[PhysicsManager] Shutting down main world..." << std::endl;
         if (mainWorld_) {
             mainWorld_->shutdown();
             mainWorld_.reset();
         }
 
+        std::cout << "[PhysicsManager] Shutting down async worlds..." << std::endl;
         for (auto& world : asyncWorlds_) {
             if (world) {
                 world->shutdown();
@@ -115,7 +114,16 @@ namespace engine::physics {
         }
         asyncWorlds_.clear();
 
-        // Clear pools
+        // ========================================================================
+        // Shutdown collision detection BEFORE world
+        // ========================================================================
+        // CRITICAL ORDER: CollisionDetection must be shut down before PhysicsWorld
+        // because it may hold references to world's collision objects
+        std::cout << "[PhysicsManager] Shutting down collision detection..." << std::endl;
+        shutdownCollisionDetection();
+
+        // Clear pools LAST
+        std::cout << "[PhysicsManager] Clearing pools..." << std::endl;
         clearPools();
 
         initialized_ = false;
@@ -720,11 +728,27 @@ namespace engine::physics {
         if (!shape)
             return;
 
-        // Remove from tracking set
+        std::cout << "[PhysicsManager] Destroying shape at: " << (shape)
+                << " (type: " << static_cast<int>(shape->getType())
+                << ", refCount: " << shape->getRefCount() << ")" << std::endl;
+
         shapes_.erase(shape);
 
-        // The CollisionShape uses reference counting, so call release()
-        shape->release();
+        const int newRefCount = shape->decrementRefCount();
+
+        std::cout << "[PhysicsManager] After decrement, refCount = " << newRefCount << std::endl;
+
+        if (newRefCount > 0) {
+            std::cout << "[PhysicsManager] Shape still has " << newRefCount
+                    << " references, not deallocating yet" << std::endl;
+            return;
+        }
+
+        std::cout << "[PhysicsManager] RefCount is 0, deallocating shape..." << std::endl;
+
+        memoryManager_.deallocateObject(shape, MemoryCategory::PHYSICS);
+
+        std::cout << "[PhysicsManager] Shape destroyed successfully" << std::endl;
     }
 
     CompoundShape* PhysicsManager::createCompoundShapeInternal(const ShapeCreationParams& params) {

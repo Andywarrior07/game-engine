@@ -1,9 +1,4 @@
-// MAIN TEST - PHYSICS SYNCHRONIZED VERSION
-// ⭐ FIXES:
-// 1. Player visual position now syncs with RigidBody physics position
-// 2. WASD movement applies forces to physics body instead of directly moving visual
-// 3. Gravity affects player correctly
-// 4. Player starts at left side, high up, and falls to ground
+// MAIN TEST
 
 #include <SDL.h>
 #include <SDL_image.h>
@@ -13,18 +8,14 @@
 #include <thread>
 #include <cmath>
 
-// CHANGE: New input system includes
 #include "./input/InputSystem.h"
 
-// Memory and resource management
 #include "./memory/MemorySystem.h"
 #include "./resources/manager/ResourceManager.h"
 #include "./resources/types/texture/TextureResource.h"
 
-// Camera system
 #include "./camera/CameraSystem.h"
 
-// Animation (kept for now)
 #include "Animation/AnimationManager.h"
 #include "physics/PhysicsSystem.h"
 #include "physics/dynamics/RigidBody.h"
@@ -44,28 +35,27 @@ using namespace engine::camera;
 
 /**
  * @brief Main game class with PHYSICS SYNCHRONIZED
- * ⭐ KEY CHANGE: playerPosition_ is now READ from physics, not written to independently
  */
 class GameDemo {
 public:
     GameDemo() = default;
     ~GameDemo() = default;
 
-    static constexpr int WINDOW_WIDTH = 800;
-    static constexpr int WINDOW_HEIGHT = 600;
-    static constexpr float WORLD_WIDTH = 16.0f;
-    static constexpr float WORLD_HEIGHT = 12.0f;
-    static constexpr float PLAYER_MOVE_FORCE = 50.0f; // ⭐ Changed from SPEED to FORCE
+    static constexpr int WINDOW_WIDTH = 1280;   // Más ancho para ver más escena
+    static constexpr int WINDOW_HEIGHT = 720;   // Relación 16:9 estándar
+    static constexpr float WORLD_WIDTH = 30.0f; // Mundo más ancho (scroll horizontal)
+    static constexpr float WORLD_HEIGHT = 13.5f;
+    static constexpr float PLAYER_MOVE_FORCE = 1000.0f;
     static constexpr float CAMERA_SPEED = 8.0f;
+    static constexpr float GRAVITY_FORCE = -30.0f; // Gravedad pesada (caída rápida)
 
     enum Actions : ActionID {
-        ACTION_MOVE_FORWARD = 1, ACTION_MOVE_BACKWARD = 2, ACTION_MOVE_LEFT     = 3,
+        ACTION_JUMP         = 1, ACTION_MOVE_BACKWARD = 2, ACTION_MOVE_LEFT     = 3,
         ACTION_MOVE_RIGHT   = 4, ACTION_EXIT          = 5, ACTION_SWITCH_CAMERA = 6,
         ACTION_ZOOM_IN      = 7, ACTION_ZOOM_OUT      = 8, ACTION_CAMERA_SHAKE  = 9,
         ACTION_CAMERA_UP    = 10, ACTION_CAMERA_DOWN  = 11, ACTION_CAMERA_LEFT  = 12,
         ACTION_CAMERA_RIGHT = 13, ACTION_TOGGLE_GRID  = 14, ACTION_TOGGLE_DEBUG = 15,
         ACTION_PLAYER_MOVE  = 20, ACTION_CAMERA_MOVE  = 21, ACTION_RESET_PLAYER = 22,
-        // ⭐ NEW: Reset player position
     };
 
     bool initialize() {
@@ -105,7 +95,7 @@ public:
         physicsSystem_ = std::make_unique<engine::physics::PhysicsSystem>(*memoryManager_);
 
         engine::physics::PhysicsConfig config = engine::physics::PhysicsConfig::ForRPG();
-        config.gravity = Vec3(0, -19.62f, 0);
+        config.gravity = Vec3(0, GRAVITY_FORCE, 0);
         config.enableDebugDraw = true;
 
         if (!physicsSystem_->initialize(config)) {
@@ -191,6 +181,7 @@ public:
         resourceConfig.maxMemory = 256 * 1024 * 1024;
         resourceConfig.enableHotReload = false;
         resourceConfig.loaderThreadCount = 2;
+        resourceConfig.gcInterval = std::chrono::seconds(5);
 
         if (!resourceManager_->initialize(resourceConfig)) {
             std::cerr << "Failed to initialize ResourceManager" << std::endl;
@@ -230,14 +221,12 @@ public:
             return false;
         }
 
-        // ⭐ CRITICAL: Initialize player visual position from PHYSICS position
         syncPlayerPositionFromPhysics();
 
         std::cout << "Player initialized at position: (" << playerPosition_.x << ", " << playerPosition_.y << ")" << std::endl;
 
         // Set camera to follow player
-        Camera2D* mainCamera = cameraManager_->getCamera2D(mainCameraId_);
-        if (mainCamera) {
+        if (Camera2D* mainCamera = cameraManager_->getCamera2D(mainCameraId_)) {
             mainCamera->setTarget(playerPosition_);
             mainCamera->setPosition(playerPosition_);
             std::cout << "✓ Camera set to follow player" << std::endl;
@@ -248,8 +237,8 @@ public:
         return true;
     }
 
-    void setupInputActions() {
-        inputSystem_->registerAction(ACTION_MOVE_FORWARD, "MoveForward", ActionType::BUTTON);
+    void setupInputActions() const {
+        inputSystem_->registerAction(ACTION_JUMP, "Jump", ActionType::BUTTON);
         inputSystem_->registerAction(ACTION_MOVE_BACKWARD, "MoveBackward", ActionType::BUTTON);
         inputSystem_->registerAction(ACTION_MOVE_LEFT, "MoveLeft", ActionType::BUTTON);
         inputSystem_->registerAction(ACTION_MOVE_RIGHT, "MoveRight", ActionType::BUTTON);
@@ -268,7 +257,7 @@ public:
         inputSystem_->registerAction(ACTION_CAMERA_MOVE, "CameraMove", ActionType::AXIS_2D);
         inputSystem_->registerAction(ACTION_RESET_PLAYER, "ResetPlayer", ActionType::BUTTON);
 
-        inputSystem_->bindKey(ACTION_MOVE_FORWARD, KeyCode::W, "Default");
+        inputSystem_->bindKey(ACTION_JUMP, KeyCode::SPACE, "Default");
         inputSystem_->bindKey(ACTION_MOVE_BACKWARD, KeyCode::S, "Default");
         inputSystem_->bindKey(ACTION_MOVE_LEFT, KeyCode::A, "Default");
         inputSystem_->bindKey(ACTION_MOVE_RIGHT, KeyCode::D, "Default");
@@ -276,16 +265,16 @@ public:
         inputSystem_->bindKey(ACTION_SWITCH_CAMERA, KeyCode::C, "Default");
         inputSystem_->bindKey(ACTION_ZOOM_IN, KeyCode::EQUAL, "Default");
         inputSystem_->bindKey(ACTION_ZOOM_OUT, KeyCode::MINUS, "Default");
-        inputSystem_->bindKey(ACTION_CAMERA_SHAKE, KeyCode::SPACE, "Default");
+        inputSystem_->bindKey(ACTION_CAMERA_SHAKE, KeyCode::LEFT_SHIFT, "Default");
         inputSystem_->bindKey(ACTION_CAMERA_UP, KeyCode::UP, "Default");
         inputSystem_->bindKey(ACTION_CAMERA_DOWN, KeyCode::DOWN, "Default");
         inputSystem_->bindKey(ACTION_CAMERA_LEFT, KeyCode::LEFT, "Default");
         inputSystem_->bindKey(ACTION_CAMERA_RIGHT, KeyCode::RIGHT, "Default");
         inputSystem_->bindKey(ACTION_TOGGLE_GRID, KeyCode::G, "Default");
         inputSystem_->bindKey(ACTION_TOGGLE_DEBUG, KeyCode::X, "Default");
-        inputSystem_->bindKey(ACTION_RESET_PLAYER, KeyCode::R, "Default"); // ⭐ NEW
+        inputSystem_->bindKey(ACTION_RESET_PLAYER, KeyCode::R, "Default");
 
-        inputSystem_->bindGamepadButton(ACTION_MOVE_FORWARD, GamepadButton::DPAD_UP, "Default");
+        inputSystem_->bindGamepadButton(ACTION_JUMP, GamepadButton::DPAD_UP, "Default");
         inputSystem_->bindGamepadButton(ACTION_MOVE_BACKWARD, GamepadButton::DPAD_DOWN, "Default");
         inputSystem_->bindGamepadButton(ACTION_MOVE_LEFT, GamepadButton::DPAD_LEFT, "Default");
         inputSystem_->bindGamepadButton(ACTION_MOVE_RIGHT, GamepadButton::DPAD_RIGHT, "Default");
@@ -353,7 +342,7 @@ public:
 
         playerTextureHandle_ = resourceManager_->loadById<TextureResource>(
             playerTextureId,
-            std::string("../assets/player-cube.png"),
+            std::string("../assets/player_02-uhd.png"),
             ResourcePriority::HIGH,
             LoadMode::SYNC
         );
@@ -369,8 +358,7 @@ public:
         std::cout << "✓ Player sprite sheet loaded: " << playerTexture->getWidth()
                 << "x" << playerTexture->getHeight() << " pixels" << std::endl;
 
-        SDL_Surface* surface = playerTexture->getSDLSurface();
-        if (surface) {
+        if (SDL_Surface* surface = playerTexture->getSDLSurface()) {
             playerGLTexture_ = surfaceToGLTexture(surface);
             if (playerGLTexture_ == 0) {
                 std::cerr << "Failed to create OpenGL texture from surface" << std::endl;
@@ -382,10 +370,10 @@ public:
             return false;
         }
 
-        currentSpriteFrame_.x = 0;
+        currentSpriteFrame_.x = 130;
         currentSpriteFrame_.y = 0;
-        currentSpriteFrame_.w = 48;
-        currentSpriteFrame_.h = 48;
+        currentSpriteFrame_.w = 120;
+        currentSpriteFrame_.h = 120;
 
         return true;
     }
@@ -415,16 +403,9 @@ public:
             }
 
             processCameraInput(deltaTime);
-
-            // ⭐ UPDATE PHYSICS FIRST
             physicsSystem_->update(deltaTime);
-
-            // ⭐ THEN update game logic (applies forces to physics)
-            updateGameLogic(deltaTime);
-
-            // ⭐ SYNC visual position from physics AFTER physics update
             syncPlayerPositionFromPhysics();
-
+            updateGameLogic(deltaTime);
             cameraManager_->update(deltaTime);
             render();
 
@@ -506,122 +487,128 @@ public:
         }
     }
 
-    /**
-     * ⭐ CRITICAL CHANGE: Now applies FORCES to physics body instead of moving visual position
-     * ⭐ FIXED: Better force application to prevent jitter
-     */
     void updateGameLogic(float deltaTime) {
-        if (!player_) {
+        if (!player_)
             return;
-        }
 
-        // ⭐ Reset player position
-        if (inputSystem_->isActionTriggered(ACTION_RESET_PLAYER)) {
-            resetPlayerPosition();
-            return;
-        }
-
-        // ⭐ CRITICAL: Check if player is grounded (touching ground)
+        // =========================================================
+        // 1. DETECCIÓN DE SUELO (Ajustada a tu nuevo tamaño)
+        // =========================================================
         Vec3 playerPos = player_->getPosition();
         Vec3 groundPos = ground_->getPosition();
-        float distanceToGround = std::abs(playerPos.y - (groundPos.y + 1.0f)); // +1.0 for ground height + player radius
-        bool isGrounded = distanceToGround < 0.1f;                             // Small threshold for "touching"
 
-        Vec3 force{0.0f, 0.0f, 0.0f};
-        bool isMoving = false;
+        float playerHalfHeight = 0.8f; // Un poco menos que el físico para tolerancia
+        float groundHalfHeight = 0.5f;
 
-        // Calculate force based on input (in 2D plane, Z=0)
-        if (inputSystem_->getActionValue(ACTION_MOVE_FORWARD) > 0.5f) {
-            force.y += PLAYER_MOVE_FORCE;
-            isMoving = true;
-        }
-        if (inputSystem_->getActionValue(ACTION_MOVE_BACKWARD) > 0.5f) {
-            force.y -= PLAYER_MOVE_FORCE;
-            isMoving = true;
-        }
-        if (inputSystem_->getActionValue(ACTION_MOVE_LEFT) > 0.5f) {
-            force.x -= PLAYER_MOVE_FORCE;
-            isMoving = true;
-        }
-        if (inputSystem_->getActionValue(ACTION_MOVE_RIGHT) > 0.5f) {
-            force.x += PLAYER_MOVE_FORCE;
-            isMoving = true;
-        }
+        float expectedDistance = groundHalfHeight + playerHalfHeight;
+        float distanceToGround = std::abs(playerPos.y - groundPos.y - expectedDistance);
 
-        if (isMoving && isGrounded) {
-            if (force.x != 0.0f && force.y != 0.0f) {
-                float length = std::sqrt(force.x * force.x + force.y * force.y);
-                if (length > 0.0f) {
-                    force.x = (force.x / length) * PLAYER_MOVE_FORCE;
-                    force.y = (force.y / length) * PLAYER_MOVE_FORCE;
+        // Umbral de tolerancia
+        bool isGrounded = distanceToGround < 0.2f;
+
+        // =========================================================
+        // 2. OBTENER VELOCIDAD ACTUAL
+        // =========================================================
+        Vec3 currentVel = player_->getLinearVelocity();
+
+        // =========================================================
+        // 3. LÓGICA DE MOVIMIENTO HORIZONTAL (Eje X)
+        // =========================================================
+        float targetSpeedX = 0.0f;
+        float moveSpeed = 15.0f; // Velocidad máxima al correr
+
+        float inputDir = 0.0f;
+        if (inputSystem_->getActionValue(ACTION_MOVE_LEFT) > 0.5f)
+            inputDir = -1.0f;
+        if (inputSystem_->getActionValue(ACTION_MOVE_RIGHT) > 0.5f)
+            inputDir = 1.0f;
+
+        targetSpeedX = inputDir * moveSpeed;
+
+        // Aquí está la MAGIA del movimiento (Interpolación)
+        if (isGrounded) {
+            // EN EL SUELO: Tenemos tracción total.
+            // Nos movemos rápidamente hacia la velocidad objetivo (acelerar/frenar rápido)
+            // 10.0f * deltaTime es el factor de "agarre"
+            float accelerationGround = 10.0f;
+            currentVel.x += (targetSpeedX - currentVel.x) * accelerationGround * deltaTime;
+        } else {
+            // EN EL AIRE: Tenemos inercia.
+            // Si el jugador NO toca nada (inputDir == 0), NO frenamos (conserva inercia).
+            // Si el jugador toca teclas, le damos un poco de control (pero lento).
+
+            if (inputDir != 0.0f) {
+                float accelerationAir = 2.0f; // Mucho menor que en el suelo
+
+                // Solo aplicamos fuerza si no excedemos la velocidad máxima
+                // o si estamos intentando ir en contra de la inercia actual
+                bool movingAgainstInertia = (currentVel.x * inputDir < 0);
+
+                if (std::abs(currentVel.x) < moveSpeed || movingAgainstInertia) {
+                    currentVel.x += (targetSpeedX - currentVel.x) * accelerationAir * deltaTime;
                 }
             }
 
-            Vec3 impulse = force * deltaTime * 10.0f;
-            player_->applyImpulse(impulse);
-
-            Vec3 vel = player_->getLinearVelocity();
-            vel.x *= 0.85f; // Dampen horizontal velocity
-            vel.y *= 0.85f; // Dampen vertical velocity
-            player_->setLinearVelocity(vel);
+            // Opcional: Rozamiento del aire muy leve (para que no vuele infinitamente si le pegan)
+            currentVel.x *= 0.995f;
         }
 
-        if (!isMoving && isGrounded) {
-            Vec3 vel = player_->getLinearVelocity();
-            vel.x *= 0.7f;
-            vel.y *= 0.7f;
-            player_->setLinearVelocity(vel);
+        // =========================================================
+        // 4. LÓGICA DE SALTO (Impulso Instantáneo)
+        // =========================================================
+        if (inputSystem_->getActionValue(ACTION_JUMP) > 0.5f && isGrounded) {
+            // Reiniciamos la velocidad Y para que el salto sea consistente
+            // (evita que salte menos si estaba bajando una pendiente)
+            currentVel.y = 0.0f;
+
+            // IMPORTANTE: Primero seteamos la velocidad limpia
+            player_->setLinearVelocity(currentVel);
+
+            // Luego aplicamos el IMPULSO hacia arriba (método existente en RigidBody.h)
+            float jumpForce = 20.0f; // Ajustar según peso (mass)
+            player_->applyImpulse(Vec3(0, jumpForce, 0));
+
+            // Marcamos grounded falso manual para evitar doble salto en el mismo frame
+            isGrounded = false;
+
+            // Salimos temprano para dejar que la física procese el impulso
+            // (o actualizamos currentVel.y manualmente si queremos seguir lógica abajo)
+            return;
         }
 
-        // ⭐ Clamp max speed regardless of grounded state
-        Vec3 vel = player_->getLinearVelocity();
-        const float maxSpeed = 8.0f; // Slightly lower max speed
-        float speed = std::sqrt(vel.x * vel.x + vel.y * vel.y);
-        if (speed > maxSpeed) {
-            vel.x = (vel.x / speed) * maxSpeed;
-            vel.y = (vel.y / speed) * maxSpeed;
-            player_->setLinearVelocity(vel);
+        // =========================================================
+        // 5. APLICAR CAMBIOS
+        // =========================================================
+
+        // Solo activamos si hay movimiento significativo para ahorrar CPU
+        if (std::abs(currentVel.x) > 0.01f || std::abs(currentVel.y) > 0.01f) {
+            player_->activate(true);
         }
 
-        // Update camera target
-        Camera2D* followCamera = cameraManager_->getCamera2D(mainCameraId_);
-        if (followCamera && followCamera->getMode() == CameraMode::FOLLOW_TARGET) {
-            followCamera->setTarget(playerPosition_);
-        }
+        // Guardamos la nueva velocidad calculada
+        player_->setLinearVelocity(currentVel);
 
-        // Debug output
-        static int debugCounter = 0;
-        if (++debugCounter % 60 == 0) {
-            Vec3 physicsPos = player_->getPosition();
-            Vec3 velocity = player_->getLinearVelocity();
-            std::cout << "\n=== PHYSICS DEBUG ===" << std::endl;
-            std::cout << "Physics Pos: (" << physicsPos.x << ", " << physicsPos.y << ", " << physicsPos.z << ")" << std::endl;
-            std::cout << "Visual Pos: (" << playerPosition_.x << ", " << playerPosition_.y << ")" << std::endl;
-            std::cout << "Velocity: (" << velocity.x << ", " << velocity.y << ", " << velocity.z << ")" << std::endl;
-            std::cout << "Is Grounded: " << isGrounded << std::endl;
-            std::cout << "Distance to Ground: " << distanceToGround << std::endl;
-            std::cout << "Is Active: " << player_->isActive() << std::endl;
-            std::cout << "===================\n" << std::endl;
+        // =========================================================
+        // 6. CÁMARA (Sin cambios)
+        // =========================================================
+        if (Camera2D* followCamera = cameraManager_->getCamera2D(mainCameraId_); followCamera && followCamera->getMode() == CameraMode::FOLLOW_TARGET) {
+            followCamera->setTarget(playerPos);
+            followCamera->setSmoothingSpeed(0.0f);
+            followCamera->setPosition(playerPos);
         }
     }
 
-    /**
-     * ⭐ NEW METHOD: Sync visual position from physics RigidBody
-     */
     void syncPlayerPositionFromPhysics() {
         if (!player_) {
             return;
         }
 
-        Vec3 physicsPos = player_->getPosition();
+        const Vec3 physicsPos = player_->getPosition();
         playerPosition_.x = physicsPos.x;
         playerPosition_.y = physicsPos.y;
         // Z is ignored for 2D rendering
     }
 
-    /**
-     * ⭐ NEW METHOD: Reset player to starting position
-     */
     void resetPlayerPosition() {
         if (!player_) {
             return;
@@ -629,8 +616,7 @@ public:
 
         std::cout << "Resetting player position..." << std::endl;
 
-        // Reset to starting position (left side, high up)
-        player_->setPosition(Vec3(3.0f, 10.0f, 0));
+        player_->setPosition(Vec3(3.0f, 90.0f, 0));
         player_->setLinearVelocity(Vec3(0, 0, 0));
         player_->setAngularVelocity(Vec3(0, 0, 0));
         player_->activate(true);
@@ -640,7 +626,7 @@ public:
         std::cout << "Player reset to (" << playerPosition_.x << ", " << playerPosition_.y << ")" << std::endl;
     }
 
-    void toggleCameraMode() {
+    void toggleCameraMode() const {
         static bool isFollowMode = true;
 
         if (isFollowMode) {
@@ -655,31 +641,22 @@ public:
     }
 
     void render() {
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         glMatrixMode(GL_PROJECTION);
         glLoadIdentity();
 
-        Camera2D* activeCamera = cameraManager_->getCamera2D(cameraManager_->getActiveCameraId());
+        if (const Camera2D* activeCamera = cameraManager_->getCamera2D(cameraManager_->getActiveCameraId())) {
+            const Vec2 cameraPos = activeCamera->getPosition2D();
+            const float zoom = activeCamera->getZoom();
 
-        if (activeCamera) {
-            Vec2 cameraPos = activeCamera->getPosition2D();
-            float zoom = activeCamera->getZoom();
-
-            float halfWidth = (WORLD_WIDTH / 2.0f) / zoom;
-            float halfHeight = (WORLD_HEIGHT / 2.0f) / zoom;
-
-            // ⭐ FIXED: Correct Y-axis orientation
-            // bottom should be LESS than top (bottom < top)
+            const float halfWidth = (WORLD_WIDTH / 2.0f) / zoom;
+            const float halfHeight = (WORLD_HEIGHT / 2.0f) / zoom;
             glOrtho(
                 cameraPos.x - halfWidth,
-                // left
                 cameraPos.x + halfWidth,
-                // right
                 cameraPos.y - halfHeight,
-                // bottom (LOWER value)
                 cameraPos.y + halfHeight,
-                // top (HIGHER value)
                 -1.0f,
                 1.0f
             );
@@ -690,6 +667,8 @@ public:
 
         glMatrixMode(GL_MODELVIEW);
         glLoadIdentity();
+
+        renderBackgroundGrid();
 
         if (ground_) {
             renderGround();
@@ -706,29 +685,74 @@ public:
         SDL_GL_SwapWindow(window_);
     }
 
+    void renderBackgroundGrid() {
+        // 1. Color de fondo (Azul/Morado oscuro estilo Stereo Madness)
+        // R, G, B, Alpha
+        glClearColor(0.1f, 0.0f, 0.3f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        // 2. Dibujar Grilla
+        glEnable(GL_BLEND);
+        glLineWidth(1.0f);
+        glColor4f(1.0f, 1.0f, 1.0f, 0.15f); // Blanco transparente suave
+
+        float camX = 0;
+        float camY = 0;
+
+        // Obtenemos posición de cámara para efecto parallax simple
+        if (auto* cam = cameraManager_->getCamera2D(cameraManager_->getActiveCameraId())) {
+            camX = cam->getPosition2D().x;
+            camY = cam->getPosition2D().y;
+        }
+
+        // Dibujamos líneas verticales y horizontales infinitas basadas en la cámara
+        float spacing = 1.0f; // 1 unidad de mundo = 1 bloque
+        int gridCount = 40;   // Cuantas lineas dibujar alrededor de la cámara
+
+        glBegin(GL_LINES);
+        // Verticales
+        float startX = std::floor(camX) - gridCount / 2;
+        for (int i = 0; i < gridCount; i++) {
+            glVertex2f(startX + i * spacing, camY - 20);
+            glVertex2f(startX + i * spacing, camY + 20);
+        }
+        // Horizontales
+        float startY = std::floor(camY) - gridCount / 2;
+        for (int i = 0; i < gridCount; i++) {
+            glVertex2f(camX - 20, startY + i * spacing);
+            glVertex2f(camX + 20, startY + i * spacing);
+        }
+        glEnd();
+    }
+
     void renderGround() const {
         if (!ground_)
             return;
-
         Vec3 pos = ground_->getPosition();
 
-        glColor3f(1.0f, 1.0f, 1.0f);
+        float yTop = pos.y + 0.5f;
 
-        glPushMatrix();
-        glTranslatef(pos.x, pos.y, pos.z);
+        // CAMBIO AQUÍ: Usamos un valor grande para dibujar, igual que en la física
+        // O puedes usar una constante como 1000.0f para asegurar que cubra todo
+        float drawWidth = WORLD_WIDTH * 50.0f;
 
-        glColor3f(0.4f, 0.2f, 0.1f); // Brown
-
+        // 1. Relleno oscuro debajo del suelo
+        glColor3f(0.05f, 0.0f, 0.2f);
         glBegin(GL_QUADS);
-        glVertex2f(-WORLD_WIDTH / 2, -0.5f);
-        glVertex2f(WORLD_WIDTH / 2, -0.5f);
-        glVertex2f(WORLD_WIDTH / 2, 0.5f);
-        glVertex2f(-WORLD_WIDTH / 2, 0.5f);
+        glVertex2f(pos.x - drawWidth, yTop - 10.0f);
+        glVertex2f(pos.x + drawWidth, yTop - 10.0f);
+        glVertex2f(pos.x + drawWidth, yTop);
+        glVertex2f(pos.x - drawWidth, yTop);
         glEnd();
 
-        glPopMatrix();
-
-        glColor3f(1.0f, 1.0f, 1.0f);
+        // 2. Línea brillante superior
+        glLineWidth(3.0f);
+        glColor3f(0.0f, 0.8f, 1.0f);
+        glBegin(GL_LINES);
+        glVertex2f(pos.x - drawWidth, yTop);
+        glVertex2f(pos.x + drawWidth, yTop);
+        glEnd();
+        glLineWidth(1.0f);
     }
 
     void renderPlayerOpenGL() {
@@ -739,21 +763,20 @@ public:
         if (!playerTexture)
             return;
 
-        float texWidth = static_cast<float>(playerTexture->getWidth());
-        float texHeight = static_cast<float>(playerTexture->getHeight());
+        const auto texWidth = static_cast<float>(playerTexture->getWidth());
+        const auto texHeight = static_cast<float>(playerTexture->getHeight());
 
-        float u_min = currentSpriteFrame_.x / texWidth;
-        float v_min = currentSpriteFrame_.y / texHeight;
-        float u_max = (currentSpriteFrame_.x + currentSpriteFrame_.w) / texWidth;
-        float v_max = (currentSpriteFrame_.y + currentSpriteFrame_.h) / texHeight;
+        const float u_min = currentSpriteFrame_.x / texWidth;
+        const float v_min = currentSpriteFrame_.y / texHeight;
+        const float u_max = static_cast<float>(currentSpriteFrame_.x + currentSpriteFrame_.w) / texWidth;
+        const float v_max = static_cast<float>(currentSpriteFrame_.y + currentSpriteFrame_.h) / texHeight;
 
-        float texCoords[4] = {u_min, v_min, u_max, v_max};
+        const float texCoords[4] = {u_min, v_min, u_max, v_max};
 
-        float worldUnitPerPixel = WORLD_WIDTH / static_cast<float>(WINDOW_WIDTH);
-        float spriteWorldWidth = currentSpriteFrame_.w * worldUnitPerPixel;
-        float spriteWorldHeight = currentSpriteFrame_.h * worldUnitPerPixel;
+        const float worldUnitPerPixel = WORLD_WIDTH / static_cast<float>(WINDOW_WIDTH);
+        const float spriteWorldWidth = currentSpriteFrame_.w * worldUnitPerPixel;
+        const float spriteWorldHeight = currentSpriteFrame_.h * worldUnitPerPixel;
 
-        // ⭐ Use synced position
         renderTexturedQuad(
             playerGLTexture_,
             playerPosition_.x,
@@ -764,18 +787,14 @@ public:
         );
     }
 
-    /**
-     * ⭐ NEW: Render physics debug info (bounding boxes, velocities, etc.)
-     */
-    void renderPhysicsDebug() {
+    void renderPhysicsDebug() const {
         if (!player_)
             return;
 
-        Vec3 playerPos = player_->getPosition();
-        Vec3 velocity = player_->getLinearVelocity();
+        const Vec3 playerPos = player_->getPosition();
 
         // Draw velocity vector
-        if (std::abs(velocity.x) > 0.1f || std::abs(velocity.y) > 0.1f) {
+        if (const Vec3 velocity = player_->getLinearVelocity(); std::abs(velocity.x) > 0.1f || std::abs(velocity.y) > 0.1f) {
             glColor3f(1.0f, 1.0f, 0.0f); // Yellow
             glLineWidth(2.0f);
             glBegin(GL_LINES);
@@ -786,20 +805,21 @@ public:
         }
 
         // Draw physics bounding box (cube extents = 0.5)
-        glColor3f(0.0f, 1.0f, 0.0f); // Green
+        float spriteHalfSize = 1.2f; ///< this for player_447-uhd.png,m for player-cube.png use 0.2f, for player_02-uhd.png
+
+        glColor3f(0.0f, 1.0f, 0.0f); // Verde
         glBegin(GL_LINE_LOOP);
-        glVertex2f(playerPos.x - 0.5f, playerPos.y - 0.5f);
-        glVertex2f(playerPos.x + 0.5f, playerPos.y - 0.5f);
-        glVertex2f(playerPos.x + 0.5f, playerPos.y + 0.5f);
-        glVertex2f(playerPos.x - 0.5f, playerPos.y + 0.5f);
+        glVertex2f(playerPos.x - spriteHalfSize, playerPos.y - spriteHalfSize);
+        glVertex2f(playerPos.x + spriteHalfSize, playerPos.y - spriteHalfSize);
+        glVertex2f(playerPos.x + spriteHalfSize, playerPos.y + spriteHalfSize);
+        glVertex2f(playerPos.x - spriteHalfSize, playerPos.y + spriteHalfSize);
         glEnd();
 
         glColor3f(1.0f, 1.0f, 1.0f); // Reset
     }
 
-    Vec2 getCameraPosition() {
-        const BaseCamera* activeCamera = cameraManager_->getActiveCamera();
-        if (activeCamera) {
+    Vec2 getCameraPosition() const {
+        if (const BaseCamera* activeCamera = cameraManager_->getActiveCamera()) {
             Vec3 pos3D = activeCamera->getPosition();
             Vec2 cameraWorldPos(pos3D.x, pos3D.y);
             Vec2 renderOffset(
@@ -811,9 +831,9 @@ public:
         return Vec2{0.0f, 0.0f};
     }
 
-    void showStats(int frameCount, std::chrono::steady_clock::duration elapsed) {
-        auto elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count();
-        double fps = frameCount * 1000.0 / elapsedMs;
+    void showStats(int frameCount, std::chrono::steady_clock::duration elapsed) const {
+        const auto elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count();
+        const double fps = frameCount * 1000.0 / elapsedMs;
 
         std::cout << "\n--- Game Performance Stats ---" << std::endl;
         std::cout << "FPS: " << fps << std::endl;
@@ -893,6 +913,12 @@ public:
 
         if (resourceManager_) {
             resourceManager_.reset();
+        }
+
+        if (physicsSystem_) {
+            std::cout << "[PhysicsSystem] Shutting down before memory manager..." << std::endl;
+            physicsSystem_->shutdown();
+            physicsSystem_.reset();
         }
 
         if (memoryManager_) {
@@ -988,10 +1014,8 @@ private:
     }
 
     bool createPhysicsObjects() {
-        // ============================================================================
-        // GROUND CREATION
-        // ============================================================================
-        auto groundShape = engine::physics::ShapeCreationParams::Box(Vec3(WORLD_WIDTH / 2, 0.5f, 1.0f));
+        constexpr float groundWidth = WORLD_WIDTH * 50.0f;
+        const auto groundShape = engine::physics::ShapeCreationParams::Box(Vec3(groundWidth, 0.5f, 1.0f));
 
         engine::physics::BodyCreationParams groundParams = engine::physics::BodyCreationParams::StaticBody(
             groundShape,
@@ -1024,20 +1048,28 @@ private:
         // ============================================================================
         // PLAYER CREATION
         // ============================================================================
-        auto boxShape = engine::physics::ShapeCreationParams::Box(Vec3(0.5f)); // Con 0.2f queda bien, pero no se mueve.
+        constexpr float boxSize = 0.9f;
+
+        const auto boxShape = engine::physics::ShapeCreationParams::Box(Vec3(boxSize)); // Con 0.2f queda bien, pero no se mueve.
+
+        // constexpr float minMass = 5.0f; // Masa mínima para asegurar que no sea demasiado ligero
+        constexpr float originalSize = 0.5f;
+        constexpr float volumeRatio = (boxSize * boxSize * boxSize) / (originalSize * originalSize * originalSize);
+        // constexpr float adjustedMass = std::max(minMass, 10.0f * volumeRatio); // Masa base de 10kg con mínimo de 5kg
+        constexpr float adjustedMass = 1.0f;
 
         engine::physics::BodyCreationParams boxParams = engine::physics::BodyCreationParams::DynamicBody(
             boxShape,
-            1.0f,
+            adjustedMass,
             nullptr,
             5.0f
         );
-        boxParams.name = "Player";
 
-        boxParams.material = engine::physics::PhysicsMaterial::Wood();
-        boxParams.material.friction = 2.0f;
+        boxParams.name = "Player";
+        boxParams.material = engine::physics::PhysicsMaterial::Metal();
+        boxParams.material.friction = 0.0f;
         boxParams.material.restitution = 0.0f;
-        boxParams.material.rollingFriction = 0.3f;
+        boxParams.material.rollingFriction = 0.1f;
 
         boxParams.enableCCD = true;
 
@@ -1048,10 +1080,10 @@ private:
             return false;
         }
 
-        player_->setDamping(0.9f, 0.9f);
-        player_->setPosition(Vec3(3.0f, 10.0f, 0));
-        player_->setAngularFactor(Vec3(0,0,0));
-        player_->setSleepingThresholds(0.2f, 0.5f);
+        player_->setDamping(0.3f, 0.3f);
+        player_->setPosition(Vec3(3.0f, 1.0f, 0));
+        player_->setAngularFactor(Vec3(0, 0, 0));
+        player_->setSleepingThresholds(0.0f, 0.0f);
 
         std::cout << "✓ Player positioned at: ("
                 << player_->getPosition().x << ", "
@@ -1061,9 +1093,9 @@ private:
         // ============================================================================
         // VERIFICATION
         // ============================================================================
-        Vec3 playerPos = player_->getPosition();
-        Vec3 groundPos = ground_->getPosition();
-        float distanceY = playerPos.y - groundPos.y;
+        const Vec3 playerPos = player_->getPosition();
+        const Vec3 groundPos = ground_->getPosition();
+        const float distanceY = playerPos.y - groundPos.y;
 
         std::cout << "\n=== Physics Setup Verification ===" << std::endl;
         std::cout << "Player Y: " << playerPos.y << std::endl;

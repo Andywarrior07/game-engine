@@ -72,36 +72,51 @@ namespace engine::resources {
     }
 
     void ResourceManager::shutdown() {
-        // Stop all threads
-        stopLoading_ = true;
-        stopHotReload_ = true;
-        stopGC_ = true;
+        std::cout << "ResourceManager shutting down..." << std::endl;
 
-        // Wake up threads
+        stopLoading_.store(true, std::memory_order_release);
+        stopHotReload_.store(true, std::memory_order_release);
+        stopGC_.store(true, std::memory_order_release);
+
         queueCV_.notify_all();
 
-        // Join threads
+        std::cout << "Waiting for " << loaderThreads_.size() << " loader threads..." << std::endl;
         for (auto& thread : loaderThreads_) {
             if (thread.joinable()) {
                 thread.join();
             }
         }
+        loaderThreads_.clear();
 
         if (hotReloadThread_.joinable()) {
+            std::cout << "Waiting for hot reload thread..." << std::endl;
             hotReloadThread_.join();
         }
 
         if (gcThread_.joinable()) {
+            std::cout << "Waiting for GC thread..." << std::endl;
             gcThread_.join();
         }
 
-        // Clear all resources
+        {
+            std::lock_guard lock(pendingMutex_);
+            pendingLoads_.clear();
+        }
+
+        {
+            std::lock_guard lock(queueMutex_);
+            // Limpiar la cola de carga sin procesar
+            while (!loadQueue_.empty()) {
+                loadQueue_.pop();
+            }
+        }
+
         unloadAll();
 
-        // Clear caches
+        // 8. Limpiar caches
         caches_.clear();
 
-        // Clear loaders
+        // 9. Limpiar loaders
         loaders_.clear();
 
         std::cout << "ResourceManager shutdown successfully" << std::endl;
