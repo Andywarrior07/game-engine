@@ -10,11 +10,6 @@
 #include <iostream>
 #include <ostream>
 #include <sstream>
-#include <mach/mach_host.h>
-#include <mach/mach_init.h>
-#include <mach/message.h>
-#include <mach/vm_statistics.h>
-#include <sys/sysctl.h>
 
 namespace engine::memory {
     MemoryManager::~MemoryManager() {
@@ -81,16 +76,16 @@ namespace engine::memory {
             }
 
             // Physics pool - for rigid bodies, colliders, etc.
-            if (config_.physicsPoolSize > 0) {
-                auto physicsPool = std::make_unique<PoolAllocator>(
-                    512, // 512 byte blocks for physics objects
-                    config_.physicsPoolSize / 512,
-                    DEFAULT_ALIGNMENT,
-                    "PhysicsPool"
-                );
-
-                categoryAllocators_[static_cast<std::size_t>(MemoryCategory::PHYSICS)] = std::move(physicsPool);
-            }
+            // if (config_.physicsPoolSize > 0) {
+            //     auto physicsPool = std::make_unique<PoolAllocator>(
+            //         64 * 1024 * 1024, // 512 byte blocks for physics objects
+            //         config_.physicsPoolSize / 1024,
+            //         DEFAULT_ALIGNMENT,
+            //         "PhysicsPool"
+            //     );
+            //
+            //     categoryAllocators_[static_cast<std::size_t>(MemoryCategory::PHYSICS)] = std::move(physicsPool);
+            // }
 
             // Audio ring buffer - for streaming audio
             // if (config_.audioRingBufferSize > 0) {

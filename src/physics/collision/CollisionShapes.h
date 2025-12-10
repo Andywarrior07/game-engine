@@ -37,6 +37,9 @@ namespace engine::physics {
 
         void release();
 
+        int decrementRefCount() { return --refCount_; }
+        int getRefCount() const { return refCount_.load(); }
+
         btCollisionShape* getBulletShape() const { return bulletShape_; }
         ShapeType getType() const { return type_; }
 
