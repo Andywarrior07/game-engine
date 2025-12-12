@@ -1,21 +1,18 @@
-// MAIN TEST
+// MAIN TEST - CON ROTACIÓN DE PLAYER EN SALTO
 
 #include <SDL.h>
 #include <SDL_image.h>
+#include <chrono>
+#include <cmath>
 #include <iostream>
 #include <memory>
-#include <chrono>
 #include <thread>
-#include <cmath>
 
+#include "./camera/CameraSystem.h"
 #include "./input/InputSystem.h"
-
 #include "./memory/MemorySystem.h"
 #include "./resources/manager/ResourceManager.h"
 #include "./resources/types/texture/TextureResource.h"
-
-#include "./camera/CameraSystem.h"
-
 #include "Animation/AnimationManager.h"
 #include "physics/PhysicsSystem.h"
 #include "physics/dynamics/RigidBody.h"
@@ -23,8 +20,8 @@
 #if defined(__APPLE__)
 #include <OpenGL/gl.h>
 #else
-#include <GL/glew.h>
 #include <GL/gl.h>
+#include <GL/glew.h>
 #endif
 
 using namespace engine::memory;
@@ -34,28 +31,40 @@ using namespace engine::math;
 using namespace engine::camera;
 
 /**
- * @brief Main game class with PHYSICS SYNCHRONIZED
+ * @brief Main game class with PHYSICS SYNCHRONIZED + ROTATION ON JUMP
  */
 class GameDemo {
 public:
     GameDemo() = default;
     ~GameDemo() = default;
 
-    static constexpr int WINDOW_WIDTH = 1280;   // Más ancho para ver más escena
-    static constexpr int WINDOW_HEIGHT = 720;   // Relación 16:9 estándar
-    static constexpr float WORLD_WIDTH = 30.0f; // Mundo más ancho (scroll horizontal)
+    static constexpr int WINDOW_WIDTH = 1280;
+    static constexpr int WINDOW_HEIGHT = 720;
+    static constexpr float WORLD_WIDTH = 30.0f;
     static constexpr float WORLD_HEIGHT = 13.5f;
     static constexpr float PLAYER_MOVE_FORCE = 1000.0f;
     static constexpr float CAMERA_SPEED = 8.0f;
-    static constexpr float GRAVITY_FORCE = -30.0f; // Gravedad pesada (caída rápida)
+    static constexpr float GRAVITY_FORCE = -30.0f;
 
     enum Actions : ActionID {
-        ACTION_JUMP         = 1, ACTION_MOVE_BACKWARD = 2, ACTION_MOVE_LEFT     = 3,
-        ACTION_MOVE_RIGHT   = 4, ACTION_EXIT          = 5, ACTION_SWITCH_CAMERA = 6,
-        ACTION_ZOOM_IN      = 7, ACTION_ZOOM_OUT      = 8, ACTION_CAMERA_SHAKE  = 9,
-        ACTION_CAMERA_UP    = 10, ACTION_CAMERA_DOWN  = 11, ACTION_CAMERA_LEFT  = 12,
-        ACTION_CAMERA_RIGHT = 13, ACTION_TOGGLE_GRID  = 14, ACTION_TOGGLE_DEBUG = 15,
-        ACTION_PLAYER_MOVE  = 20, ACTION_CAMERA_MOVE  = 21, ACTION_RESET_PLAYER = 22,
+        ACTION_JUMP = 1,
+        ACTION_MOVE_BACKWARD = 2,
+        ACTION_MOVE_LEFT = 3,
+        ACTION_MOVE_RIGHT = 4,
+        ACTION_EXIT = 5,
+        ACTION_SWITCH_CAMERA = 6,
+        ACTION_ZOOM_IN = 7,
+        ACTION_ZOOM_OUT = 8,
+        ACTION_CAMERA_SHAKE = 9,
+        ACTION_CAMERA_UP = 10,
+        ACTION_CAMERA_DOWN = 11,
+        ACTION_CAMERA_LEFT = 12,
+        ACTION_CAMERA_RIGHT = 13,
+        ACTION_TOGGLE_GRID = 14,
+        ACTION_TOGGLE_DEBUG = 15,
+        ACTION_PLAYER_MOVE = 20,
+        ACTION_CAMERA_MOVE = 21,
+        ACTION_RESET_PLAYER = 22,
     };
 
     bool initialize() {
@@ -103,7 +112,6 @@ public:
             return false;
         }
 
-        // Create physics objects
         if (!createPhysicsObjects()) {
             return false;
         }
@@ -122,13 +130,12 @@ public:
         }
 
         window_ = SDL_CreateWindow(
-            "Game Demo - Physics Synchronized",
-            SDL_WINDOWPOS_CENTERED,
-            SDL_WINDOWPOS_CENTERED,
-            WINDOW_WIDTH,
-            WINDOW_HEIGHT,
-            SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL
-        );
+                "Game Demo - Physics Synchronized + Rotation",
+                SDL_WINDOWPOS_CENTERED,
+                SDL_WINDOWPOS_CENTERED,
+                WINDOW_WIDTH,
+                WINDOW_HEIGHT,
+                SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL);
         if (!window_) {
             std::cerr << "Failed to create window: " << SDL_GetError() << std::endl;
             cleanup();
@@ -225,7 +232,6 @@ public:
 
         std::cout << "Player initialized at position: (" << playerPosition_.x << ", " << playerPosition_.y << ")" << std::endl;
 
-        // Set camera to follow player
         if (Camera2D* mainCamera = cameraManager_->getCamera2D(mainCameraId_)) {
             mainCamera->setTarget(playerPosition_);
             mainCamera->setPosition(playerPosition_);
@@ -307,9 +313,8 @@ public:
         mainCamera->setSmoothingSpeed(8.0f);
 
         CameraBounds worldBounds(
-            Vec3(0.0f, 0.0f, -1.0f),
-            Vec3(WORLD_WIDTH, WORLD_HEIGHT, 1.0f)
-        );
+                Vec3(0.0f, 0.0f, -1.0f),
+                Vec3(WORLD_WIDTH, WORLD_HEIGHT, 1.0f));
         worldBounds.setEnabled(true);
 
         mainCamera->setBounds(worldBounds);
@@ -341,11 +346,10 @@ public:
         const ResourceID playerTextureId = std::hash<std::string>{}("player_texture");
 
         playerTextureHandle_ = resourceManager_->loadById<TextureResource>(
-            playerTextureId,
-            std::string("../assets/player_02-uhd.png"),
-            ResourcePriority::HIGH,
-            LoadMode::SYNC
-        );
+                playerTextureId,
+                std::string("../assets/player_02-uhd.png"),
+                ResourcePriority::HIGH,
+                LoadMode::SYNC);
 
         auto playerTexture = getTextureResource(playerTextureHandle_);
         if (!playerTexture) {
@@ -356,7 +360,7 @@ public:
         playerTextureHandle_.updateCache(playerTexture);
 
         std::cout << "✓ Player sprite sheet loaded: " << playerTexture->getWidth()
-                << "x" << playerTexture->getHeight() << " pixels" << std::endl;
+                  << "x" << playerTexture->getHeight() << " pixels" << std::endl;
 
         if (SDL_Surface* surface = playerTexture->getSDLSurface()) {
             playerGLTexture_ = surfaceToGLTexture(surface);
@@ -374,6 +378,27 @@ public:
         currentSpriteFrame_.y = 0;
         currentSpriteFrame_.w = 120;
         currentSpriteFrame_.h = 120;
+
+        std::cout << "\n=== Loading Spike Texture ===" << std::endl;
+
+        SDL_Surface* spikeSurface = IMG_Load("../assets/spike.png");
+        if (!spikeSurface) {
+            std::cerr << "Failed to load spike texture: " << IMG_GetError() << std::endl;
+            return false;
+        }
+
+        std::cout << "✓ Spike texture loaded: "
+                  << spikeSurface->w << "x" << spikeSurface->h << " pixels" << std::endl;
+
+        spikeTexture_ = surfaceToGLTexture(spikeSurface);
+        SDL_FreeSurface(spikeSurface);
+
+        if (spikeTexture_ == 0) {
+            std::cerr << "Failed to create OpenGL texture for spike" << std::endl;
+            return false;
+        }
+
+        std::cout << "✓ Spike OpenGL texture created (ID: " << spikeTexture_ << ")" << std::endl;
 
         return true;
     }
@@ -406,6 +431,7 @@ public:
             physicsSystem_->update(deltaTime);
             syncPlayerPositionFromPhysics();
             updateGameLogic(deltaTime);
+            updatePlayerRotation(deltaTime); // ⭐ NUEVO: Actualizar rotación
             cameraManager_->update(deltaTime);
             render();
 
@@ -470,9 +496,8 @@ public:
             if (std::abs(cameraHorizontal) > 0.1f || std::abs(cameraVertical) > 0.1f) {
                 Vec2 currentPos = activeCamera->getPosition2D();
                 Vec2 movement(
-                    cameraHorizontal * CAMERA_SPEED * deltaTime,
-                    cameraVertical * CAMERA_SPEED * deltaTime
-                );
+                        cameraHorizontal * CAMERA_SPEED * deltaTime,
+                        cameraVertical * CAMERA_SPEED * deltaTime);
                 activeCamera->setPosition(currentPos + movement);
             }
         }
@@ -491,31 +516,21 @@ public:
         if (!player_)
             return;
 
-        // =========================================================
-        // 1. DETECCIÓN DE SUELO (Ajustada a tu nuevo tamaño)
-        // =========================================================
         Vec3 playerPos = player_->getPosition();
         Vec3 groundPos = ground_->getPosition();
 
-        float playerHalfHeight = 0.8f; // Un poco menos que el físico para tolerancia
+        float playerHalfHeight = 0.8f;
         float groundHalfHeight = 0.5f;
 
         float expectedDistance = groundHalfHeight + playerHalfHeight;
         float distanceToGround = std::abs(playerPos.y - groundPos.y - expectedDistance);
 
-        // Umbral de tolerancia
         bool isGrounded = distanceToGround < 0.2f;
 
-        // =========================================================
-        // 2. OBTENER VELOCIDAD ACTUAL
-        // =========================================================
         Vec3 currentVel = player_->getLinearVelocity();
 
-        // =========================================================
-        // 3. LÓGICA DE MOVIMIENTO HORIZONTAL (Eje X)
-        // =========================================================
         float targetSpeedX = 0.0f;
-        float moveSpeed = 15.0f; // Velocidad máxima al correr
+        float moveSpeed = 15.0f;
 
         float inputDir = 0.0f;
         if (inputSystem_->getActionValue(ACTION_MOVE_LEFT) > 0.5f)
@@ -525,23 +540,12 @@ public:
 
         targetSpeedX = inputDir * moveSpeed;
 
-        // Aquí está la MAGIA del movimiento (Interpolación)
         if (isGrounded) {
-            // EN EL SUELO: Tenemos tracción total.
-            // Nos movemos rápidamente hacia la velocidad objetivo (acelerar/frenar rápido)
-            // 10.0f * deltaTime es el factor de "agarre"
             float accelerationGround = 10.0f;
             currentVel.x += (targetSpeedX - currentVel.x) * accelerationGround * deltaTime;
         } else {
-            // EN EL AIRE: Tenemos inercia.
-            // Si el jugador NO toca nada (inputDir == 0), NO frenamos (conserva inercia).
-            // Si el jugador toca teclas, le damos un poco de control (pero lento).
-
             if (inputDir != 0.0f) {
-                float accelerationAir = 2.0f; // Mucho menor que en el suelo
-
-                // Solo aplicamos fuerza si no excedemos la velocidad máxima
-                // o si estamos intentando ir en contra de la inercia actual
+                float accelerationAir = 2.0f;
                 bool movingAgainstInertia = (currentVel.x * inputDir < 0);
 
                 if (std::abs(currentVel.x) < moveSpeed || movingAgainstInertia) {
@@ -549,53 +553,89 @@ public:
                 }
             }
 
-            // Opcional: Rozamiento del aire muy leve (para que no vuele infinitamente si le pegan)
             currentVel.x *= 0.995f;
         }
 
-        // =========================================================
-        // 4. LÓGICA DE SALTO (Impulso Instantáneo)
-        // =========================================================
-        if (inputSystem_->getActionValue(ACTION_JUMP) > 0.5f && isGrounded) {
-            // Reiniciamos la velocidad Y para que el salto sea consistente
-            // (evita que salte menos si estaba bajando una pendiente)
+        // ⭐ LÓGICA DE SALTO MODIFICADA
+        if (inputSystem_->getActionValue(ACTION_JUMP) > 0.5f && isGrounded && !isRotating_) {
             currentVel.y = 0.0f;
-
-            // IMPORTANTE: Primero seteamos la velocidad limpia
             player_->setLinearVelocity(currentVel);
 
-            // Luego aplicamos el IMPULSO hacia arriba (método existente en RigidBody.h)
-            float jumpForce = 20.0f; // Ajustar según peso (mass)
+            float jumpForce = 20.0f;
             player_->applyImpulse(Vec3(0, jumpForce, 0));
 
-            // Marcamos grounded falso manual para evitar doble salto en el mismo frame
-            isGrounded = false;
+            // ⭐ INICIAR ROTACIÓN
+            startRotation();
 
-            // Salimos temprano para dejar que la física procese el impulso
-            // (o actualizamos currentVel.y manualmente si queremos seguir lógica abajo)
+            isGrounded = false;
             return;
         }
 
-        // =========================================================
-        // 5. APLICAR CAMBIOS
-        // =========================================================
-
-        // Solo activamos si hay movimiento significativo para ahorrar CPU
         if (std::abs(currentVel.x) > 0.01f || std::abs(currentVel.y) > 0.01f) {
             player_->activate(true);
         }
 
-        // Guardamos la nueva velocidad calculada
         player_->setLinearVelocity(currentVel);
 
-        // =========================================================
-        // 6. CÁMARA (Sin cambios)
-        // =========================================================
-        if (Camera2D* followCamera = cameraManager_->getCamera2D(mainCameraId_); followCamera && followCamera->getMode() == CameraMode::FOLLOW_TARGET) {
+        if (Camera2D* followCamera = cameraManager_->getCamera2D(mainCameraId_);
+            followCamera && followCamera->getMode() == CameraMode::FOLLOW_TARGET) {
             followCamera->setTarget(playerPos);
             followCamera->setSmoothingSpeed(0.0f);
             followCamera->setPosition(playerPos);
         }
+    }
+
+    /**
+     * ⭐⭐⭐ NUEVA FUNCIÓN: Iniciar la rotación del player
+     *
+     * Esta función se llama cuando el player salta.
+     * Activa el sistema de rotación y resetea el progreso.
+     */
+    void startRotation() {
+        isRotating_ = true;                         // Activamos el flag de "estoy rotando"
+        rotationProgress_ = 0.0f;                   // Empezamos desde 0% (0 grados)
+        rotationStartAngle_ = playerRotationAngle_; // Guardamos el ángulo inicial
+
+        std::cout << "🔄 Rotation started! Initial angle: " << rotationStartAngle_ << "°" << std::endl;
+    }
+
+    /**
+     * ⭐⭐⭐ NUEVA FUNCIÓN: Actualizar la rotación del player cada frame
+     *
+     * Esta función se ejecuta en cada frame del juego loop.
+     * Solo hace algo si isRotating_ es true.
+     *
+     * @param deltaTime - Tiempo transcurrido desde el último frame (en segundos)
+     */
+    void updatePlayerRotation(float deltaTime) {
+        // Si NO estamos rotando, salimos inmediatamente
+        if (!isRotating_) {
+            return;
+        }
+
+        // ⭐ PASO 1: Incrementar el progreso de la rotación
+        // rotationSpeed_ define qué tan rápido gira (1.0 = 180° en 1 segundo)
+        rotationProgress_ += rotationSpeed_ * deltaTime;
+
+        // ⭐ PASO 2: Verificar si ya completamos la rotación completa
+        if (rotationProgress_ >= 1.0f) {
+            // Nos pasamos del 100%, así que fijamos exactamente a 100%
+            rotationProgress_ = 1.0f;
+
+            // Calculamos el ángulo final exacto (inicial + 180°)
+            playerRotationAngle_ = rotationStartAngle_ + 180.0f;
+
+            // Desactivamos la rotación
+            isRotating_ = false;
+
+            std::cout << "✅ Rotation completed! Final angle: " << playerRotationAngle_ << "°" << std::endl;
+            return;
+        }
+
+        // ⭐ PASO 3: Si aún no terminamos, calcular el ángulo intermedio
+        // Interpolación lineal: ángulo = inicio + (180° × progreso)
+        // Ejemplo: si progreso = 0.5 (50%), ángulo = inicio + 90°
+        playerRotationAngle_ = rotationStartAngle_ + (180.0f * rotationProgress_);
     }
 
     void syncPlayerPositionFromPhysics() {
@@ -606,7 +646,6 @@ public:
         const Vec3 physicsPos = player_->getPosition();
         playerPosition_.x = physicsPos.x;
         playerPosition_.y = physicsPos.y;
-        // Z is ignored for 2D rendering
     }
 
     void resetPlayerPosition() {
@@ -620,6 +659,11 @@ public:
         player_->setLinearVelocity(Vec3(0, 0, 0));
         player_->setAngularVelocity(Vec3(0, 0, 0));
         player_->activate(true);
+
+        // ⭐ Resetear también la rotación visual
+        playerRotationAngle_ = 0.0f;
+        isRotating_ = false;
+        rotationProgress_ = 0.0f;
 
         syncPlayerPositionFromPhysics();
 
@@ -641,8 +685,6 @@ public:
     }
 
     void render() {
-        // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
         glMatrixMode(GL_PROJECTION);
         glLoadIdentity();
 
@@ -653,15 +695,13 @@ public:
             const float halfWidth = (WORLD_WIDTH / 2.0f) / zoom;
             const float halfHeight = (WORLD_HEIGHT / 2.0f) / zoom;
             glOrtho(
-                cameraPos.x - halfWidth,
-                cameraPos.x + halfWidth,
-                cameraPos.y - halfHeight,
-                cameraPos.y + halfHeight,
-                -1.0f,
-                1.0f
-            );
+                    cameraPos.x - halfWidth,
+                    cameraPos.x + halfWidth,
+                    cameraPos.y - halfHeight,
+                    cameraPos.y + halfHeight,
+                    -1.0f,
+                    1.0f);
         } else {
-            // Fallback: Standard orientation (Y+ = up)
             glOrtho(0, WORLD_WIDTH, 0, WORLD_HEIGHT, -1.0f, 1.0f);
         }
 
@@ -674,10 +714,13 @@ public:
             renderGround();
         }
 
-        // ⭐ Render player at physics-synced position
+        if (spike_ && spikeTexture_ != 0) {
+            renderSpike();
+        }
+
+        // ⭐ MODIFICADO: Ahora pasamos el ángulo de rotación
         renderPlayerOpenGL();
 
-        // ⭐ NEW: Render physics debug visualization
         if (showDebugInfo_) {
             renderPhysicsDebug();
         }
@@ -686,37 +729,30 @@ public:
     }
 
     void renderBackgroundGrid() {
-        // 1. Color de fondo (Azul/Morado oscuro estilo Stereo Madness)
-        // R, G, B, Alpha
         glClearColor(0.1f, 0.0f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        // 2. Dibujar Grilla
         glEnable(GL_BLEND);
         glLineWidth(1.0f);
-        glColor4f(1.0f, 1.0f, 1.0f, 0.15f); // Blanco transparente suave
+        glColor4f(1.0f, 1.0f, 1.0f, 0.15f);
 
         float camX = 0;
         float camY = 0;
 
-        // Obtenemos posición de cámara para efecto parallax simple
         if (auto* cam = cameraManager_->getCamera2D(cameraManager_->getActiveCameraId())) {
             camX = cam->getPosition2D().x;
             camY = cam->getPosition2D().y;
         }
 
-        // Dibujamos líneas verticales y horizontales infinitas basadas en la cámara
-        float spacing = 1.0f; // 1 unidad de mundo = 1 bloque
-        int gridCount = 40;   // Cuantas lineas dibujar alrededor de la cámara
+        float spacing = 1.0f;
+        int gridCount = 40;
 
         glBegin(GL_LINES);
-        // Verticales
         float startX = std::floor(camX) - gridCount / 2;
         for (int i = 0; i < gridCount; i++) {
             glVertex2f(startX + i * spacing, camY - 20);
             glVertex2f(startX + i * spacing, camY + 20);
         }
-        // Horizontales
         float startY = std::floor(camY) - gridCount / 2;
         for (int i = 0; i < gridCount; i++) {
             glVertex2f(camX - 20, startY + i * spacing);
@@ -731,12 +767,8 @@ public:
         Vec3 pos = ground_->getPosition();
 
         float yTop = pos.y + 0.5f;
-
-        // CAMBIO AQUÍ: Usamos un valor grande para dibujar, igual que en la física
-        // O puedes usar una constante como 1000.0f para asegurar que cubra todo
         float drawWidth = WORLD_WIDTH * 50.0f;
 
-        // 1. Relleno oscuro debajo del suelo
         glColor3f(0.05f, 0.0f, 0.2f);
         glBegin(GL_QUADS);
         glVertex2f(pos.x - drawWidth, yTop - 10.0f);
@@ -745,7 +777,6 @@ public:
         glVertex2f(pos.x - drawWidth, yTop);
         glEnd();
 
-        // 2. Línea brillante superior
         glLineWidth(3.0f);
         glColor3f(0.0f, 0.8f, 1.0f);
         glBegin(GL_LINES);
@@ -755,6 +786,29 @@ public:
         glLineWidth(1.0f);
     }
 
+    void renderSpike() {
+        if (!spike_ || spikeTexture_ == 0) {
+            return;
+        }
+
+        const Vec3 physicsPos = spike_->getPosition();
+        spikePosition_.x = physicsPos.x;
+        spikePosition_.y = physicsPos.y;
+
+        renderTexturedQuad(
+                spikeTexture_,
+                spikePosition_.x,
+                spikePosition_.y,
+                spikeWidth_,
+                spikeHeight_,
+                nullptr,
+                0.0f // Sin rotación para el spike
+        );
+    }
+
+    /**
+     * ⭐⭐⭐ FUNCIÓN MODIFICADA: Ahora usa playerRotationAngle_
+     */
     void renderPlayerOpenGL() {
         if (playerGLTexture_ == 0)
             return;
@@ -777,13 +831,15 @@ public:
         const float spriteWorldWidth = currentSpriteFrame_.w * worldUnitPerPixel;
         const float spriteWorldHeight = currentSpriteFrame_.h * worldUnitPerPixel;
 
+        // ⭐ PASAMOS EL ÁNGULO DE ROTACIÓN
         renderTexturedQuad(
-            playerGLTexture_,
-            playerPosition_.x,
-            playerPosition_.y,
-            spriteWorldWidth,
-            spriteWorldHeight,
-            texCoords
+                playerGLTexture_,
+                playerPosition_.x,
+                playerPosition_.y,
+                spriteWorldWidth,
+                spriteWorldHeight,
+                texCoords,
+                playerRotationAngle_ // ← NUEVO parámetro
         );
     }
 
@@ -793,9 +849,9 @@ public:
 
         const Vec3 playerPos = player_->getPosition();
 
-        // Draw velocity vector
-        if (const Vec3 velocity = player_->getLinearVelocity(); std::abs(velocity.x) > 0.1f || std::abs(velocity.y) > 0.1f) {
-            glColor3f(1.0f, 1.0f, 0.0f); // Yellow
+        if (const Vec3 velocity = player_->getLinearVelocity();
+            std::abs(velocity.x) > 0.1f || std::abs(velocity.y) > 0.1f) {
+            glColor3f(1.0f, 1.0f, 0.0f);
             glLineWidth(2.0f);
             glBegin(GL_LINES);
             glVertex2f(playerPos.x, playerPos.y);
@@ -804,10 +860,9 @@ public:
             glLineWidth(1.0f);
         }
 
-        // Draw physics bounding box (cube extents = 0.5)
-        float spriteHalfSize = 1.2f; ///< this for player_447-uhd.png,m for player-cube.png use 0.2f, for player_02-uhd.png
+        float spriteHalfSize = 1.2f;
 
-        glColor3f(0.0f, 1.0f, 0.0f); // Verde
+        glColor3f(0.0f, 1.0f, 0.0f);
         glBegin(GL_LINE_LOOP);
         glVertex2f(playerPos.x - spriteHalfSize, playerPos.y - spriteHalfSize);
         glVertex2f(playerPos.x + spriteHalfSize, playerPos.y - spriteHalfSize);
@@ -815,7 +870,7 @@ public:
         glVertex2f(playerPos.x - spriteHalfSize, playerPos.y + spriteHalfSize);
         glEnd();
 
-        glColor3f(1.0f, 1.0f, 1.0f); // Reset
+        glColor3f(1.0f, 1.0f, 1.0f);
     }
 
     Vec2 getCameraPosition() const {
@@ -823,9 +878,8 @@ public:
             Vec3 pos3D = activeCamera->getPosition();
             Vec2 cameraWorldPos(pos3D.x, pos3D.y);
             Vec2 renderOffset(
-                cameraWorldPos.x - WINDOW_WIDTH / 2.0f,
-                cameraWorldPos.y - WINDOW_HEIGHT / 2.0f
-            );
+                    cameraWorldPos.x - WINDOW_WIDTH / 2.0f,
+                    cameraWorldPos.y - WINDOW_HEIGHT / 2.0f);
             return renderOffset;
         }
         return Vec2{0.0f, 0.0f};
@@ -837,24 +891,9 @@ public:
 
         std::cout << "\n--- Game Performance Stats ---" << std::endl;
         std::cout << "FPS: " << fps << std::endl;
-
-        std::cout << "Resource Memory: " << (resourceManager_->getMemoryUsage() / 1024.0 / 1024.0) << " MB" <<
-                std::endl;
-        std::cout << "Total Memory Usage: " << (memoryManager_->getTotalMemoryUsage() / 1024.0 / 1024.0) << " MB" <<
-                std::endl;
-
-        std::cout << "Cameras: " << cameraManager_->getCameraCount() << std::endl;
-
-        const BaseCamera* activeCamera = cameraManager_->getActiveCamera();
-        if (activeCamera) {
-            Vec3 cameraPos = activeCamera->getPosition();
-            std::cout << "Camera Position: (" << cameraPos.x << ", " << cameraPos.y << ")" << std::endl;
-        }
-
-        auto inputStats = inputSystem_->getStatistics();
-        std::cout << "Input Frames: " << inputStats.totalFrames << std::endl;
-
         std::cout << "Player Position: (" << playerPosition_.x << ", " << playerPosition_.y << ")" << std::endl;
+        std::cout << "Player Rotation: " << playerRotationAngle_ << "° (Rotating: "
+                  << (isRotating_ ? "YES" : "NO") << ")" << std::endl;
 
         if (player_) {
             Vec3 vel = player_->getLinearVelocity();
@@ -863,20 +902,13 @@ public:
     }
 
     void printControls() {
-        std::cout << "=== GAME CONTROLS (PHYSICS VERSION) ===" << std::endl;
-        std::cout << "Player Movement (applies forces):" << std::endl;
-        std::cout << "  WASD: Apply movement forces to player" << std::endl;
-        std::cout << "  R: Reset player position" << std::endl;
-        std::cout << "\nCamera Controls:" << std::endl;
-        std::cout << "  C: Switch camera mode (Follow/Free)" << std::endl;
-        std::cout << "  Arrow Keys: Manual camera (Free mode only)" << std::endl;
-        std::cout << "  +/-: Zoom in/out" << std::endl;
-        std::cout << "  Space: Camera shake" << std::endl;
-        std::cout << "\nDebug:" << std::endl;
-        std::cout << "  X: Toggle debug visualization (velocity vectors, bounding boxes)" << std::endl;
-        std::cout << "  G: Toggle grid display" << std::endl;
-        std::cout << "  ESC: Quit game" << std::endl;
-        std::cout << "========================================" << std::endl;
+        std::cout << "=== GAME CONTROLS ===" << std::endl;
+        std::cout << "SPACE: Jump + Rotate 180°" << std::endl;
+        std::cout << "A/D: Move left/right" << std::endl;
+        std::cout << "R: Reset player" << std::endl;
+        std::cout << "X: Toggle debug" << std::endl;
+        std::cout << "ESC: Quit" << std::endl;
+        std::cout << "=====================" << std::endl;
     }
 
     ResourcePtr<TextureResource> getTextureResource(const ResourceHandle<TextureResource>& handle) {
@@ -896,6 +928,12 @@ public:
         if (playerGLTexture_ != 0) {
             glDeleteTextures(1, &playerGLTexture_);
             playerGLTexture_ = 0;
+        }
+
+        if (spikeTexture_ != 0) {
+            glDeleteTextures(1, &spikeTexture_);
+            spikeTexture_ = 0;
+            std::cout << "✓ Spike texture cleaned up" << std::endl;
         }
 
         playerTextureHandle_.reset();
@@ -954,8 +992,11 @@ public:
 
 private:
     enum class PlayerAnimation {
-        IDLE, UP, DOWN,
-        LEFT, RIGHT
+        IDLE,
+        UP,
+        DOWN,
+        LEFT,
+        RIGHT
     };
 
     SDL_Window* window_ = nullptr;
@@ -973,10 +1014,24 @@ private:
 
     engine::physics::RigidBody* player_;
     engine::physics::RigidBody* ground_;
+    engine::physics::RigidBody* spike_;
 
-    // ⭐ This is now READ from physics, not written to independently
     Vec2 playerPosition_;
     SDL_Rect currentSpriteFrame_;
+
+    // ============================================================================
+    // ⭐⭐⭐ NUEVAS VARIABLES PARA ROTACIÓN
+    // ============================================================================
+    float playerRotationAngle_ = 0.0f; ///< Ángulo actual de rotación en GRADOS
+    bool isRotating_ = false;          ///< ¿Está el player rotando actualmente?
+    float rotationProgress_ = 0.0f;    ///< Progreso de 0.0 a 1.0 (0% a 100%)
+    float rotationStartAngle_ = 0.0f;  ///< Ángulo cuando empezó la rotación
+    float rotationSpeed_ = 1.0f;       ///< Velocidad de rotación (mayor = más rápido)
+
+    GLuint spikeTexture_ = 0;
+    Vec2 spikePosition_;
+    float spikeWidth_ = 2.0f;
+    float spikeHeight_ = 2.0f;
 
     CameraID mainCameraId_ = INVALID_CAMERA_ID;
     CameraID freeCameraId_ = INVALID_CAMERA_ID;
@@ -989,8 +1044,6 @@ private:
 
         glMatrixMode(GL_PROJECTION);
         glLoadIdentity();
-        // ⭐ FIXED: Correct Y-axis orientation (Y+ = up)
-        // Standard convention: left, right, bottom, top
         glOrtho(0, WORLD_WIDTH, 0, WORLD_HEIGHT, -1.0f, 1.0f);
 
         glMatrixMode(GL_MODELVIEW);
@@ -1018,16 +1071,14 @@ private:
         const auto groundShape = engine::physics::ShapeCreationParams::Box(Vec3(groundWidth, 0.5f, 1.0f));
 
         engine::physics::BodyCreationParams groundParams = engine::physics::BodyCreationParams::StaticBody(
-            groundShape,
-            nullptr,
-            0.1f
-        );
+                groundShape,
+                nullptr,
+                0.1f);
         groundParams.name = "Ground";
 
-        // ⭐ FIXED: High friction material to prevent sliding
         groundParams.material = engine::physics::PhysicsMaterial::Concrete();
-        groundParams.material.friction = 1.0f;    // Maximum friction
-        groundParams.material.restitution = 0.0f; // No bouncing
+        groundParams.material.friction = 1.0f;
+        groundParams.material.restitution = 0.0f;
         groundParams.material.rollingFriction = 0.5f;
 
         ground_ = physicsSystem_->createRigidBody(groundParams);
@@ -1037,33 +1088,22 @@ private:
             return false;
         }
 
-        // ⭐ Position ground at BOTTOM (Y=1)
         ground_->setPosition(Vec3(WORLD_WIDTH / 2, 1.0f, 0));
 
         std::cout << "✓ Ground positioned at: ("
-                << ground_->getPosition().x << ", "
-                << ground_->getPosition().y << ", "
-                << ground_->getPosition().z << ")" << std::endl;
+                  << ground_->getPosition().x << ", "
+                  << ground_->getPosition().y << ", "
+                  << ground_->getPosition().z << ")" << std::endl;
 
-        // ============================================================================
-        // PLAYER CREATION
-        // ============================================================================
         constexpr float boxSize = 0.9f;
-
-        const auto boxShape = engine::physics::ShapeCreationParams::Box(Vec3(boxSize)); // Con 0.2f queda bien, pero no se mueve.
-
-        // constexpr float minMass = 5.0f; // Masa mínima para asegurar que no sea demasiado ligero
-        constexpr float originalSize = 0.5f;
-        constexpr float volumeRatio = (boxSize * boxSize * boxSize) / (originalSize * originalSize * originalSize);
-        // constexpr float adjustedMass = std::max(minMass, 10.0f * volumeRatio); // Masa base de 10kg con mínimo de 5kg
+        const auto boxShape = engine::physics::ShapeCreationParams::Box(Vec3(boxSize));
         constexpr float adjustedMass = 1.0f;
 
         engine::physics::BodyCreationParams boxParams = engine::physics::BodyCreationParams::DynamicBody(
-            boxShape,
-            adjustedMass,
-            nullptr,
-            5.0f
-        );
+                boxShape,
+                adjustedMass,
+                nullptr,
+                5.0f);
 
         boxParams.name = "Player";
         boxParams.material = engine::physics::PhysicsMaterial::Metal();
@@ -1081,18 +1121,15 @@ private:
         }
 
         player_->setDamping(0.3f, 0.3f);
-        player_->setPosition(Vec3(3.0f, 1.0f, 0));
+        player_->setPosition(Vec3(3.0f, 2.5f, 0));
         player_->setAngularFactor(Vec3(0, 0, 0));
         player_->setSleepingThresholds(0.0f, 0.0f);
 
         std::cout << "✓ Player positioned at: ("
-                << player_->getPosition().x << ", "
-                << player_->getPosition().y << ", "
-                << player_->getPosition().z << ")" << std::endl;
+                  << player_->getPosition().x << ", "
+                  << player_->getPosition().y << ", "
+                  << player_->getPosition().z << ")" << std::endl;
 
-        // ============================================================================
-        // VERIFICATION
-        // ============================================================================
         const Vec3 playerPos = player_->getPosition();
         const Vec3 groundPos = ground_->getPosition();
         const float distanceY = playerPos.y - groundPos.y;
@@ -1108,25 +1145,63 @@ private:
             std::cout << "❌ WARNING: Player is BELOW ground!" << std::endl;
         }
 
-        std::cout << "\nPhysics Properties:" << std::endl;
-        std::cout << "  Player mass: " << player_->getMass() << " kg" << std::endl;
-        std::cout << "  Player restitution: " << player_->getRestitution() << std::endl;
-        std::cout << "  World gravity: ("
-                << physicsSystem_->getGravity().x << ", "
-                << physicsSystem_->getGravity().y << ", "
-                << physicsSystem_->getGravity().z << ")" << std::endl;
-        std::cout << "================================\n" << std::endl;
+        std::cout << "\n=== Creating Spike Obstacle ===" << std::endl;
+
+        const float spikeHalfWidth = spikeWidth_ / 2.0f;
+        const float spikeHalfHeight = spikeHeight_ / 2.0f;
+
+        const auto spikeShape = engine::physics::ShapeCreationParams::Box(
+                Vec3(spikeHalfWidth, spikeHalfHeight, 0.5f));
+
+        engine::physics::BodyCreationParams spikeParams =
+                engine::physics::BodyCreationParams::StaticBody(
+                        spikeShape,
+                        nullptr,
+                        0.1f);
+
+        spikeParams.name = "Spike";
+        spikeParams.material = engine::physics::PhysicsMaterial::Concrete();
+        spikeParams.material.friction = 1.0f;
+        spikeParams.material.restitution = 0.0f;
+        spikeParams.material.rollingFriction = 0.5f;
+
+        spike_ = physicsSystem_->createRigidBody(spikeParams);
+
+        if (!spike_) {
+            std::cerr << "Failed to create spike body" << std::endl;
+            return false;
+        }
+
+        const Vec3 spikeWorldPos(10.0f, 2.5f, 0.0f);
+        spike_->setPosition(spikeWorldPos);
+
+        spikePosition_.x = spikeWorldPos.x;
+        spikePosition_.y = spikeWorldPos.y;
+
+        std::cout << "✓ Spike created and positioned" << std::endl;
 
         return true;
     }
 
+    /**
+     * ⭐⭐⭐ FUNCIÓN MODIFICADA: Ahora acepta un parámetro de rotación
+     *
+     * @param texture - ID de la textura OpenGL
+     * @param x - Posición X en el mundo
+     * @param y - Posición Y en el mundo
+     * @param width - Ancho del quad
+     * @param height - Alto del quad
+     * @param texCoords - Coordenadas de textura (opcional)
+     * @param rotationDegrees - Ángulo de rotación en GRADOS (⭐ NUEVO)
+     */
     void renderTexturedQuad(
-        GLuint texture,
-        float x,
-        float y,
-        float width,
-        float height,
-        const float* texCoords = nullptr
+            GLuint texture,
+            float x,
+            float y,
+            float width,
+            float height,
+            const float* texCoords = nullptr,
+            float rotationDegrees = 0.0f // ⭐ NUEVO parámetro
     ) {
         float defaultTexCoords[4] = {0.0f, 0.0f, 1.0f, 1.0f};
         const float* tc = texCoords ? texCoords : defaultTexCoords;
@@ -1137,8 +1212,16 @@ private:
         glBindTexture(GL_TEXTURE_2D, texture);
 
         glPushMatrix();
+
+        // ⭐ PASO 1: Mover al punto donde queremos dibujar
         glTranslatef(x, y, 0.0f);
 
+        // ⭐ PASO 2: Rotar alrededor del CENTRO (sentido horario)
+        // Nota: OpenGL rota en sentido ANTIHORARIO por defecto,
+        // así que usamos -rotationDegrees para obtener rotación HORARIA
+        glRotatef(-rotationDegrees, 0.0f, 0.0f, 1.0f);
+
+        // ⭐ PASO 3: Dibujar el quad centrado en (0,0)
         glBegin(GL_QUADS);
         glTexCoord2f(tc[0], tc[3]);
         glVertex2f(-width / 2, -height / 2);
@@ -1170,16 +1253,15 @@ private:
         GLenum format = (surface->format->BytesPerPixel == 4) ? GL_RGBA : GL_RGB;
 
         glTexImage2D(
-            GL_TEXTURE_2D,
-            0,
-            format,
-            surface->w,
-            surface->h,
-            0,
-            format,
-            GL_UNSIGNED_BYTE,
-            surface->pixels
-        );
+                GL_TEXTURE_2D,
+                0,
+                format,
+                surface->w,
+                surface->h,
+                0,
+                format,
+                GL_UNSIGNED_BYTE,
+                surface->pixels);
 
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -1191,11 +1273,8 @@ private:
 };
 
 int main() {
-    std::cout << "=== Game Demo - Physics Synchronized ===" << std::endl;
-    std::cout << "WASD applies forces to physics body" << std::endl;
-    std::cout << "Player starts at left side, high up, and falls to ground" << std::endl;
-    std::cout << "Press R to reset player position" << std::endl;
-    std::cout << "Press X to toggle debug visualization" << std::endl;
+    std::cout << "=== Game Demo - With 180° Jump Rotation ===" << std::endl;
+    std::cout << "Press SPACE to jump and rotate!" << std::endl;
     std::cout << "\nStarting game..." << std::endl;
 
     GameDemo game;

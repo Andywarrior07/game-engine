@@ -97,7 +97,7 @@ namespace engine::physics {
             std::cout << "[PhysicsSystem] PhysicsManager::shutdown() completed" << std::endl;
 
             std::cout << "[PhysicsSystem] Deallocating PhysicsManager at address: "
-                      << static_cast<void*>(m_physicsManager) << std::endl;
+                      << m_physicsManager << std::endl;
 
             // Deallocate physics manager using our memory manager
             memoryManager_.deallocateObject(m_physicsManager, MemoryCategory::PHYSICS);
